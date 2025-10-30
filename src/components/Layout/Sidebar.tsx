@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BarChart, Users, UserCheck, Link as LinkIcon, Shield,
-  Library, Zap, FileText, HelpCircle, Settings, Sparkles, CreditCard, GraduationCap, Wrench, ChevronDown, Clock, Receipt, Package, CalendarOff, Contact, FolderOpen, Menu, X, Calendar, CheckSquare, Bot
+  Library, Zap, FileText, HelpCircle, Settings, Sparkles, CreditCard, GraduationCap, Wrench, ChevronDown, Clock, Receipt, Package, CalendarOff, Contact, FolderOpen, Menu, X, Calendar, CheckSquare, Bot, MessageSquare
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Sidebar as SidebarContainer } from '@/components/ui/sidebar'
@@ -25,6 +25,7 @@ const settingsNavigation = [
 const salesManagementNavigation = [
   { icon: Users, label: 'Leads CRM', to: '/leads' },
   { icon: Calendar, label: 'Appointments', to: '/appointments' },
+  { icon: MessageSquare, label: 'Followups', to: '/followups' },
 ]
 
 const mastersNavigation = [

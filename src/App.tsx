@@ -33,6 +33,7 @@ import { AIAgentForm } from '@/components/Pages/AIAgentForm'
 import { AIAgentPermissions } from '@/components/Pages/AIAgentPermissions'
 import { AIAgentChat } from '@/components/Pages/AIAgentChat'
 import { AIAgentLogs } from '@/components/Pages/AIAgentLogs'
+import { Followups } from '@/components/Pages/Followups'
 
 function ProtectedRoutes() {
   const { isAuthenticated, isLoading, login } = useAuth()
@@ -83,6 +84,7 @@ function ProtectedRoutes() {
         <Route path="ai-agents/permissions/:id" element={<AIAgentPermissions />} />
         <Route path="ai-agents/chat/:id" element={<AIAgentChat />} />
         <Route path="ai-agents/logs" element={<AIAgentLogs />} />
+        <Route path="followups" element={<Followups />} />
       </Route>
       <Route path="/ai-automation-mastery" element={<AIAutomationLanding />} />
       <Route path="/templates/landing-pages1" element={<AIAutomationMasteryLanding />} />
