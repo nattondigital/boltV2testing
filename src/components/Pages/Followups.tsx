@@ -25,11 +25,19 @@ interface WhatsAppTemplate {
 }
 
 const moduleColors: Record<string, string> = {
-  'Leads': 'bg-pink-100 text-pink-800',
-  'Tasks': 'bg-blue-100 text-blue-800',
+  'Affiliates': 'bg-indigo-100 text-indigo-800',
   'Appointments': 'bg-green-100 text-green-800',
-  'Contacts': 'bg-purple-100 text-purple-800',
-  'Support': 'bg-orange-100 text-orange-800',
+  'Attendance': 'bg-cyan-100 text-cyan-800',
+  'Billing': 'bg-emerald-100 text-emerald-800',
+  'Contact Management': 'bg-purple-100 text-purple-800',
+  'Expenses': 'bg-amber-100 text-amber-800',
+  'Leads': 'bg-pink-100 text-pink-800',
+  'Leave Management': 'bg-lime-100 text-lime-800',
+  'Members': 'bg-orange-100 text-orange-800',
+  'Products': 'bg-teal-100 text-teal-800',
+  'Support Ticket': 'bg-red-100 text-red-800',
+  'Tasks': 'bg-blue-100 text-blue-800',
+  'Team': 'bg-violet-100 text-violet-800',
 }
 
 export function Followups() {
