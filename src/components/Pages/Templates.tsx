@@ -851,10 +851,10 @@ export function Templates() {
                         <ExternalLink className="w-4 h-4" />
                       </Button>
                     )}
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={() => handleEditTemplate(template)}>
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" onClick={() => handleDeleteTemplate(template.id)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
@@ -929,42 +929,112 @@ export function Templates() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-brand-text">Template Details</h2>
+              <h2 className="text-2xl font-bold text-brand-text">
+                {activeTab === 'whatsapp-templates' ? 'WhatsApp Template Details' : 'Template Details'}
+              </h2>
               <Button variant="ghost" size="sm" onClick={() => setShowViewModal(false)}>
                 <X className="w-4 h-4" />
               </Button>
             </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column - Media */}
-              <div>
-                <img
-                  src={selectedTemplate.thumbnail}
-                  alt={selectedTemplate.name}
-                  className="w-full h-64 object-cover rounded-lg mb-4"
-                />
-                
-                {selectedTemplate.videoUrl && (
-                  <div className="mb-4">
-                    <Button className="w-full" onClick={() => window.open(selectedTemplate.videoUrl, '_blank')}>
-                      <Play className="w-4 h-4 mr-2" />
-                      Watch Demo Video
-                    </Button>
+
+            {activeTab === 'whatsapp-templates' ? (
+              <div className="space-y-6">
+                {/* WhatsApp Template View */}
+                <div className="flex items-center space-x-3">
+                  <h3 className="text-2xl font-bold text-brand-text">{selectedTemplate.name}</h3>
+                  <Badge className={statusColors[selectedTemplate.status]}>{selectedTemplate.status}</Badge>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Type:</span>
+                    <div className="flex items-center space-x-2 mt-1">
+                      {React.createElement(getTypeIcon(selectedTemplate.type), { className: 'w-5 h-5 text-green-600' })}
+                      <span className="font-medium">{selectedTemplate.type}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Created by:</span>
+                    <p className="font-medium mt-1">{selectedTemplate.createdBy}</p>
+                  </div>
+
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Created at:</span>
+                    <p className="font-medium mt-1">{formatDate(selectedTemplate.createdAt)}</p>
+                  </div>
+
+                  {selectedTemplate.mediaUrl && (
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">Media:</span>
+                      <p className="font-medium mt-1 text-green-600">Attached</p>
+                    </div>
+                  )}
+                </div>
+
+                {selectedTemplate.mediaUrl && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-700 mb-2 block">Media Preview:</span>
+                    {selectedTemplate.type === 'Image' ? (
+                      <img
+                        src={selectedTemplate.mediaUrl}
+                        alt={selectedTemplate.name}
+                        className="w-full max-h-96 object-contain rounded-lg border"
+                      />
+                    ) : (
+                      <div className="bg-gray-100 rounded-lg p-8 flex items-center justify-center">
+                        {React.createElement(getTypeIcon(selectedTemplate.type), { className: 'w-16 h-16 text-gray-400' })}
+                      </div>
+                    )}
+                    <a
+                      href={selectedTemplate.mediaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:underline mt-2 block"
+                    >
+                      View Media File
+                    </a>
                   </div>
                 )}
-                
-                {selectedTemplate.redirectUrl && (
-                  <div className="mb-4">
-                    <Button variant="outline" className="w-full" onClick={() => window.open(selectedTemplate.redirectUrl, '_blank')}>
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      Visit Live Demo
-                    </Button>
+
+                <div>
+                  <span className="text-sm font-medium text-gray-700 mb-2 block">Body Text:</span>
+                  <div className="bg-gray-50 rounded-lg p-4 whitespace-pre-wrap">
+                    {selectedTemplate.bodyText}
                   </div>
-                )}
+                </div>
               </div>
-              
-              {/* Right Column - Details */}
-              <div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column - Media */}
+                <div>
+                  <img
+                    src={selectedTemplate.thumbnail}
+                    alt={selectedTemplate.name}
+                    className="w-full h-64 object-cover rounded-lg mb-4"
+                  />
+
+                  {selectedTemplate.videoUrl && (
+                    <div className="mb-4">
+                      <Button className="w-full" onClick={() => window.open(selectedTemplate.videoUrl, '_blank')}>
+                        <Play className="w-4 h-4 mr-2" />
+                        Watch Demo Video
+                      </Button>
+                    </div>
+                  )}
+
+                  {selectedTemplate.redirectUrl && (
+                    <div className="mb-4">
+                      <Button variant="outline" className="w-full" onClick={() => window.open(selectedTemplate.redirectUrl, '_blank')}>
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Visit Live Demo
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column - Details */}
+                <div>
                 <div className="flex items-center space-x-3 mb-4">
                   <h3 className="text-2xl font-bold text-brand-text">{selectedTemplate.name}</h3>
                   <Badge className={statusColors[selectedTemplate.status]}>{selectedTemplate.status}</Badge>
@@ -1043,6 +1113,7 @@ export function Templates() {
                 </div>
               </div>
             </div>
+            )}
           </div>
         </div>
       )}
