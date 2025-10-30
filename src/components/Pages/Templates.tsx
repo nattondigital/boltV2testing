@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { 
+import {
   Plus, Eye, Edit, Trash2, Copy, Download, Upload, Star, X, Save,
-  Bot, Globe, Zap, Workflow, Camera, ExternalLink,
+  Bot, Globe, Zap, Workflow, ExternalLink,
   Search, Filter, Grid, List, Play, Pause, Settings,
   Image, Video, Link, Tag, Calendar, User, Heart,
   TrendingUp, Users, Clock, Award, CheckCircle
@@ -191,40 +191,6 @@ const mockN8nWorkflows = [
   }
 ]
 
-const mockGHLSnapshots = [
-  {
-    id: 'GHL-001',
-    name: 'Real Estate CRM Setup',
-    description: 'Complete GoHighLevel setup for real estate agents and brokers',
-    category: 'Real Estate',
-    thumbnail: 'https://images.pexels.com/photos/280229/pexels-photo-280229.jpeg?auto=compress&cs=tinysrgb&w=400',
-    videoUrl: 'https://example.com/realestate-demo.mp4',
-    redirectUrl: 'https://demo.realestatecr.com',
-    rating: 4.9,
-    downloads: 234,
-    tags: ['Real Estate', 'CRM', 'Lead Management'],
-    createdBy: 'Mark Thompson',
-    createdAt: '2024-01-21',
-    status: 'Published',
-    features: ['Lead Capture', 'Follow-up Sequences', 'Appointment Booking', 'Pipeline Management']
-  },
-  {
-    id: 'GHL-002',
-    name: 'Fitness Studio Management',
-    description: 'Complete GHL snapshot for fitness studios and personal trainers',
-    category: 'Fitness',
-    thumbnail: 'https://images.pexels.com/photos/1552252/pexels-photo-1552252.jpeg?auto=compress&cs=tinysrgb&w=400',
-    videoUrl: null,
-    redirectUrl: 'https://demo.fitnessstudio.com',
-    rating: 4.7,
-    downloads: 167,
-    tags: ['Fitness', 'Studio Management', 'Booking'],
-    createdBy: 'Jessica Miller',
-    createdAt: '2024-01-16',
-    status: 'Published',
-    features: ['Class Booking', 'Member Management', 'Payment Processing', 'Workout Tracking']
-  }
-]
 
 const statusColors: Record<string, string> = {
   'Published': 'bg-green-100 text-green-800',
@@ -249,7 +215,7 @@ const categoryColors: Record<string, string> = {
 }
 
 export function Templates() {
-  const [activeTab, setActiveTab] = useState<'ai-agents' | 'websites' | 'landing-pages' | 'n8n-workflows' | 'ghl-snapshots'>('ai-agents')
+  const [activeTab, setActiveTab] = useState<'ai-agents' | 'websites' | 'landing-pages' | 'n8n-workflows'>('ai-agents')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
@@ -275,7 +241,6 @@ export function Templates() {
   const [websites, setWebsites] = useState(mockWebsites)
   const [landingPages, setLandingPages] = useState(mockLandingPages)
   const [n8nWorkflows, setN8nWorkflows] = useState(mockN8nWorkflows)
-  const [ghlSnapshots, setGhlSnapshots] = useState(mockGHLSnapshots)
 
   // Get current templates based on active tab
   const getCurrentTemplates = () => {
@@ -284,7 +249,6 @@ export function Templates() {
       case 'websites': return websites
       case 'landing-pages': return landingPages
       case 'n8n-workflows': return n8nWorkflows
-      case 'ghl-snapshots': return ghlSnapshots
       default: return []
     }
   }
@@ -295,7 +259,6 @@ export function Templates() {
       case 'websites': setWebsites(templates); break
       case 'landing-pages': setLandingPages(templates); break
       case 'n8n-workflows': setN8nWorkflows(templates); break
-      case 'ghl-snapshots': setGhlSnapshots(templates); break
     }
   }
 
@@ -411,7 +374,6 @@ export function Templates() {
       case 'websites': return ['SaaS', 'E-commerce', 'Portfolio', 'Business']
       case 'landing-pages': return ['Education', 'Lead Generation', 'Sales', 'Marketing']
       case 'n8n-workflows': return ['Email Marketing', 'Social Media', 'CRM', 'Automation']
-      case 'ghl-snapshots': return ['Real Estate', 'Fitness', 'Healthcare', 'Business']
       default: return []
     }
   }
@@ -431,7 +393,6 @@ export function Templates() {
       case 'websites': return Globe
       case 'landing-pages': return Zap
       case 'n8n-workflows': return Workflow
-      case 'ghl-snapshots': return Camera
       default: return Bot
     }
   }
@@ -440,8 +401,7 @@ export function Templates() {
     { id: 'ai-agents', label: 'AI Agents', icon: Bot },
     { id: 'websites', label: 'Websites', icon: Globe },
     { id: 'landing-pages', label: 'Landing Pages', icon: Zap },
-    { id: 'n8n-workflows', label: 'n8n Workflows', icon: Workflow },
-    { id: 'ghl-snapshots', label: 'GHL Snapshots', icon: Camera }
+    { id: 'n8n-workflows', label: 'n8n Workflows', icon: Workflow }
   ]
 
   return (
