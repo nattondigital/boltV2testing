@@ -114,8 +114,7 @@ VALUES
   ('APPOINTMENT_CANCELLED', 'Appointments', NULL, 'Send Cancellation Message')
 ON CONFLICT (trigger_event) DO NOTHING;
 
-COMMENT ON TABLE followup_assignments IS 'Maps trigger events to WhatsApp templates and actions for automated followups';
+COMMENT ON TABLE followup_assignments IS 'Maps trigger events to WhatsApp templates for automated followups';
 COMMENT ON COLUMN followup_assignments.trigger_event IS 'The trigger event name from workflow_triggers or database triggers';
 COMMENT ON COLUMN followup_assignments.module IS 'The module this trigger belongs to (for grouping in UI)';
 COMMENT ON COLUMN followup_assignments.whatsapp_template_id IS 'The WhatsApp template to use for this followup';
-COMMENT ON COLUMN followup_assignments.actions IS 'The actions to perform when this event is triggered';

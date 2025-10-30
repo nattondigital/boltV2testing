@@ -13,7 +13,6 @@ interface FollowupAssignment {
   trigger_event: string
   module: string
   whatsapp_template_id: string | null
-  actions: string
   created_at: string
   updated_at: string
 }
@@ -42,7 +41,6 @@ export function Followups() {
     trigger_event: string
     module: string
     whatsapp_template_id: string | null
-    actions: string
   } | null>(null)
 
   useEffect(() => {
@@ -87,8 +85,7 @@ export function Followups() {
     setEditingData({
       trigger_event: assignment.trigger_event,
       module: assignment.module,
-      whatsapp_template_id: assignment.whatsapp_template_id || '__none__',
-      actions: assignment.actions
+      whatsapp_template_id: assignment.whatsapp_template_id || '__none__'
     })
   }
 
@@ -103,8 +100,7 @@ export function Followups() {
         .update({
           trigger_event: editingData.trigger_event,
           module: editingData.module,
-          whatsapp_template_id: editingData.whatsapp_template_id === '__none__' ? null : editingData.whatsapp_template_id,
-          actions: editingData.actions
+          whatsapp_template_id: editingData.whatsapp_template_id === '__none__' ? null : editingData.whatsapp_template_id
         })
         .eq('id', assignmentId)
 
@@ -147,7 +143,7 @@ export function Followups() {
             <span>Followup Assignments</span>
           </CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Configure WhatsApp templates and actions for different trigger events across modules.
+            Configure WhatsApp templates for different trigger events across modules.
             This helps automate followup communications for leads, tasks, appointments, and more.
           </p>
         </CardHeader>
@@ -170,7 +166,6 @@ export function Followups() {
                     <th className="text-left py-3 px-4 font-semibold text-brand-text">Trigger Event</th>
                     <th className="text-left py-3 px-4 font-semibold text-brand-text">Module</th>
                     <th className="text-left py-3 px-4 font-semibold text-brand-text">WhatsApp Template</th>
-                    <th className="text-left py-3 px-4 font-semibold text-brand-text">Actions</th>
                     <th className="text-right py-3 px-4 font-semibold text-brand-text">Actions</th>
                   </tr>
                 </thead>
@@ -254,18 +249,6 @@ export function Followups() {
                                 <span className="text-gray-500 italic">No template assigned</span>
                               )}
                             </div>
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          {isEditing ? (
-                            <Input
-                              value={editingData?.actions || ''}
-                              onChange={(e) => setEditingData(editingData ? { ...editingData, actions: e.target.value } : null)}
-                              placeholder="e.g., Send Welcome Message"
-                              className="w-full"
-                            />
-                          ) : (
-                            <span className="text-gray-900">{assignment.actions}</span>
                           )}
                         </td>
                         <td className="py-3 px-4">
