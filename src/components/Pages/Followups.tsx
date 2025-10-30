@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '../ui/button'
-import { Card, CardContent } from '../ui/card'
-import { Input } from '../ui/input'
-import { Plus, Search, Edit, Trash2, X } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { MessageSquare, Edit, Save, X } from 'lucide-react'
 import { PageHeader } from '../Common/PageHeader'
 import { supabase } from '../../lib/supabase'
+import { Badge } from '../ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
+import { Input } from '../ui/input'
 
 interface FollowupAssignment {
   id: string
@@ -23,19 +25,25 @@ interface WhatsAppTemplate {
   status: string
 }
 
+const moduleColors: Record<string, string> = {
+  'Leads': 'bg-pink-100 text-pink-800',
+  'Tasks': 'bg-blue-100 text-blue-800',
+  'Appointments': 'bg-green-100 text-green-800',
+  'Contacts': 'bg-purple-100 text-purple-800',
+  'Support': 'bg-orange-100 text-orange-800',
+}
+
 export function Followups() {
   const [assignments, setAssignments] = useState<FollowupAssignment[]>([])
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>([])
   const [loading, setLoading] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [editingAssignment, setEditingAssignment] = useState<FollowupAssignment | null>(null)
-  const [formData, setFormData] = useState({
-    trigger_event: '',
-    module: '',
-    whatsapp_template_id: '',
-    actions: ''
-  })
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingData, setEditingData] = useState<{
+    trigger_event: string
+    module: string
+    whatsapp_template_id: string | null
+    actions: string
+  } | null>(null)
 
   useEffect(() => {
     loadAssignments()
@@ -74,59 +82,37 @@ export function Followups() {
     }
   }
 
-  const handleCreate = () => {
-    setEditingAssignment(null)
-    setFormData({
-      trigger_event: '',
-      module: '',
-      whatsapp_template_id: '',
-      actions: ''
-    })
-    setShowModal(true)
-  }
-
   const handleEdit = (assignment: FollowupAssignment) => {
-    setEditingAssignment(assignment)
-    setFormData({
+    setEditingId(assignment.id)
+    setEditingData({
       trigger_event: assignment.trigger_event,
       module: assignment.module,
-      whatsapp_template_id: assignment.whatsapp_template_id || '',
+      whatsapp_template_id: assignment.whatsapp_template_id || '__none__',
       actions: assignment.actions
     })
-    setShowModal(true)
   }
 
-  const handleSave = async () => {
+  const handleSave = async (assignmentId: string) => {
+    if (!editingData) return
+
     try {
       setLoading(true)
 
-      if (editingAssignment) {
-        const { error } = await supabase
-          .from('followup_assignments')
-          .update({
-            trigger_event: formData.trigger_event,
-            module: formData.module,
-            whatsapp_template_id: formData.whatsapp_template_id || null,
-            actions: formData.actions
-          })
-          .eq('id', editingAssignment.id)
+      const { error } = await supabase
+        .from('followup_assignments')
+        .update({
+          trigger_event: editingData.trigger_event,
+          module: editingData.module,
+          whatsapp_template_id: editingData.whatsapp_template_id === '__none__' ? null : editingData.whatsapp_template_id,
+          actions: editingData.actions
+        })
+        .eq('id', assignmentId)
 
-        if (error) throw error
-      } else {
-        const { error } = await supabase
-          .from('followup_assignments')
-          .insert({
-            trigger_event: formData.trigger_event,
-            module: formData.module,
-            whatsapp_template_id: formData.whatsapp_template_id || null,
-            actions: formData.actions
-          })
-
-        if (error) throw error
-      }
+      if (error) throw error
 
       await loadAssignments()
-      setShowModal(false)
+      setEditingId(null)
+      setEditingData(null)
     } catch (error: any) {
       console.error('Error saving followup assignment:', error)
       alert(error.message || 'Failed to save followup assignment')
@@ -135,45 +121,17 @@ export function Followups() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this followup assignment?')) return
-
-    try {
-      setLoading(true)
-      const { error } = await supabase
-        .from('followup_assignments')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      await loadAssignments()
-    } catch (error) {
-      console.error('Error deleting followup assignment:', error)
-      alert('Failed to delete followup assignment')
-    } finally {
-      setLoading(false)
-    }
+  const handleCancel = () => {
+    setEditingId(null)
+    setEditingData(null)
   }
 
-  const getTemplateName = (templateId: string | null) => {
-    if (!templateId) return 'No Template'
-    const template = templates.find(t => t.id === templateId)
-    return template ? template.name : 'Unknown Template'
+  const formatTriggerEvent = (event: string) => {
+    return event
+      .split('_')
+      .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+      .join(' ')
   }
-
-  const filteredAssignments = assignments.filter(assignment =>
-    assignment.trigger_event.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    assignment.module.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    assignment.actions.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const groupedAssignments = filteredAssignments.reduce((acc, assignment) => {
-    if (!acc[assignment.module]) {
-      acc[assignment.module] = []
-    }
-    acc[assignment.module].push(assignment)
-    return acc
-  }, {} as Record<string, FollowupAssignment[]>)
 
   return (
     <div className="p-6 space-y-6">
@@ -182,171 +140,180 @@ export function Followups() {
         subtitle="Manage automated followup actions and WhatsApp templates for trigger events"
       />
 
-      <div className="flex items-center space-x-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <Input
-            placeholder="Search by trigger event, module, or actions..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Button onClick={handleCreate}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Assignment
-        </Button>
-      </div>
+      <Card className="shadow-xl">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <MessageSquare className="w-5 h-5 text-brand-primary" />
+            <span>Followup Assignments</span>
+          </CardTitle>
+          <p className="text-sm text-gray-600 mt-2">
+            Configure WhatsApp templates and actions for different trigger events across modules.
+            This helps automate followup communications for leads, tasks, appointments, and more.
+          </p>
+        </CardHeader>
+        <CardContent>
+          {loading && assignments.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+              <p className="mt-4 text-gray-600">Loading assignments...</p>
+            </div>
+          ) : assignments.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>No followup assignments found</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-semibold text-brand-text">Trigger Event</th>
+                    <th className="text-left py-3 px-4 font-semibold text-brand-text">Module</th>
+                    <th className="text-left py-3 px-4 font-semibold text-brand-text">WhatsApp Template</th>
+                    <th className="text-left py-3 px-4 font-semibold text-brand-text">Actions</th>
+                    <th className="text-right py-3 px-4 font-semibold text-brand-text">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assignments.map((assignment) => {
+                    const isEditing = editingId === assignment.id
+                    const template = templates.find(t => t.id === assignment.whatsapp_template_id)
 
-      {loading && assignments.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">Loading...</div>
-      ) : filteredAssignments.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          {searchTerm ? 'No assignments found matching your search.' : 'No followup assignments yet. Create your first one!'}
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedAssignments).map(([module, moduleAssignments]) => (
-            <div key={module}>
-              <h2 className="text-xl font-bold text-gray-800 mb-4">{module}</h2>
-              <div className="grid grid-cols-1 gap-4">
-                {moduleAssignments.map((assignment) => (
-                  <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-3">
-                            <h3 className="text-lg font-bold text-gray-800">
-                              {assignment.trigger_event}
-                            </h3>
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    return (
+                      <tr
+                        key={assignment.id}
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="py-3 px-4">
+                          {isEditing ? (
+                            <Input
+                              value={editingData?.trigger_event || ''}
+                              onChange={(e) => setEditingData(editingData ? { ...editingData, trigger_event: e.target.value } : null)}
+                              placeholder="e.g., LEAD_CREATED"
+                              className="w-full"
+                            />
+                          ) : (
+                            <>
+                              <div className="font-medium text-gray-900">
+                                {formatTriggerEvent(assignment.trigger_event)}
+                              </div>
+                              <div className="text-xs text-gray-500 font-mono mt-1">
+                                {assignment.trigger_event}
+                              </div>
+                            </>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {isEditing ? (
+                            <Input
+                              value={editingData?.module || ''}
+                              onChange={(e) => setEditingData(editingData ? { ...editingData, module: e.target.value } : null)}
+                              placeholder="e.g., Leads"
+                              className="w-32"
+                            />
+                          ) : (
+                            <Badge
+                              className={moduleColors[assignment.module] || 'bg-gray-100 text-gray-800'}
+                              variant="secondary"
+                            >
                               {assignment.module}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                            <div>
-                              <span className="text-sm font-medium text-gray-600">WhatsApp Template:</span>
-                              <p className="text-sm text-gray-800 font-medium">
-                                {getTemplateName(assignment.whatsapp_template_id)}
-                              </p>
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {isEditing ? (
+                            <Select
+                              value={editingData?.whatsapp_template_id || '__none__'}
+                              onValueChange={(value) => setEditingData(editingData ? { ...editingData, whatsapp_template_id: value } : null)}
+                            >
+                              <SelectTrigger className="w-64">
+                                <SelectValue placeholder="Select a template..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">
+                                  <span className="text-gray-500">No template assigned</span>
+                                </SelectItem>
+                                {templates.map((template) => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    <div className="flex items-center space-x-2">
+                                      <MessageSquare className="w-4 h-4 text-gray-400" />
+                                      <span>{template.name} ({template.type})</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              {template ? (
+                                <>
+                                  <MessageSquare className="w-4 h-4 text-gray-400" />
+                                  <span className="text-gray-900">{template.name}</span>
+                                </>
+                              ) : (
+                                <span className="text-gray-500 italic">No template assigned</span>
+                              )}
                             </div>
-
-                            <div>
-                              <span className="text-sm font-medium text-gray-600">Actions:</span>
-                              <p className="text-sm text-gray-800 font-medium">{assignment.actions}</p>
-                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {isEditing ? (
+                            <Input
+                              value={editingData?.actions || ''}
+                              onChange={(e) => setEditingData(editingData ? { ...editingData, actions: e.target.value } : null)}
+                              placeholder="e.g., Send Welcome Message"
+                              className="w-full"
+                            />
+                          ) : (
+                            <span className="text-gray-900">{assignment.actions}</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center justify-end space-x-2">
+                            {isEditing ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSave(assignment.id)}
+                                  disabled={loading}
+                                  className="h-8"
+                                >
+                                  <Save className="w-4 h-4 mr-1" />
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancel}
+                                  disabled={loading}
+                                  className="h-8"
+                                >
+                                  <X className="w-4 h-4 mr-1" />
+                                  Cancel
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEdit(assignment)}
+                                className="h-8"
+                              >
+                                <Edit className="w-4 h-4 mr-1" />
+                                Edit
+                              </Button>
+                            )}
                           </div>
-                        </div>
-
-                        <div className="flex items-center space-x-2 ml-4">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEdit(assignment)}
-                            disabled={loading}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 hover:text-red-700"
-                            onClick={() => handleDelete(assignment.id)}
-                            disabled={loading}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
-      )}
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">
-                {editingAssignment ? 'Edit Followup Assignment' : 'Create Followup Assignment'}
-              </h2>
-              <Button variant="ghost" size="sm" onClick={() => setShowModal(false)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Trigger Event *
-                </label>
-                <Input
-                  placeholder="e.g., LEAD_CREATED, TASK_COMPLETED"
-                  value={formData.trigger_event}
-                  onChange={(e) => setFormData({ ...formData, trigger_event: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Module *
-                </label>
-                <Input
-                  placeholder="e.g., Leads, Tasks, Appointments"
-                  value={formData.module}
-                  onChange={(e) => setFormData({ ...formData, module: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  WhatsApp Template
-                </label>
-                <select
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={formData.whatsapp_template_id}
-                  onChange={(e) => setFormData({ ...formData, whatsapp_template_id: e.target.value })}
-                >
-                  <option value="">Select a template (optional)</option>
-                  {templates.map((template) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name} ({template.type})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Actions *
-                </label>
-                <Input
-                  placeholder="e.g., Send Welcome Message, Create Task, Update Status"
-                  value={formData.actions}
-                  onChange={(e) => setFormData({ ...formData, actions: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end space-x-3 mt-6">
-              <Button variant="outline" onClick={() => setShowModal(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={loading || !formData.trigger_event || !formData.module || !formData.actions}
-              >
-                {loading ? 'Saving...' : 'Save'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
