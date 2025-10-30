@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Plus, Eye, Edit, Trash2, Copy, Download, Upload, Star, X, Save,
@@ -142,38 +142,6 @@ const mockN8nWorkflows = [
   }
 ]
 
-const mockWhatsappTemplates = [
-  {
-    id: 'WA-001',
-    name: 'Welcome Message',
-    type: 'Text',
-    mediaUrl: null,
-    bodyText: 'Welcome to our service! We\'re excited to have you here. How can we assist you today?',
-    createdBy: 'Admin User',
-    createdAt: '2024-01-22',
-    status: 'Published'
-  },
-  {
-    id: 'WA-002',
-    name: 'Product Demo Video',
-    type: 'Video',
-    mediaUrl: 'https://example.com/demo.mp4',
-    bodyText: 'Check out this quick demo of our latest product features!',
-    createdBy: 'Marketing Team',
-    createdAt: '2024-01-20',
-    status: 'Published'
-  },
-  {
-    id: 'WA-003',
-    name: 'Promotional Image',
-    type: 'Image',
-    mediaUrl: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400',
-    bodyText: 'Limited time offer! Get 50% off on all products this week.',
-    createdBy: 'Sales Team',
-    createdAt: '2024-01-18',
-    status: 'Published'
-  }
-]
 
 
 const statusColors: Record<string, string> = {
@@ -219,12 +187,50 @@ export function Templates() {
   })
   const [uploadingFile, setUploadingFile] = useState(false)
   const [fileError, setFileError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   // State for each template type
   const [websites, setWebsites] = useState(mockWebsites)
   const [landingPages, setLandingPages] = useState(mockLandingPages)
   const [n8nWorkflows, setN8nWorkflows] = useState(mockN8nWorkflows)
-  const [whatsappTemplates, setWhatsappTemplates] = useState(mockWhatsappTemplates)
+  const [whatsappTemplates, setWhatsappTemplates] = useState<any[]>([])
+
+  // Load WhatsApp templates from database
+  useEffect(() => {
+    if (activeTab === 'whatsapp-templates') {
+      loadWhatsappTemplates()
+    }
+  }, [activeTab])
+
+  const loadWhatsappTemplates = async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('whatsapp_templates')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      // Map database fields to match component expectations
+      const mappedData = data?.map(template => ({
+        id: template.id,
+        name: template.name,
+        type: template.type,
+        mediaUrl: template.media_url,
+        bodyText: template.body_text,
+        status: template.status,
+        createdBy: template.created_by,
+        createdAt: template.created_at
+      })) || []
+
+      setWhatsappTemplates(mappedData)
+    } catch (error) {
+      console.error('Error loading WhatsApp templates:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Get current templates based on active tab
   const getCurrentTemplates = () => {
@@ -305,22 +311,36 @@ export function Templates() {
     setShowEditModal(true)
   }
 
-  const handleCreateTemplate = () => {
-    let newTemplate: any
-
+  const handleCreateTemplate = async () => {
     if (activeTab === 'whatsapp-templates') {
-      newTemplate = {
-        id: `WA-${String(Date.now()).slice(-3)}`,
-        name: formData.name,
-        type: formData.type,
-        mediaUrl: formData.mediaUrl || null,
-        bodyText: formData.bodyText,
-        createdBy: 'Admin User',
-        createdAt: new Date().toISOString().split('T')[0],
-        status: formData.status
+      try {
+        setLoading(true)
+        const { data, error } = await supabase
+          .from('whatsapp_templates')
+          .insert({
+            name: formData.name,
+            type: formData.type,
+            media_url: formData.mediaUrl || null,
+            body_text: formData.bodyText,
+            status: formData.status,
+            created_by: 'Admin User'
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+
+        await loadWhatsappTemplates()
+        setShowCreateModal(false)
+        resetForm()
+      } catch (error) {
+        console.error('Error creating WhatsApp template:', error)
+        alert('Failed to create template. Please try again.')
+      } finally {
+        setLoading(false)
       }
     } else {
-      newTemplate = {
+      let newTemplate: any = {
         id: `${activeTab.toUpperCase().replace('-', '')}-${String(Date.now()).slice(-3)}`,
         name: formData.name,
         description: formData.description,
@@ -336,28 +356,42 @@ export function Templates() {
         status: formData.status,
         features: formData.features.split(',').map(feature => feature.trim()).filter(feature => feature)
       }
-    }
 
-    const updatedTemplates = [...currentTemplates, newTemplate]
-    setCurrentTemplates(updatedTemplates)
-    setShowCreateModal(false)
-    resetForm()
+      const updatedTemplates = [...currentTemplates, newTemplate]
+      setCurrentTemplates(updatedTemplates)
+      setShowCreateModal(false)
+      resetForm()
+    }
   }
 
-  const handleUpdateTemplate = () => {
-    let updatedTemplate: any
-
+  const handleUpdateTemplate = async () => {
     if (activeTab === 'whatsapp-templates') {
-      updatedTemplate = {
-        ...selectedTemplate,
-        name: formData.name,
-        type: formData.type,
-        mediaUrl: formData.mediaUrl || null,
-        bodyText: formData.bodyText,
-        status: formData.status
+      try {
+        setLoading(true)
+        const { error } = await supabase
+          .from('whatsapp_templates')
+          .update({
+            name: formData.name,
+            type: formData.type,
+            media_url: formData.mediaUrl || null,
+            body_text: formData.bodyText,
+            status: formData.status
+          })
+          .eq('id', selectedTemplate.id)
+
+        if (error) throw error
+
+        await loadWhatsappTemplates()
+        setShowEditModal(false)
+        resetForm()
+      } catch (error) {
+        console.error('Error updating WhatsApp template:', error)
+        alert('Failed to update template. Please try again.')
+      } finally {
+        setLoading(false)
       }
     } else {
-      updatedTemplate = {
+      let updatedTemplate: any = {
         ...selectedTemplate,
         name: formData.name,
         description: formData.description,
@@ -369,20 +403,39 @@ export function Templates() {
         features: formData.features.split(',').map(feature => feature.trim()).filter(feature => feature),
         status: formData.status
       }
-    }
 
-    const updatedTemplates = currentTemplates.map(template =>
-      template.id === selectedTemplate.id ? updatedTemplate : template
-    )
-    setCurrentTemplates(updatedTemplates)
-    setShowEditModal(false)
-    resetForm()
+      const updatedTemplates = currentTemplates.map(template =>
+        template.id === selectedTemplate.id ? updatedTemplate : template
+      )
+      setCurrentTemplates(updatedTemplates)
+      setShowEditModal(false)
+      resetForm()
+    }
   }
 
-  const handleDeleteTemplate = (templateId: string) => {
+  const handleDeleteTemplate = async (templateId: string) => {
     if (confirm('Are you sure you want to delete this template?')) {
-      const updatedTemplates = currentTemplates.filter(template => template.id !== templateId)
-      setCurrentTemplates(updatedTemplates)
+      if (activeTab === 'whatsapp-templates') {
+        try {
+          setLoading(true)
+          const { error } = await supabase
+            .from('whatsapp_templates')
+            .delete()
+            .eq('id', templateId)
+
+          if (error) throw error
+
+          await loadWhatsappTemplates()
+        } catch (error) {
+          console.error('Error deleting WhatsApp template:', error)
+          alert('Failed to delete template. Please try again.')
+        } finally {
+          setLoading(false)
+        }
+      } else {
+        const updatedTemplates = currentTemplates.filter(template => template.id !== templateId)
+        setCurrentTemplates(updatedTemplates)
+      }
     }
   }
 
@@ -401,9 +454,13 @@ export function Templates() {
     setUploadingFile(true)
 
     try {
+      // GHL folder details for WhatsApp Template Media
+      const ghlFolderId = '9d74c5db-d17f-46c6-a1c0-e3c0d761a843'
+      const ghlLocationId = '6903be8d79f86168153724f2'
+
       const fileExt = file.name.split('.').pop()
       const fileName = `${Math.random()}.${fileExt}`
-      const filePath = `whatsapp-media/${fileName}`
+      const filePath = `${ghlFolderId}/${fileName}`
 
       const { error: uploadError, data } = await supabase.storage
         .from('media-files')
