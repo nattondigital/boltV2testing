@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Plus, Eye, Edit, Trash2, Copy, Download, Upload, Star, X, Save,
-  Bot, Globe, Zap, Workflow, ExternalLink,
+  Globe, Zap, Workflow, ExternalLink,
   Search, Filter, Grid, List, Play, Pause, Settings,
   Image, Video, Link, Tag, Calendar, User, Heart,
   TrendingUp, Users, Clock, Award, CheckCircle
@@ -19,57 +19,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { formatDate } from '@/lib/utils'
 
 // Mock data for different template types
-const mockAiAgents = [
-  {
-    id: 'AI-001',
-    name: 'Customer Support Bot',
-    description: 'AI-powered customer support agent that handles 90% of common queries',
-    category: 'Customer Service',
-    thumbnail: 'https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&w=400',
-    videoUrl: 'https://example.com/demo-video.mp4',
-    redirectUrl: 'https://demo.customerbot.ai',
-    rating: 4.8,
-    downloads: 234,
-    tags: ['Customer Service', 'AI Chat', 'Automation'],
-    createdBy: 'John Smith',
-    createdAt: '2024-01-15',
-    status: 'Published',
-    features: ['24/7 Support', 'Multi-language', 'CRM Integration', 'Analytics Dashboard']
-  },
-  {
-    id: 'AI-002',
-    name: 'Sales Qualification Agent',
-    description: 'Intelligent lead qualification bot that scores and routes prospects',
-    category: 'Sales',
-    thumbnail: 'https://images.pexels.com/photos/3184292/pexels-photo-3184292.jpeg?auto=compress&cs=tinysrgb&w=400',
-    videoUrl: null,
-    redirectUrl: 'https://demo.salesbot.ai',
-    rating: 4.9,
-    downloads: 189,
-    tags: ['Sales', 'Lead Qualification', 'CRM'],
-    createdBy: 'Jane Doe',
-    createdAt: '2024-01-12',
-    status: 'Published',
-    features: ['Lead Scoring', 'Auto-routing', 'Calendar Integration', 'Follow-up Sequences']
-  },
-  {
-    id: 'AI-003',
-    name: 'Content Creation Assistant',
-    description: 'AI agent that creates blog posts, social media content, and marketing copy',
-    category: 'Content Marketing',
-    thumbnail: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=400',
-    videoUrl: 'https://example.com/content-demo.mp4',
-    redirectUrl: null,
-    rating: 4.7,
-    downloads: 156,
-    tags: ['Content Creation', 'Marketing', 'AI Writing'],
-    createdBy: 'Mike Wilson',
-    createdAt: '2024-01-10',
-    status: 'Draft',
-    features: ['Blog Writing', 'Social Media Posts', 'Email Templates', 'SEO Optimization']
-  }
-]
-
 const mockWebsites = [
   {
     id: 'WEB-001',
@@ -200,22 +149,17 @@ const statusColors: Record<string, string> = {
 }
 
 const categoryColors: Record<string, string> = {
-  'Customer Service': 'bg-blue-100 text-blue-800',
-  'Sales': 'bg-green-100 text-green-800',
-  'Content Marketing': 'bg-purple-100 text-purple-800',
   'SaaS': 'bg-indigo-100 text-indigo-800',
   'E-commerce': 'bg-orange-100 text-orange-800',
   'Portfolio': 'bg-pink-100 text-pink-800',
   'Education': 'bg-red-100 text-red-800',
   'Lead Generation': 'bg-yellow-100 text-yellow-800',
   'Email Marketing': 'bg-cyan-100 text-cyan-800',
-  'Social Media': 'bg-violet-100 text-violet-800',
-  'Real Estate': 'bg-emerald-100 text-emerald-800',
-  'Fitness': 'bg-rose-100 text-rose-800'
+  'Social Media': 'bg-violet-100 text-violet-800'
 }
 
 export function Templates() {
-  const [activeTab, setActiveTab] = useState<'ai-agents' | 'websites' | 'landing-pages' | 'n8n-workflows'>('ai-agents')
+  const [activeTab, setActiveTab] = useState<'websites' | 'landing-pages' | 'n8n-workflows'>('websites')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
@@ -237,7 +181,6 @@ export function Templates() {
   })
 
   // State for each template type
-  const [aiAgents, setAiAgents] = useState(mockAiAgents)
   const [websites, setWebsites] = useState(mockWebsites)
   const [landingPages, setLandingPages] = useState(mockLandingPages)
   const [n8nWorkflows, setN8nWorkflows] = useState(mockN8nWorkflows)
@@ -245,7 +188,6 @@ export function Templates() {
   // Get current templates based on active tab
   const getCurrentTemplates = () => {
     switch (activeTab) {
-      case 'ai-agents': return aiAgents
       case 'websites': return websites
       case 'landing-pages': return landingPages
       case 'n8n-workflows': return n8nWorkflows
@@ -255,7 +197,6 @@ export function Templates() {
 
   const setCurrentTemplates = (templates: any[]) => {
     switch (activeTab) {
-      case 'ai-agents': setAiAgents(templates); break
       case 'websites': setWebsites(templates); break
       case 'landing-pages': setLandingPages(templates); break
       case 'n8n-workflows': setN8nWorkflows(templates); break
@@ -370,7 +311,6 @@ export function Templates() {
 
   const getCategoriesForTab = () => {
     switch (activeTab) {
-      case 'ai-agents': return ['Customer Service', 'Sales', 'Content Marketing', 'Support']
       case 'websites': return ['SaaS', 'E-commerce', 'Portfolio', 'Business']
       case 'landing-pages': return ['Education', 'Lead Generation', 'Sales', 'Marketing']
       case 'n8n-workflows': return ['Email Marketing', 'Social Media', 'CRM', 'Automation']
@@ -389,16 +329,14 @@ export function Templates() {
 
   const getTabIcon = (tab: string) => {
     switch (tab) {
-      case 'ai-agents': return Bot
       case 'websites': return Globe
       case 'landing-pages': return Zap
       case 'n8n-workflows': return Workflow
-      default: return Bot
+      default: return Globe
     }
   }
 
   const tabs = [
-    { id: 'ai-agents', label: 'AI Agents', icon: Bot },
     { id: 'websites', label: 'Websites', icon: Globe },
     { id: 'landing-pages', label: 'Landing Pages', icon: Zap },
     { id: 'n8n-workflows', label: 'n8n Workflows', icon: Workflow }
