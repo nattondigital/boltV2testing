@@ -78,6 +78,14 @@ Deno.serve(async (req: Request) => {
       throw new Error('WhatsApp API key or WABA number not configured')
     }
 
+    // Format phone number: remove +, spaces, dashes, and add 91 if needed
+    let formattedPhone = contact_phone.replace(/[\+\s\-]/g, '')
+
+    // Add country code 91 if phone is 10 digits (Indian number without country code)
+    if (formattedPhone.length === 10) {
+      formattedPhone = '91' + formattedPhone
+    }
+
     // Send the WhatsApp message based on template type
     let messageBody: any
     let endpoint = 'https://public.doubletick.io/whatsapp/message/text'
@@ -93,7 +101,7 @@ Deno.serve(async (req: Request) => {
       }
 
       messageBody = {
-        to: contact_phone,
+        to: formattedPhone,
         from: senderNumber,
         content: {
           text: messageText
@@ -102,7 +110,7 @@ Deno.serve(async (req: Request) => {
     } else if (['Audio', 'Video', 'Image', 'Document'].includes(template.type)) {
       // For media messages
       messageBody = {
-        to: contact_phone,
+        to: formattedPhone,
         from: senderNumber,
         messageId: crypto.randomUUID(),
         content: {
@@ -129,7 +137,8 @@ Deno.serve(async (req: Request) => {
       'Content-Type': 'application/json'
     }
 
-    const response = await fetch(endpoint, {      method: 'POST',
+    const response = await fetch(endpoint, {
+      method: 'POST',
       headers: requestHeaders,
       body: JSON.stringify(messageBody)
     })
