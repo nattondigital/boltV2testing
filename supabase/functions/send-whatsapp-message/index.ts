@@ -84,7 +84,7 @@ Deno.serve(async (req: Request) => {
 
     if (template.type === 'Text') {
       // Replace placeholders in message with trigger data
-      let messageText = template.message || ''
+      let messageText = template.body_text || ''
       if (trigger_data) {
         messageText = replacePlaceholders(messageText, trigger_data)
       }
@@ -107,7 +107,7 @@ Deno.serve(async (req: Request) => {
         messageId: crypto.randomUUID(),
         content: {
           mediaUrl: template.media_url || '',
-          caption: template.message || ''
+          caption: template.body_text || ''
         }
       }
       
@@ -129,8 +129,7 @@ Deno.serve(async (req: Request) => {
       'Content-Type': 'application/json'
     }
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
+    const response = await fetch(endpoint, {      method: 'POST',
       headers: requestHeaders,
       body: JSON.stringify(messageBody)
     })
