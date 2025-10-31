@@ -124,17 +124,38 @@ Deno.serve(async (req: Request) => {
     }
 
     // Send to DoubleTick API
+    const requestHeaders = {
+      'Authorization': apiKey,
+      'Content-Type': 'application/json'
+    }
+
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Authorization': apiKey,
-        'Content-Type': 'application/json'
-      },
+      headers: requestHeaders,
       body: JSON.stringify(messageBody)
     })
 
     const responseText = await response.text()
-    
+    const responseHeaders = Object.fromEntries(response.headers.entries())
+
+    // Log the API request and response
+    await supabase.from('whatsapp_api_logs').insert({
+      trigger_event,
+      contact_phone,
+      contact_name,
+      template_id: template.id,
+      template_name: template.name,
+      template_type: template.type,
+      api_endpoint: endpoint,
+      request_payload: messageBody,
+      request_headers: { 'Authorization': '***REDACTED***', 'Content-Type': 'application/json' },
+      response_status: response.status,
+      response_body: responseText,
+      response_headers: responseHeaders,
+      success: response.ok,
+      error_message: response.ok ? null : `HTTP ${response.status}: ${responseText}`
+    })
+
     if (!response.ok) {
       throw new Error(`DoubleTick API error: ${response.status} ${responseText}`)
     }
@@ -151,7 +172,29 @@ Deno.serve(async (req: Request) => {
     )
   } catch (error) {
     console.error('WhatsApp message error:', error)
-    
+
+    // Log the error
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const supabase = createClient(supabaseUrl, supabaseKey)
+
+      const body = await req.json().catch(() => ({})) as WhatsAppMessageRequest
+
+      await supabase.from('whatsapp_api_logs').insert({
+        trigger_event: body.trigger_event || 'UNKNOWN',
+        contact_phone: body.contact_phone || 'UNKNOWN',
+        contact_name: body.contact_name,
+        api_endpoint: 'N/A',
+        request_payload: body,
+        success: false,
+        error_message: error.message,
+        error_details: { stack: error.stack, name: error.name }
+      })
+    } catch (logError) {
+      console.error('Failed to log error:', logError)
+    }
+
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
