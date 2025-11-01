@@ -147,11 +147,26 @@ export function PipelineSettings() {
   }
 
   const handleDeletePipeline = async (pipelineId: string) => {
-    if (!confirm('Are you sure you want to delete this pipeline? All stages will also be deleted.')) {
-      return
-    }
-
     try {
+      // Check if there are any leads using this pipeline
+      const { data: leadsCount, error: countError } = await supabase
+        .from('leads')
+        .select('id', { count: 'exact', head: true })
+        .eq('pipeline_id', pipelineId)
+
+      if (countError) throw countError
+
+      const count = leadsCount?.length || 0
+
+      if (count > 0) {
+        alert(`Cannot delete pipeline. There are ${count} lead(s) currently assigned to this pipeline. Please delete or reassign all leads in this pipeline before deleting it.`)
+        return
+      }
+
+      if (!confirm('Are you sure you want to delete this pipeline? All stages will also be deleted.')) {
+        return
+      }
+
       const { error } = await supabase
         .from('pipelines')
         .delete()
@@ -161,6 +176,7 @@ export function PipelineSettings() {
 
       await fetchPipelines()
       setSelectedPipeline(null)
+      alert('Pipeline deleted successfully!')
     } catch (error) {
       console.error('Error deleting pipeline:', error)
       alert('Failed to delete pipeline')
