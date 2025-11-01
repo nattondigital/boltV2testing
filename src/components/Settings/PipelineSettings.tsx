@@ -167,12 +167,33 @@ export function PipelineSettings() {
         return
       }
 
+      // Check if this is the default pipeline
+      const pipelineToDelete = pipelines.find(p => p.id === pipelineId)
+      const isDefault = pipelineToDelete?.is_default
+
+      // Delete the pipeline
       const { error } = await supabase
         .from('pipelines')
         .delete()
         .eq('id', pipelineId)
 
       if (error) throw error
+
+      // If the deleted pipeline was default, set another pipeline as default
+      if (isDefault) {
+        const remainingPipelines = pipelines.filter(p => p.id !== pipelineId)
+        if (remainingPipelines.length > 0) {
+          // Set the first remaining pipeline as default
+          const { error: updateError } = await supabase
+            .from('pipelines')
+            .update({ is_default: true })
+            .eq('id', remainingPipelines[0].id)
+
+          if (updateError) {
+            console.error('Error setting new default pipeline:', updateError)
+          }
+        }
+      }
 
       await fetchPipelines()
       setSelectedPipeline(null)
