@@ -224,9 +224,12 @@ export function Leads() {
   })
 
   useEffect(() => {
-    fetchPipelines()
-    fetchLeads()
-    fetchTeamMembers()
+    const initializeLeads = async () => {
+      await fetchPipelines()
+      await fetchLeads()
+      await fetchTeamMembers()
+    }
+    initializeLeads()
   }, [])
 
   useEffect(() => {
@@ -1116,7 +1119,8 @@ export function Leads() {
       (lead.company && lead.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (lead.lead_id && lead.lead_id.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    const matchesPipeline = !pipelineFilter || lead.pipeline_id === pipelineFilter
+    // Always filter by pipeline - show only leads from selected pipeline
+    const matchesPipeline = pipelineFilter ? lead.pipeline_id === pipelineFilter : false
     const matchesSource = !sourceFilter || lead.source === sourceFilter
     const matchesInterest = !interestFilter || lead.interest === interestFilter
     const matchesStage = !stageFilter || lead.stage === stageFilter
