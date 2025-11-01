@@ -1111,9 +1111,10 @@ export function Leads() {
 
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone.includes(searchTerm) ||
-      lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (lead.company && lead.company.toLowerCase().includes(searchTerm.toLowerCase()))
+      (lead.phone && lead.phone.includes(searchTerm)) ||
+      (lead.email && lead.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.company && lead.company.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (lead.lead_id && lead.lead_id.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesPipeline = !pipelineFilter || lead.pipeline_id === pipelineFilter
     const matchesSource = !sourceFilter || lead.source === sourceFilter
