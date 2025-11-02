@@ -61,12 +61,27 @@ export function Billing() {
   const [showMobileContactDropdown, setShowMobileContactDropdown] = useState(false)
 
   const [products, setProducts] = useState<any[]>([])
+  const [packages, setPackages] = useState<any[]>([])
+  const [showPackageDropdown, setShowPackageDropdown] = useState(false)
+  const [packageSearchTerm, setPackageSearchTerm] = useState('')
 
   useEffect(() => {
     loadData()
     loadContacts()
     loadProducts()
+    loadPackages()
   }, [activeTab])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.package-search-container')) {
+        setShowPackageDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const loadContacts = async () => {
     try {
@@ -94,6 +109,21 @@ export function Billing() {
       setProducts(data || [])
     } catch (error) {
       console.error('Error loading products:', error)
+    }
+  }
+
+  const loadPackages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('packages')
+        .select('*')
+        .eq('is_active', true)
+        .order('package_name', { ascending: true })
+
+      if (error) throw error
+      setPackages(data || [])
+    } catch (error) {
+      console.error('Error loading packages:', error)
     }
   }
 
@@ -1925,16 +1955,22 @@ function FormModal({ title, formData, setFormData, onSave, onCancel, type, loadi
     setShowContactDropdown(false)
   }
 
-  const handleProductSelect = (product: any) => {
-    const price = product.product_price || 0
-    const newItem = {
-      id: Date.now(),
-      product_id: product.product_id,
-      product_name: product.product_name,
-      description: product.description,
-      quantity: 1,
-      unit_price: price,
-      total: price
+  const handleProductSelect = (product: any, isPreformatted = false) => {
+    let newItem
+
+    if (isPreformatted) {
+      newItem = product
+    } else {
+      const price = product.product_price || 0
+      newItem = {
+        id: Date.now() + Math.random(),
+        product_id: product.product_id,
+        product_name: product.product_name,
+        description: product.description,
+        quantity: 1,
+        unit_price: price,
+        total: price
+      }
     }
 
     const items = formData.items || []
@@ -1943,8 +1979,11 @@ function FormModal({ title, formData, setFormData, onSave, onCancel, type, loadi
       items: [...items, newItem]
     }))
 
-    setProductSearchTerm('')
-    setShowProductDropdown(false)
+    if (!isPreformatted) {
+      setProductSearchTerm('')
+      setShowProductDropdown(false)
+    }
+
     calculateTotalsFromItems([...items, newItem])
   }
 
@@ -2077,6 +2116,58 @@ function FormModal({ title, formData, setFormData, onSave, onCancel, type, loadi
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
                 <Input value={formData.title || ''} onChange={(e) => updateField('title', e.target.value)} placeholder="Enter title" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quick Add Package</label>
+                <div className="relative package-search-container">
+                  <Input
+                    value={packageSearchTerm}
+                    onChange={(e) => {
+                      setPackageSearchTerm(e.target.value)
+                      setShowPackageDropdown(true)
+                    }}
+                    onFocus={() => setShowPackageDropdown(true)}
+                    placeholder="Search and add package (optional)"
+                  />
+                  {showPackageDropdown && packages.filter(pkg =>
+                    pkg.package_name?.toLowerCase().includes(packageSearchTerm.toLowerCase()) ||
+                    pkg.package_id?.toLowerCase().includes(packageSearchTerm.toLowerCase())
+                  ).length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {packages.filter(pkg =>
+                        pkg.package_name?.toLowerCase().includes(packageSearchTerm.toLowerCase()) ||
+                        pkg.package_id?.toLowerCase().includes(packageSearchTerm.toLowerCase())
+                      ).map((pkg: any) => (
+                        <div
+                          key={pkg.id}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          onClick={() => {
+                            pkg.products.forEach((product: any) => {
+                              const newItem = {
+                                id: Date.now() + Math.random(),
+                                product_id: product.product_id,
+                                product_name: product.product_name,
+                                quantity: product.quantity,
+                                unit_price: product.unit_price,
+                                total: product.quantity * product.unit_price
+                              }
+                              handleProductSelect(newItem, true)
+                            })
+                            setPackageSearchTerm('')
+                            setShowPackageDropdown(false)
+                          }}
+                        >
+                          <div className="font-medium">{pkg.package_name}</div>
+                          <div className="text-sm text-gray-500">
+                            {pkg.package_id} • {pkg.products.length} products • {formatCurrency(pkg.discounted_price || 0)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Select a package to add all its products at once</p>
               </div>
 
               <div>
