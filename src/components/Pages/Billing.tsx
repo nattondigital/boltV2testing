@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Download, Eye, Edit, Trash2, DollarSign, TrendingUp, Calendar, AlertCircle, CheckCircle, Clock, Send, FileText, Receipt, Repeat, Search, X, Save, MoreVertical, Printer, ArrowLeft, ChevronRight } from 'lucide-react'
+import { Plus, Download, Eye, Edit, Trash2, DollarSign, TrendingUp, Calendar, AlertCircle, CheckCircle, Clock, Send, FileText, Receipt, Repeat, Search, X, Save, MoreVertical, Printer, ArrowLeft, ChevronRight, Link2, Copy, Share2, RefreshCw } from 'lucide-react'
 import { PageHeader } from '@/components/Common/PageHeader'
 import { KPICard } from '@/components/Common/KPICard'
 import { Button } from '@/components/ui/button'
@@ -694,6 +694,41 @@ export function Billing() {
     setShowCreateModal(true)
   }
 
+  const handleGeneratePaymentLink = async (invoice: any) => {
+    try {
+      setLoading(true)
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-payment-link`
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ invoice_id: invoice.id })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to generate payment link')
+      }
+
+      alert(`Payment link generated successfully via ${result.gateway}!\n\nLink: ${result.payment_link_url}`)
+      await loadData()
+    } catch (error: any) {
+      console.error('Error generating payment link:', error)
+      alert(error.message || 'Failed to generate payment link')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCopyPaymentLink = (paymentLink: string) => {
+    navigator.clipboard.writeText(paymentLink)
+    alert('Payment link copied to clipboard!')
+  }
+
   const getFilteredData = () => {
     const data = activeTab === 'estimates' ? estimates :
                  activeTab === 'invoices' ? invoices :
@@ -919,7 +954,7 @@ export function Billing() {
       )}
 
       {activeTab === 'invoices' && (
-        <InvoicesTable data={filteredData} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onRecordReceipt={handleRecordReceipt} onViewPDF={handleViewPDF} loading={loading} />
+        <InvoicesTable data={filteredData} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onRecordReceipt={handleRecordReceipt} onViewPDF={handleViewPDF} onGeneratePaymentLink={handleGeneratePaymentLink} onCopyPaymentLink={handleCopyPaymentLink} loading={loading} />
       )}
 
       {activeTab === 'subscriptions' && (
@@ -1731,7 +1766,7 @@ function EstimatesTable({ data, onView, onEdit, onDelete, onCreateInvoice, onVie
   )
 }
 
-function InvoicesTable({ data, onView, onEdit, onDelete, onRecordReceipt, onViewPDF, loading }: any) {
+function InvoicesTable({ data, onView, onEdit, onDelete, onRecordReceipt, onViewPDF, onGeneratePaymentLink, onCopyPaymentLink, loading }: any) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
       <Card className="shadow-xl">
@@ -1754,6 +1789,7 @@ function InvoicesTable({ data, onView, onEdit, onDelete, onRecordReceipt, onView
                     <th className="text-left py-3 px-4 font-semibold text-brand-text">Amount</th>
                     <th className="text-left py-3 px-4 font-semibold text-brand-text">Balance Due</th>
                     <th className="text-left py-3 px-4 font-semibold text-brand-text">Status</th>
+                    <th className="text-left py-3 px-4 font-semibold text-brand-text">Payment Link</th>
                     <th className="text-left py-3 px-4 font-semibold text-brand-text">Due Date</th>
                     <th className="text-left py-3 px-4 font-semibold text-brand-text">Actions</th>
                   </tr>
@@ -1781,6 +1817,24 @@ function InvoicesTable({ data, onView, onEdit, onDelete, onRecordReceipt, onView
                         <Badge className={statusColors[item.status]}>{item.status}</Badge>
                       </td>
                       <td className="py-3 px-4">
+                        {item.payment_link_url ? (
+                          <div className="flex items-center space-x-2">
+                            <Badge className="bg-green-100 text-green-800">
+                              {item.payment_gateway_used || 'Active'}
+                            </Badge>
+                            <button
+                              onClick={() => onCopyPaymentLink(item.payment_link_url)}
+                              className="text-brand-primary hover:text-brand-primary/80"
+                              title="Copy payment link"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">No link</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
                         <div className="font-medium">{formatDate(item.due_date)}</div>
                       </td>
                       <td className="py-3 px-4">
@@ -1799,6 +1853,18 @@ function InvoicesTable({ data, onView, onEdit, onDelete, onRecordReceipt, onView
                               <Eye className="w-4 h-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
+                            {!item.payment_link_url && ['Draft', 'Sent', 'Pending', 'Partially Paid'].includes(item.status) && (
+                              <DropdownMenuItem onClick={() => onGeneratePaymentLink(item)}>
+                                <Link2 className="w-4 h-4 mr-2" />
+                                Generate Payment Link
+                              </DropdownMenuItem>
+                            )}
+                            {item.payment_link_url && (
+                              <DropdownMenuItem onClick={() => onCopyPaymentLink(item.payment_link_url)}>
+                                <Copy className="w-4 h-4 mr-2" />
+                                Copy Payment Link
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem onClick={() => onEdit(item)}>
                               <Edit className="w-4 h-4 mr-2" />
                               Edit

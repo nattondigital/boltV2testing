@@ -684,6 +684,37 @@ export function Settings() {
         }
       }
 
+      if (integrationId === 'cashfree' || integrationId === 'razorpay') {
+        const gatewayType = integrationId === 'cashfree' ? 'Cashfree' : 'Razorpay'
+
+        const gatewayConfig = {
+          gateway_type: gatewayType,
+          app_id: integrationId === 'cashfree' ? integrationConfig.appId : integrationConfig.keyId,
+          secret_key: integrationId === 'cashfree' ? integrationConfig.secretKey : integrationConfig.keySecret,
+          environment: integrationConfig.environment,
+          is_active: true,
+          is_default: false,
+          api_version: integrationConfig.apiVersion || '2023-08-01'
+        }
+
+        const { data: existingConfig } = await supabase
+          .from('payment_gateway_config')
+          .select('id')
+          .eq('gateway_type', gatewayType)
+          .maybeSingle()
+
+        if (existingConfig) {
+          await supabase
+            .from('payment_gateway_config')
+            .update(gatewayConfig)
+            .eq('gateway_type', gatewayType)
+        } else {
+          await supabase
+            .from('payment_gateway_config')
+            .insert([gatewayConfig])
+        }
+      }
+
       await fetchIntegrations()
       setEditingIntegration(null)
       setIntegrationConfig({})
@@ -1451,6 +1482,88 @@ export function Settings() {
                                 value={integrationConfig.apiKey || ''}
                                 onChange={(e) => updateIntegrationConfig('apiKey', e.target.value)}
                                 placeholder="Enter OpenRouter API Key"
+                                type="password"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {integration.id === 'cashfree' && (
+                          <>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Environment</label>
+                              <Select
+                                value={integrationConfig.environment || 'sandbox'}
+                                onValueChange={(value) => updateIntegrationConfig('environment', value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
+                                  <SelectItem value="production">Production (Live)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">App ID (x-client-id)</label>
+                              <Input
+                                value={integrationConfig.appId || ''}
+                                onChange={(e) => updateIntegrationConfig('appId', e.target.value)}
+                                placeholder="Enter Cashfree App ID"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Secret Key (x-client-secret)</label>
+                              <Input
+                                value={integrationConfig.secretKey || ''}
+                                onChange={(e) => updateIntegrationConfig('secretKey', e.target.value)}
+                                placeholder="Enter Cashfree Secret Key"
+                                type="password"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">API Version</label>
+                              <Input
+                                value={integrationConfig.apiVersion || '2023-08-01'}
+                                onChange={(e) => updateIntegrationConfig('apiVersion', e.target.value)}
+                                placeholder="2023-08-01"
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {integration.id === 'razorpay' && (
+                          <>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Environment</label>
+                              <Select
+                                value={integrationConfig.environment || 'test'}
+                                onValueChange={(value) => updateIntegrationConfig('environment', value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="test">Test Mode</SelectItem>
+                                  <SelectItem value="live">Live Mode</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Key ID</label>
+                              <Input
+                                value={integrationConfig.keyId || ''}
+                                onChange={(e) => updateIntegrationConfig('keyId', e.target.value)}
+                                placeholder="Enter Razorpay Key ID"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Key Secret</label>
+                              <Input
+                                value={integrationConfig.keySecret || ''}
+                                onChange={(e) => updateIntegrationConfig('keySecret', e.target.value)}
+                                placeholder="Enter Razorpay Key Secret"
                                 type="password"
                               />
                             </div>
