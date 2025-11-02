@@ -67,10 +67,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!invoice.customer_email || !invoice.customer_name || !invoice.total_amount) {
+    if (!invoice.customer_name || !invoice.total_amount) {
       return new Response(
         JSON.stringify({
-          error: "Invoice is missing required fields (customer_email, customer_name, or total_amount)"
+          error: "Invoice is missing required fields (customer_name or total_amount)"
         }),
         {
           status: 400,
@@ -78,6 +78,9 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
+
+    const customerEmail = invoice.customer_email || "info@professionalsaathi.com";
+    const customerName = invoice.customer_name || "Customer";
 
     let gatewayType = gateway_override;
     if (!gatewayType) {
@@ -152,8 +155,8 @@ Deno.serve(async (req: Request) => {
         link_purpose: invoice.title || "Invoice Payment",
         link_expiry_time: expiryDate.toISOString(),
         customer_details: {
-          customer_name: invoice.customer_name,
-          customer_email: invoice.customer_email,
+          customer_name: customerName,
+          customer_email: customerEmail,
           customer_phone: cleanPhone,
         },
         link_notify: {
@@ -230,10 +233,10 @@ Deno.serve(async (req: Request) => {
       const razorpayPayload = {
         amount: Math.round(parseFloat(invoice.total_amount) * 100),
         currency: invoice.currency || "INR",
-        description: invoice.title,
+        description: invoice.title || "Invoice Payment",
         customer: {
-          name: invoice.customer_name,
-          email: invoice.customer_email,
+          name: customerName,
+          email: customerEmail,
           contact: invoice.customer_phone || "",
         },
         notify: {
