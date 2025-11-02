@@ -13,8 +13,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 const productTypeColors: Record<string, string> = {
-  'AI Automation Training': 'bg-blue-100 text-blue-800',
-  'AI Automation Agency Service': 'bg-green-100 text-green-800'
+  'Business Registration': 'bg-blue-100 text-blue-800',
+  'Statutory Compliance': 'bg-green-100 text-green-800',
+  'Business License': 'bg-purple-100 text-purple-800'
 }
 
 const pricingModelColors: Record<string, string> = {
@@ -240,7 +241,7 @@ export function Products() {
           <>
             <PageHeader
               title="Products Master"
-              subtitle="Manage AI Automation Training courses and Agency Services"
+              subtitle="Manage CA Practice Services - Registration, Compliance & Licensing"
               actions={[
                 {
                   label: 'Add Product',
@@ -319,8 +320,9 @@ export function Products() {
                 onChange={(e) => setTypeFilter(e.target.value)}
               >
                 <option value="">All Types</option>
-                <option value="AI Automation Training">Training</option>
-                <option value="AI Automation Agency Service">Agency Service</option>
+                <option value="Business Registration">Business Registration</option>
+                <option value="Statutory Compliance">Statutory Compliance</option>
+                <option value="Business License">Business License</option>
               </select>
               <select
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
@@ -369,10 +371,12 @@ export function Products() {
                             <tr key={product.id} className="hover:bg-gray-50">
                               <td className="py-3 px-4">
                                 <div className="flex items-center space-x-3">
-                                  {product.product_type === 'AI Automation Training' ? (
-                                    <GraduationCap className="w-5 h-5 text-blue-600" />
+                                  {product.product_type === 'Business Registration' ? (
+                                    <Briefcase className="w-5 h-5 text-blue-600" />
+                                  ) : product.product_type === 'Statutory Compliance' ? (
+                                    <GraduationCap className="w-5 h-5 text-green-600" />
                                   ) : (
-                                    <Briefcase className="w-5 h-5 text-green-600" />
+                                    <Package className="w-5 h-5 text-purple-600" />
                                   )}
                                   <div>
                                     <div className="font-medium">{product.product_name}</div>
@@ -382,7 +386,7 @@ export function Products() {
                               </td>
                               <td className="py-3 px-4">
                                 <Badge className={productTypeColors[product.product_type]}>
-                                  {product.product_type === 'AI Automation Training' ? 'Training' : 'Agency Service'}
+                                  {product.product_type}
                                 </Badge>
                               </td>
                               <td className="py-3 px-4">
@@ -483,8 +487,9 @@ export function Products() {
                           <SelectValue placeholder="Select type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="AI Automation Training">AI Automation Training</SelectItem>
-                          <SelectItem value="AI Automation Agency Service">AI Automation Agency Service</SelectItem>
+                          <SelectItem value="Business Registration">Business Registration</SelectItem>
+                          <SelectItem value="Statutory Compliance">Statutory Compliance</SelectItem>
+                          <SelectItem value="Business License">Business License</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -603,13 +608,17 @@ export function Products() {
               <CardContent>
                 <div className="space-y-6">
                   <div className="flex items-center space-x-4">
-                    {selectedProduct.product_type === 'AI Automation Training' ? (
+                    {selectedProduct.product_type === 'Business Registration' ? (
                       <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <GraduationCap className="w-8 h-8 text-blue-600" />
+                        <Briefcase className="w-8 h-8 text-blue-600" />
+                      </div>
+                    ) : selectedProduct.product_type === 'Statutory Compliance' ? (
+                      <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
+                        <GraduationCap className="w-8 h-8 text-green-600" />
                       </div>
                     ) : (
-                      <div className="w-16 h-16 bg-green-100 rounded-lg flex items-center justify-center">
-                        <Briefcase className="w-8 h-8 text-green-600" />
+                      <div className="w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <Package className="w-8 h-8 text-purple-600" />
                       </div>
                     )}
                     <div>
@@ -627,7 +636,7 @@ export function Products() {
                     <div>
                       <div className="text-sm text-gray-600 mb-2">Product Type</div>
                       <Badge className={productTypeColors[selectedProduct.product_type]}>
-                        {selectedProduct.product_type === 'AI Automation Training' ? 'Training' : 'Agency Service'}
+                        {selectedProduct.product_type}
                       </Badge>
                     </div>
                     <div>
@@ -807,7 +816,7 @@ export function Products() {
                             <p className="text-xs text-gray-500 font-mono mb-2">{product.product_id}</p>
                             <div className="flex flex-wrap gap-2">
                               <Badge className={productTypeColors[product.product_type]}>
-                                {product.product_type === 'AI Automation Training' ? '🎓 Training' : '💼 Service'}
+                                {product.product_type}
                               </Badge>
                               <Badge className={product.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
                                 {product.is_active ? 'Active' : 'Inactive'}
@@ -869,8 +878,9 @@ export function Products() {
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="AI Automation Training">Training</SelectItem>
-                    <SelectItem value="AI Automation Agency Service">Service</SelectItem>
+                    <SelectItem value="Business Registration">Business Registration</SelectItem>
+                    <SelectItem value="Statutory Compliance">Statutory Compliance</SelectItem>
+                    <SelectItem value="Business License">Business License</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -973,10 +983,12 @@ export function Products() {
                       <h2 className="text-xl font-bold mb-1">{selectedProduct.product_name}</h2>
                       <p className="text-sm text-gray-500 font-mono">{selectedProduct.product_id}</p>
                     </div>
-                    {selectedProduct.product_type === 'AI Automation Training' ? (
-                      <GraduationCap className="w-8 h-8 text-blue-600" />
+                    {selectedProduct.product_type === 'Business Registration' ? (
+                      <Briefcase className="w-8 h-8 text-blue-600" />
+                    ) : selectedProduct.product_type === 'Statutory Compliance' ? (
+                      <GraduationCap className="w-8 h-8 text-green-600" />
                     ) : (
-                      <Briefcase className="w-8 h-8 text-green-600" />
+                      <Package className="w-8 h-8 text-purple-600" />
                     )}
                   </div>
 
@@ -990,7 +1002,7 @@ export function Products() {
                       <div>
                         <div className="text-xs text-gray-600 mb-1">Type</div>
                         <Badge className={productTypeColors[selectedProduct.product_type]} variant="secondary">
-                          {selectedProduct.product_type === 'AI Automation Training' ? 'Training' : 'Service'}
+                          {selectedProduct.product_type}
                         </Badge>
                       </div>
                       <div>
