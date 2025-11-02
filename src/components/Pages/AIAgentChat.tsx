@@ -257,6 +257,51 @@ export function AIAgentChat() {
       })
     }
 
+    if (permissions['Leads']?.can_create) {
+      tools.push({
+        type: 'function',
+        function: {
+          name: 'create_lead',
+          description: 'Create a new lead in the CRM',
+          parameters: {
+            type: 'object',
+            properties: {
+              name: {
+                type: 'string',
+                description: 'Name of the lead'
+              },
+              phone: {
+                type: 'string',
+                description: 'Phone number of the lead'
+              },
+              email: {
+                type: 'string',
+                description: 'Email address of the lead'
+              },
+              company: {
+                type: 'string',
+                description: 'Company name'
+              },
+              pipeline: {
+                type: 'string',
+                description: 'Pipeline name (e.g., "ITR FILING", "Ai Automation 2.0")'
+              },
+              interest: {
+                type: 'string',
+                enum: ['Hot', 'Warm', 'Cold'],
+                description: 'Interest level of the lead'
+              },
+              source: {
+                type: 'string',
+                description: 'Source of the lead (e.g., Website, Referral, Phone)'
+              }
+            },
+            required: ['name', 'phone']
+          }
+        }
+      })
+    }
+
     if (permissions['Leads']?.can_view) {
       tools.push({
         type: 'function',
@@ -543,6 +588,47 @@ export function AIAgentChat() {
 
           if (taskError) throw taskError
           return { success: true, message: `Task created: ${args.title}` }
+
+        case 'create_lead':
+          const { data: pipelines, error: pipelineError } = await supabase
+            .from('pipelines')
+            .select('id, name')
+
+          if (pipelineError) throw pipelineError
+
+          let pipelineId = pipelines?.find(p =>
+            p.name.toLowerCase() === (args.pipeline || '').toLowerCase()
+          )?.id
+
+          if (!pipelineId && pipelines && pipelines.length > 0) {
+            pipelineId = pipelines.find(p => p.is_default)?.id || pipelines[0].id
+          }
+
+          const { data: stages, error: stageError } = await supabase
+            .from('pipeline_stages')
+            .select('stage_id')
+            .eq('pipeline_id', pipelineId)
+            .order('display_order', { ascending: true })
+            .limit(1)
+
+          if (stageError) throw stageError
+          const firstStageId = stages?.[0]?.stage_id || 'new_lead'
+
+          const { error: leadError } = await supabase
+            .from('leads')
+            .insert({
+              name: args.name,
+              phone: args.phone,
+              email: args.email,
+              company: args.company,
+              pipeline_id: pipelineId,
+              stage: firstStageId,
+              interest: args.interest || 'Warm',
+              source: args.source || 'Manual Entry'
+            })
+
+          if (leadError) throw leadError
+          return { success: true, message: `Lead created: ${args.name} (${args.phone})` }
 
         case 'get_leads':
           const leadsQuery = supabase
