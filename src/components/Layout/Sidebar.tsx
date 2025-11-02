@@ -87,7 +87,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
               exit={{ opacity: 0, width: 0 }}
               className="text-xl font-bold tracking-tight whitespace-nowrap"
             >
-              AIA Coach
+              CA Dashboard
             </motion.span>
           )}
         </motion.div>
