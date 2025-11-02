@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { InvoicePDF } from '@/components/Billing/InvoicePDF'
+import { EstimatePDF } from '@/components/Billing/EstimatePDF'
 
 const statusColors: Record<string, string> = {
   'Paid': 'bg-green-100 text-green-800',
@@ -51,6 +52,7 @@ export function Billing() {
   const [showViewModal, setShowViewModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showInvoicePDF, setShowInvoicePDF] = useState(false)
+  const [showEstimatePDF, setShowEstimatePDF] = useState(false)
   const [selectedItem, setSelectedItem] = useState<any>(null)
 
   const [formData, setFormData] = useState<any>({})
@@ -517,6 +519,11 @@ export function Billing() {
     setShowInvoicePDF(true)
   }
 
+  const handleViewEstimatePDF = (item: any) => {
+    setSelectedItem(item)
+    setShowEstimatePDF(true)
+  }
+
   const handleEdit = (item: any) => {
     setSelectedItem(item)
     setMobileContactSearchTerm(item.customer_name || '')
@@ -908,7 +915,7 @@ export function Billing() {
       </motion.div>
 
       {activeTab === 'estimates' && (
-        <EstimatesTable data={filteredData} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onCreateInvoice={handleCreateInvoice} loading={loading} />
+        <EstimatesTable data={filteredData} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} onCreateInvoice={handleCreateInvoice} onViewPDF={handleViewEstimatePDF} loading={loading} />
       )}
 
       {activeTab === 'invoices' && (
@@ -927,6 +934,13 @@ export function Billing() {
         <InvoicePDF
           invoice={selectedItem}
           onClose={() => setShowInvoicePDF(false)}
+        />
+      )}
+
+      {showEstimatePDF && selectedItem && (
+        <EstimatePDF
+          estimate={selectedItem}
+          onClose={() => setShowEstimatePDF(false)}
         />
       )}
             </motion.div>
@@ -1622,7 +1636,7 @@ export function Billing() {
   )
 }
 
-function EstimatesTable({ data, onView, onEdit, onDelete, onCreateInvoice, loading }: any) {
+function EstimatesTable({ data, onView, onEdit, onDelete, onCreateInvoice, onViewPDF, loading }: any) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
       <Card className="shadow-xl">
@@ -1681,6 +1695,10 @@ function EstimatesTable({ data, onView, onEdit, onDelete, onCreateInvoice, loadi
                             <DropdownMenuItem onClick={() => onView(item)}>
                               <Eye className="w-4 h-4 mr-2" />
                               View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onViewPDF(item)}>
+                              <Download className="w-4 h-4 mr-2" />
+                              View PDF
                             </DropdownMenuItem>
                             {item.status !== 'Invoiced' && (
                               <DropdownMenuItem onClick={() => onEdit(item)}>
