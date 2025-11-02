@@ -16,6 +16,7 @@ import { CalendarSettings } from '@/components/Settings/CalendarSettings'
 import { PipelineSettings } from '@/components/Settings/PipelineSettings'
 import { MediaFoldersSettings } from '@/components/Settings/MediaFoldersSettings'
 import { CustomFieldsSettings } from '@/components/Settings/CustomFieldsSettings'
+import { useAuth } from '@/contexts/AuthContext'
 
 const mockIntegrations = [
   {
@@ -87,10 +88,21 @@ const statusColors: Record<string, string> = {
 }
 
 export function Settings() {
+  const { userProfile, refreshProfile } = useAuth()
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'integrations' | 'api' | 'system' | 'webhooks' | 'appearance' | 'calendar' | 'pipelines' | 'media-folders' | 'custom-fields'>('profile')
   const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({})
   const [editingIntegration, setEditingIntegration] = useState<string | null>(null)
   const [integrationConfig, setIntegrationConfig] = useState<Record<string, any>>({})
+  const [profileData, setProfileData] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    department: '',
+    role: '',
+    status: 'Active'
+  })
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [profileMessage, setProfileMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [settings, setSettings] = useState({
     profile: {
       firstName: 'Admin',
@@ -146,8 +158,89 @@ export function Settings() {
       fetchWebhooks()
     } else if (activeTab === 'integrations') {
       fetchIntegrations()
+    } else if (activeTab === 'profile') {
+      loadProfileData()
     }
   }, [activeTab])
+
+  useEffect(() => {
+    if (userProfile) {
+      setProfileData({
+        full_name: userProfile.full_name || '',
+        email: userProfile.email || '',
+        phone: userProfile.phone || '',
+        department: userProfile.department || '',
+        role: userProfile.role || '',
+        status: userProfile.status || 'Active'
+      })
+    }
+  }, [userProfile])
+
+  const loadProfileData = () => {
+    if (userProfile) {
+      setProfileData({
+        full_name: userProfile.full_name || '',
+        email: userProfile.email || '',
+        phone: userProfile.phone || '',
+        department: userProfile.department || '',
+        role: userProfile.role || '',
+        status: userProfile.status || 'Active'
+      })
+    }
+  }
+
+  const handleSaveProfile = async () => {
+    if (!userProfile || !profileData.full_name || !profileData.email || !profileData.phone) {
+      setProfileMessage({ type: 'error', text: 'Please fill in all required fields (Name, Email, Phone)' })
+      setTimeout(() => setProfileMessage(null), 5000)
+      return
+    }
+
+    try {
+      setIsSavingProfile(true)
+      setProfileMessage(null)
+
+      const { error } = await supabase
+        .from('admin_users')
+        .update({
+          full_name: profileData.full_name,
+          email: profileData.email,
+          phone: profileData.phone,
+          department: profileData.department || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userProfile.id)
+
+      if (error) throw error
+
+      await refreshProfile()
+
+      setProfileMessage({ type: 'success', text: 'Profile updated successfully!' })
+      setTimeout(() => setProfileMessage(null), 5000)
+    } catch (error) {
+      console.error('Error updating profile:', error)
+      setProfileMessage({ type: 'error', text: 'Failed to update profile. Please try again.' })
+      setTimeout(() => setProfileMessage(null), 5000)
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
+  const updateProfileField = (field: string, value: string) => {
+    setProfileData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
 
   const fetchIntegrations = async () => {
     try {
@@ -602,121 +695,160 @@ export function Settings() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Avatar Section */}
-                <div className="flex flex-col items-center space-y-4">
-                  <Avatar className="h-24 w-24">
-                    <AvatarFallback className="bg-brand-primary text-white text-2xl font-bold">
-                      {settings.profile.avatar}
-                    </AvatarFallback>
-                  </Avatar>
-                  <Button variant="outline" size="sm">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Change Avatar
-                  </Button>
+              {!userProfile ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-gray-500 mt-4">Loading profile...</p>
                 </div>
-
-                {/* Personal Information */}
-                <div className="lg:col-span-2 space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                      <Input
-                        value={settings.profile.firstName}
-                        onChange={(e) => updateSetting('profile', 'firstName', e.target.value)}
-                      />
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Avatar Section */}
+                    <div className="flex flex-col items-center space-y-4">
+                      <Avatar className="h-24 w-24">
+                        <AvatarFallback className="bg-brand-primary text-white text-2xl font-bold">
+                          {getInitials(profileData.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">Member ID</p>
+                        <p className="font-medium">{userProfile.member_id || 'N/A'}</p>
+                      </div>
+                      <Badge className={statusColors[profileData.status]}>
+                        {profileData.status}
+                      </Badge>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                      <Input
-                        value={settings.profile.lastName}
-                        onChange={(e) => updateSetting('profile', 'lastName', e.target.value)}
-                      />
+
+                    {/* Personal Information */}
+                    <div className="lg:col-span-2 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Full Name <span className="text-red-500">*</span>
+                          </label>
+                          <Input
+                            value={profileData.full_name}
+                            onChange={(e) => updateProfileField('full_name', e.target.value)}
+                            placeholder="Enter your full name"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                          <Input
+                            value={profileData.role}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Email Address <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                            <Input
+                              className="pl-10"
+                              type="email"
+                              value={profileData.email}
+                              onChange={(e) => updateProfileField('email', e.target.value)}
+                              placeholder="your.email@example.com"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Phone Number <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                            <Input
+                              className="pl-10"
+                              type="tel"
+                              value={profileData.phone}
+                              onChange={(e) => updateProfileField('phone', e.target.value)}
+                              placeholder="+91 1234567890"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                          <div className="relative">
+                            <Building className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                            <Input
+                              className="pl-10"
+                              value={profileData.department}
+                              onChange={(e) => updateProfileField('department', e.target.value)}
+                              placeholder="e.g., Sales, Support, Tech"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Last Login</label>
+                          <Input
+                            value={userProfile.last_login ? new Date(userProfile.last_login).toLocaleString() : 'Never'}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="pt-4 border-t">
+                        <p className="text-xs text-gray-500 mb-2">
+                          Account created on {new Date(userProfile.created_at).toLocaleDateString()}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Last updated on {new Date(userProfile.updated_at).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          className="pl-10"
-                          value={settings.profile.email}
-                          onChange={(e) => updateSetting('profile', 'email', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          className="pl-10"
-                          value={settings.profile.phone}
-                          onChange={(e) => updateSetting('profile', 'phone', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  {profileMessage && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`mt-6 p-4 rounded-lg flex items-center space-x-2 ${
+                        profileMessage.type === 'success'
+                          ? 'bg-green-50 border border-green-200 text-green-700'
+                          : 'bg-red-50 border border-red-200 text-red-700'
+                      }`}
+                    >
+                      {profileMessage.type === 'success' ? (
+                        <CheckCircle className="w-5 h-5" />
+                      ) : (
+                        <AlertTriangle className="w-5 h-5" />
+                      )}
+                      <span>{profileMessage.text}</span>
+                    </motion.div>
+                  )}
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
-                      <div className="relative">
-                        <Building className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          className="pl-10"
-                          value={settings.profile.company}
-                          onChange={(e) => updateSetting('profile', 'company', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                        <Input
-                          className="pl-10"
-                          value={settings.profile.address}
-                          onChange={(e) => updateSetting('profile', 'address', e.target.value)}
-                        />
-                      </div>
-                    </div>
+                  <div className="flex justify-end mt-6 pt-6 border-t">
+                    <Button
+                      onClick={handleSaveProfile}
+                      disabled={isSavingProfile}
+                      className="min-w-32"
+                    >
+                      {isSavingProfile ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Saving...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <Save className="w-4 h-4" />
+                          <span>Save Changes</span>
+                        </div>
+                      )}
+                    </Button>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-                      <Select value={settings.profile.timezone} onValueChange={(value) => updateSetting('profile', 'timezone', value)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Asia/Kolkata">Asia/Kolkata (IST)</SelectItem>
-                          <SelectItem value="America/New_York">America/New_York (EST)</SelectItem>
-                          <SelectItem value="Europe/London">Europe/London (GMT)</SelectItem>
-                          <SelectItem value="Asia/Tokyo">Asia/Tokyo (JST)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
-                      <Select value={settings.profile.language} onValueChange={(value) => updateSetting('profile', 'language', value)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="English">English</SelectItem>
-                          <SelectItem value="Hindi">Hindi</SelectItem>
-                          <SelectItem value="Spanish">Spanish</SelectItem>
-                          <SelectItem value="French">French</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </motion.div>
