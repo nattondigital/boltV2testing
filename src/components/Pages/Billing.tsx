@@ -28,7 +28,8 @@ const statusColors: Record<string, string> = {
   'Completed': 'bg-green-100 text-green-800',
   'Failed': 'bg-red-100 text-red-800',
   'Refunded': 'bg-orange-100 text-orange-800',
-  'Partially Paid': 'bg-yellow-100 text-yellow-800'
+  'Partially Paid': 'bg-yellow-100 text-yellow-800',
+  'Invoiced': 'bg-purple-100 text-purple-800'
 }
 
 type TabType = 'estimates' | 'invoices' | 'subscriptions' | 'receipts'
@@ -209,6 +210,13 @@ export function Billing() {
             issue_date: formData.issueDate,
             due_date: formData.dueDate
           }])
+
+          if (formData.estimateId) {
+            await supabase
+              .from('estimates')
+              .update({ status: 'Invoiced' })
+              .eq('id', formData.estimateId)
+          }
           break
         case 'subscriptions':
           await supabase.from('subscriptions').insert([{
@@ -610,6 +618,7 @@ export function Billing() {
       dueDate: '',
       paidDate: ''
     })
+    setViewState('add')
     setShowCreateModal(true)
   }
 
@@ -704,7 +713,7 @@ export function Billing() {
   const getStatusOptions = () => {
     switch (activeTab) {
       case 'estimates':
-        return ['Draft', 'Sent', 'Accepted', 'Rejected', 'Expired']
+        return ['Draft', 'Sent', 'Accepted', 'Rejected', 'Expired', 'Invoiced']
       case 'invoices':
         return ['Draft', 'Sent', 'Paid', 'Partially Paid', 'Overdue', 'Cancelled']
       case 'subscriptions':
