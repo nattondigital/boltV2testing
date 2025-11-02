@@ -137,7 +137,10 @@ Deno.serve(async (req: Request) => {
     let paymentLinkExpiry = null;
 
     if (gatewayType === "Cashfree") {
-      const cashfreeUrl = gatewayConfig.environment === "production"
+      const isProduction = gatewayConfig.environment === "production" ||
+                           gatewayConfig.environment === "live";
+
+      const cashfreeUrl = isProduction
         ? "https://api.cashfree.com/pg/links"
         : "https://sandbox.cashfree.com/pg/links";
 
@@ -171,21 +174,39 @@ Deno.serve(async (req: Request) => {
       };
 
       console.log("Cashfree Request:", {
+        environment: gatewayConfig.environment,
+        isProduction,
         url: cashfreeUrl,
         payload: cashfreePayload,
         headers: {
           "x-api-version": gatewayConfig.api_version || "2023-08-01",
-          "x-client-id": gatewayConfig.app_id,
+          "x-client-id": gatewayConfig.app_id?.substring(0, 10) + "...",
         }
       });
+
+      const apiVersion = gatewayConfig.api_version?.trim() || "2023-08-01";
+      const appId = gatewayConfig.app_id?.trim();
+      const secretKey = gatewayConfig.secret_key?.trim();
+
+      if (!appId || !secretKey) {
+        return new Response(
+          JSON.stringify({
+            error: "Cashfree credentials are missing. Please configure App ID and Secret Key in Settings.",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
 
       const cashfreeResponse = await fetch(cashfreeUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-version": gatewayConfig.api_version || "2023-08-01",
-          "x-client-id": gatewayConfig.app_id,
-          "x-client-secret": gatewayConfig.secret_key,
+          "x-api-version": apiVersion,
+          "x-client-id": appId,
+          "x-client-secret": secretKey,
         },
         body: JSON.stringify(cashfreePayload),
       });
