@@ -1164,7 +1164,7 @@ export function Products() {
           </motion.div>
         )}
 
-        {view === 'view' && selectedProduct && (
+        {view === 'view' && selectedProduct && activeTab === 'products' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1270,6 +1270,160 @@ export function Products() {
                   <Button variant="outline" onClick={() => setView('list')}>
                     Close
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {view === 'view' && selectedPackage && activeTab === 'packages' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Package Details</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => setView('list')}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <Box className="w-8 h-8 text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">{selectedPackage.package_name}</h3>
+                      <p className="text-sm text-gray-500 font-mono">{selectedPackage.package_id}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm text-gray-600 mb-2">Description</div>
+                    <p className="text-base">{selectedPackage.description || 'N/A'}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-gray-600 mb-2">Package Type</div>
+                      <Badge className="bg-blue-100 text-blue-800">
+                        {selectedPackage.package_type}
+                      </Badge>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600 mb-2">Status</div>
+                      <Badge className={selectedPackage.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                        {selectedPackage.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {selectedPackage.validity_days && (
+                    <div>
+                      <div className="text-sm text-gray-600 mb-2">Validity</div>
+                      <div className="text-base">{selectedPackage.validity_days} days</div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="text-sm text-gray-600 mb-2">Included Products</div>
+                    <div className="space-y-2">
+                      {selectedPackage.products.map((product, index) => (
+                        <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="font-medium">{product.product_name}</div>
+                              <div className="text-sm text-gray-500">{product.product_id}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm text-gray-600">Qty: {product.quantity}</div>
+                              <div className="font-semibold text-brand-primary">
+                                ₹{(product.unit_price * product.quantity).toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm text-gray-600 mb-2">Pricing</div>
+                    <div className="bg-blue-50 p-4 rounded space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Subtotal</span>
+                        <span className="font-semibold">₹{selectedPackage.total_price.toLocaleString()}</span>
+                      </div>
+                      {selectedPackage.discount_percentage > 0 && (
+                        <>
+                          <div className="flex justify-between items-center text-green-600">
+                            <span className="text-sm">Discount ({selectedPackage.discount_percentage}%)</span>
+                            <span className="font-semibold">
+                              -₹{(selectedPackage.total_price - selectedPackage.discounted_price).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="border-t border-blue-200 pt-2"></div>
+                        </>
+                      )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Final Price</span>
+                        <span className="text-2xl font-bold text-brand-primary">
+                          ₹{selectedPackage.discounted_price.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {Array.isArray(selectedPackage.features) && selectedPackage.features.length > 0 && (
+                    <div>
+                      <div className="text-sm text-gray-600 mb-2">Features</div>
+                      <ul className="list-disc list-inside space-y-1">
+                        {selectedPackage.features.map((feature, index) => (
+                          <li key={index} className="text-sm">{feature}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                    <div>
+                      <div className="text-sm text-gray-600">Total Sales</div>
+                      <div className="text-xl font-semibold">{selectedPackage.total_sales}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Total Revenue</div>
+                      <div className="text-xl font-semibold text-green-600">
+                        ₹{parseFloat(selectedPackage.total_revenue.toString()).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3 mt-6">
+                    <Button onClick={() => {
+                      setPackageFormData({
+                        package_name: selectedPackage.package_name,
+                        package_type: selectedPackage.package_type,
+                        description: selectedPackage.description || '',
+                        selected_products: selectedPackage.products,
+                        discount_percentage: selectedPackage.discount_percentage.toString(),
+                        features: Array.isArray(selectedPackage.features) ? selectedPackage.features.join('\n') : '',
+                        validity_days: selectedPackage.validity_days?.toString() || '',
+                        thumbnail_url: selectedPackage.thumbnail_url || '',
+                        is_active: selectedPackage.is_active
+                      })
+                      setView('edit')
+                    }}>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Package
+                    </Button>
+                    <Button variant="outline" onClick={() => setView('list')}>
+                      Close
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
