@@ -67,13 +67,32 @@ export function Billing() {
   const [packages, setPackages] = useState<any[]>([])
   const [showPackageDropdown, setShowPackageDropdown] = useState(false)
   const [packageSearchTerm, setPackageSearchTerm] = useState('')
+  const [paymentGateways, setPaymentGateways] = useState<any[]>([])
+  const [showGatewayModal, setShowGatewayModal] = useState(false)
+  const [selectedInvoiceForLink, setSelectedInvoiceForLink] = useState<any>(null)
 
   useEffect(() => {
     loadData()
     loadContacts()
     loadProducts()
     loadPackages()
+    loadPaymentGateways()
   }, [activeTab])
+
+  const loadPaymentGateways = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_gateway_config')
+        .select('*')
+        .eq('is_active', true)
+        .order('is_default', { ascending: false })
+
+      if (error) throw error
+      setPaymentGateways(data || [])
+    } catch (error) {
+      console.error('Error loading payment gateways:', error)
+    }
+  }
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -694,10 +713,20 @@ export function Billing() {
     setShowCreateModal(true)
   }
 
-  const handleGeneratePaymentLink = async (invoice: any) => {
+  const handleGeneratePaymentLink = async (invoice: any, selectedGateway?: string) => {
     try {
+      if (paymentGateways.length === 0) {
+        alert('No payment gateway configured. Please configure Cashfree or Razorpay in Settings > Integrations.')
+        return
+      }
+
       setLoading(true)
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-payment-link`
+
+      const payload: any = { invoice_id: invoice.id }
+      if (selectedGateway) {
+        payload.gateway_override = selectedGateway
+      }
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -705,20 +734,28 @@ export function Billing() {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ invoice_id: invoice.id })
+        body: JSON.stringify(payload)
       })
 
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to generate payment link')
+        const errorMsg = result.error || 'Failed to generate payment link'
+
+        if (result.gateway === 'Cashfree' && result.error.includes('not enabled')) {
+          alert(`${errorMsg}\n\nNote: Cashfree payment links feature needs to be enabled by Cashfree support. You can try using Razorpay instead or contact care@cashfree.com to enable this feature.`)
+        } else {
+          alert(errorMsg)
+        }
+        return
       }
 
-      alert(`Payment link generated successfully via ${result.gateway}!\n\nLink: ${result.payment_link_url}`)
+      alert(`Payment link generated successfully via ${result.gateway}!\n\nLink: ${result.payment_link_url}\n\nThe link has been copied to your clipboard.`)
+      navigator.clipboard.writeText(result.payment_link_url)
       await loadData()
     } catch (error: any) {
       console.error('Error generating payment link:', error)
-      alert(error.message || 'Failed to generate payment link')
+      alert(error.message || 'Failed to generate payment link. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -1854,10 +1891,12 @@ function InvoicesTable({ data, onView, onEdit, onDelete, onRecordReceipt, onView
                               View Details
                             </DropdownMenuItem>
                             {!item.payment_link_url && ['Draft', 'Sent', 'Pending', 'Partially Paid'].includes(item.status) && (
-                              <DropdownMenuItem onClick={() => onGeneratePaymentLink(item)}>
-                                <Link2 className="w-4 h-4 mr-2" />
-                                Generate Payment Link
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem onClick={() => onGeneratePaymentLink(item)}>
+                                  <Link2 className="w-4 h-4 mr-2" />
+                                  Generate Payment Link
+                                </DropdownMenuItem>
+                              </>
                             )}
                             {item.payment_link_url && (
                               <DropdownMenuItem onClick={() => onCopyPaymentLink(item.payment_link_url)}>

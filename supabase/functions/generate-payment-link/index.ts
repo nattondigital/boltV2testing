@@ -164,13 +164,22 @@ Deno.serve(async (req: Request) => {
       if (!cashfreeResponse.ok) {
         const errorData = await cashfreeResponse.json();
         console.error("Cashfree API error:", errorData);
+
+        let userMessage = "Failed to create Cashfree payment link";
+        if (errorData.type === "feature_not_enabled") {
+          userMessage = "Cashfree payment links feature is not enabled. Please contact Cashfree support at care@cashfree.com to enable payment links for your account.";
+        } else if (errorData.message) {
+          userMessage = `Cashfree Error: ${errorData.message}`;
+        }
+
         return new Response(
           JSON.stringify({
-            error: "Failed to create Cashfree payment link",
+            error: userMessage,
             details: errorData,
+            gateway: "Cashfree"
           }),
           {
-            status: 500,
+            status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
@@ -223,13 +232,22 @@ Deno.serve(async (req: Request) => {
       if (!razorpayResponse.ok) {
         const errorData = await razorpayResponse.json();
         console.error("Razorpay API error:", errorData);
+
+        let userMessage = "Failed to create Razorpay payment link";
+        if (errorData.error && errorData.error.description) {
+          userMessage = `Razorpay Error: ${errorData.error.description}`;
+        } else if (errorData.error && errorData.error.reason) {
+          userMessage = `Razorpay Error: ${errorData.error.reason}`;
+        }
+
         return new Response(
           JSON.stringify({
-            error: "Failed to create Razorpay payment link",
+            error: userMessage,
             details: errorData,
+            gateway: "Razorpay"
           }),
           {
-            status: 500,
+            status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
