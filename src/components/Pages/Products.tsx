@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Eye, Edit, Trash2, Package, TrendingUp, DollarSign, ShoppingCart, X, Save, GraduationCap, Briefcase, MoreVertical, ArrowLeft } from 'lucide-react'
+import { Plus, Eye, Edit, Trash2, Package, TrendingUp, DollarSign, ShoppingCart, X, Save, GraduationCap, Briefcase, MoreVertical, ArrowLeft, Box } from 'lucide-react'
 import { PageHeader } from '@/components/Common/PageHeader'
 import { KPICard } from '@/components/Common/KPICard'
 import { Button } from '@/components/ui/button'
@@ -24,6 +24,7 @@ const pricingModelColors: Record<string, string> = {
 }
 
 type ViewType = 'list' | 'add' | 'edit' | 'view'
+type TabType = 'products' | 'packages'
 
 interface Product {
   id: string
@@ -45,14 +46,38 @@ interface Product {
   updated_at: string
 }
 
+interface PackageType {
+  id: string
+  package_id: string
+  package_name: string
+  package_type: string
+  description: string
+  products: { product_id: string; product_name: string; quantity: number; unit_price: number }[]
+  total_price: number
+  discounted_price: number
+  discount_percentage: number
+  currency: string
+  is_active: boolean
+  features: string[]
+  validity_days: number | null
+  thumbnail_url: string | null
+  total_sales: number
+  total_revenue: number
+  created_at: string
+  updated_at: string
+}
+
 export function Products() {
+  const [activeTab, setActiveTab] = useState<TabType>('products')
   const [view, setView] = useState<ViewType>('list')
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [products, setProducts] = useState<Product[]>([])
+  const [packages, setPackages] = useState<PackageType[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(null)
   const [formData, setFormData] = useState({
     product_name: '',
     product_type: '',
@@ -65,6 +90,26 @@ export function Products() {
     sales_page_url: '',
     is_active: true
   })
+
+  const [packageFormData, setPackageFormData] = useState({
+    package_name: '',
+    package_type: '',
+    description: '',
+    selected_products: [] as { product_id: string; product_name: string; quantity: number; unit_price: number }[],
+    discount_percentage: '0',
+    features: '',
+    validity_days: '',
+    thumbnail_url: '',
+    is_active: true
+  })
+
+  useEffect(() => {
+    if (activeTab === 'products') {
+      fetchProducts()
+    } else {
+      fetchPackages()
+    }
+  }, [activeTab])
 
   useEffect(() => {
     fetchProducts()
@@ -87,12 +132,38 @@ export function Products() {
     }
   }
 
+  const fetchPackages = async () => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('packages')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setPackages(data || [])
+    } catch (error) {
+      console.error('Failed to fetch packages:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.product_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = !typeFilter || product.product_type === typeFilter
     const matchesStatus = !statusFilter || (statusFilter === 'Active' ? product.is_active : !product.is_active)
+    return matchesSearch && matchesType && matchesStatus
+  })
+
+  const filteredPackages = packages.filter(pkg => {
+    const matchesSearch = pkg.package_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         pkg.package_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         pkg.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesType = !typeFilter || pkg.package_type === typeFilter
+    const matchesStatus = !statusFilter || (statusFilter === 'Active' ? pkg.is_active : !pkg.is_active)
     return matchesSearch && matchesType && matchesStatus
   })
 
@@ -225,6 +296,90 @@ export function Products() {
       is_active: true
     })
     setSelectedProduct(null)
+    setPackageFormData({
+      package_name: '',
+      package_type: '',
+      description: '',
+      selected_products: [],
+      discount_percentage: '0',
+      features: '',
+      validity_days: '',
+      thumbnail_url: '',
+      is_active: true
+    })
+    setSelectedPackage(null)
+  }
+
+  const handleCreatePackage = async () => {
+    try {
+      const total = packageFormData.selected_products.reduce((sum, p) => sum + (p.unit_price * p.quantity), 0)
+      const discount = parseFloat(packageFormData.discount_percentage) || 0
+      const discounted = total - (total * discount / 100)
+      const featuresArray = packageFormData.features.split('\n').filter(f => f.trim() !== '')
+
+      const { error } = await supabase
+        .from('packages')
+        .insert([{
+          package_id: '',
+          package_name: packageFormData.package_name,
+          package_type: packageFormData.package_type,
+          description: packageFormData.description,
+          products: packageFormData.selected_products,
+          total_price: total,
+          discounted_price: discounted,
+          discount_percentage: discount,
+          features: featuresArray,
+          validity_days: packageFormData.validity_days ? parseInt(packageFormData.validity_days) : null,
+          thumbnail_url: packageFormData.thumbnail_url || null,
+          is_active: packageFormData.is_active
+        }])
+
+      if (error) throw error
+
+      await fetchPackages()
+      setView('list')
+      resetForm()
+    } catch (error: any) {
+      console.error('Failed to create package:', error)
+      alert(`Failed to create package: ${error.message || 'Please try again.'}`)
+    }
+  }
+
+  const handleEditPackage = async () => {
+    if (!selectedPackage) return
+
+    try {
+      const total = packageFormData.selected_products.reduce((sum, p) => sum + (p.unit_price * p.quantity), 0)
+      const discount = parseFloat(packageFormData.discount_percentage) || 0
+      const discounted = total - (total * discount / 100)
+      const featuresArray = packageFormData.features.split('\n').filter(f => f.trim() !== '')
+
+      const { error } = await supabase
+        .from('packages')
+        .update({
+          package_name: packageFormData.package_name,
+          package_type: packageFormData.package_type,
+          description: packageFormData.description,
+          products: packageFormData.selected_products,
+          total_price: total,
+          discounted_price: discounted,
+          discount_percentage: discount,
+          features: featuresArray,
+          validity_days: packageFormData.validity_days ? parseInt(packageFormData.validity_days) : null,
+          thumbnail_url: packageFormData.thumbnail_url || null,
+          is_active: packageFormData.is_active
+        })
+        .eq('id', selectedPackage.id)
+
+      if (error) throw error
+
+      await fetchPackages()
+      setView('list')
+      resetForm()
+    } catch (error: any) {
+      console.error('Failed to update package:', error)
+      alert(`Failed to update package: ${error.message || 'Please try again.'}`)
+    }
   }
 
   return (
@@ -241,16 +396,59 @@ export function Products() {
           <>
             <PageHeader
               title="Products Master"
-              subtitle="Manage CA Practice Services - Registration, Compliance & Licensing"
+              subtitle="Manage CA Practice Services & Packages"
               actions={[
                 {
-                  label: 'Add Product',
+                  label: activeTab === 'products' ? 'Add Product' : 'Add Package',
                   onClick: () => setView('add'),
                   variant: 'default',
                   icon: Plus
                 }
               ]}
             />
+
+            {/* Tab Switcher */}
+            <motion.div
+              className="mb-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
+                <button
+                  onClick={() => {
+                    setActiveTab('products')
+                    setSearchTerm('')
+                    setTypeFilter('')
+                    setStatusFilter('')
+                  }}
+                  className={`px-6 py-2 rounded-md font-medium transition-all flex items-center space-x-2 ${
+                    activeTab === 'products'
+                      ? 'bg-white text-brand-primary shadow-sm'
+                      : 'text-gray-600 hover:text-brand-primary'
+                  }`}
+                >
+                  <Package className="w-4 h-4" />
+                  <span>Products</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab('packages')
+                    setSearchTerm('')
+                    setTypeFilter('')
+                    setStatusFilter('')
+                  }}
+                  className={`px-6 py-2 rounded-md font-medium transition-all flex items-center space-x-2 ${
+                    activeTab === 'packages'
+                      ? 'bg-white text-brand-primary shadow-sm'
+                      : 'text-gray-600 hover:text-brand-primary'
+                  }`}
+                >
+                  <Box className="w-4 h-4" />
+                  <span>Packages</span>
+                </button>
+              </div>
+            </motion.div>
+
             <motion.div
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
               initial="hidden"
@@ -335,39 +533,41 @@ export function Products() {
               </select>
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle>All Products</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="text-left py-3 px-4 font-semibold text-sm">Product</th>
-                          <th className="text-left py-3 px-4 font-semibold text-sm">Type</th>
-                          <th className="text-left py-3 px-4 font-semibold text-sm">Pricing</th>
-                          <th className="text-left py-3 px-4 font-semibold text-sm">Sales</th>
-                          <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
-                          <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {isLoading ? (
+            {/* Products Tab */}
+            {activeTab === 'products' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle>All Products</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
                           <tr>
-                            <td colSpan={6} className="text-center py-8 text-gray-500">Loading products...</td>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Product</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Type</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Pricing</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Sales</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
                           </tr>
-                        ) : filteredProducts.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="text-center py-8 text-gray-500">No products found</td>
-                          </tr>
-                        ) : (
-                          filteredProducts.map((product) => (
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {isLoading ? (
+                            <tr>
+                              <td colSpan={6} className="text-center py-8 text-gray-500">Loading products...</td>
+                            </tr>
+                          ) : filteredProducts.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="text-center py-8 text-gray-500">No products found</td>
+                            </tr>
+                          ) : (
+                            filteredProducts.map((product) => (
                             <tr key={product.id} className="hover:bg-gray-50">
                               <td className="py-3 px-4">
                                 <div className="flex items-center space-x-3">
@@ -445,13 +645,153 @@ export function Products() {
                               </td>
                             </tr>
                           ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Packages Tab */}
+            {activeTab === 'packages' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle>All Packages</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Package</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Products</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Pricing</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Sales</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
+                            <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {isLoading ? (
+                            <tr>
+                              <td colSpan={6} className="text-center py-8 text-gray-500">Loading packages...</td>
+                            </tr>
+                          ) : filteredPackages.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="text-center py-8 text-gray-500">No packages found</td>
+                            </tr>
+                          ) : (
+                            filteredPackages.map((pkg) => (
+                              <tr key={pkg.id} className="hover:bg-gray-50">
+                                <td className="py-3 px-4">
+                                  <div className="flex items-center space-x-3">
+                                    <Box className="w-5 h-5 text-purple-600" />
+                                    <div>
+                                      <div className="font-medium">{pkg.package_name}</div>
+                                      <div className="text-sm text-gray-500 font-mono">{pkg.package_id}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="text-sm text-gray-600">
+                                    {pkg.products.length} product{pkg.products.length !== 1 ? 's' : ''}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="space-y-1">
+                                    {pkg.discount_percentage > 0 ? (
+                                      <>
+                                        <div className="text-sm line-through text-gray-400">₹{pkg.total_price.toLocaleString()}</div>
+                                        <div className="font-semibold text-brand-primary">₹{pkg.discounted_price.toLocaleString()}</div>
+                                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                          {pkg.discount_percentage}% OFF
+                                        </Badge>
+                                      </>
+                                    ) : (
+                                      <div className="font-semibold text-brand-primary">₹{pkg.total_price.toLocaleString()}</div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <div className="space-y-1">
+                                    <div className="font-semibold">{pkg.total_sales} units</div>
+                                    <div className="text-sm text-gray-600">₹{parseFloat(pkg.total_revenue.toString()).toLocaleString()}</div>
+                                  </div>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <Badge className={pkg.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                                    {pkg.is_active ? 'Active' : 'Inactive'}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreVertical className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => {
+                                        setSelectedPackage(pkg)
+                                        setView('view')
+                                      }}>
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        View
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => {
+                                        setSelectedPackage(pkg)
+                                        setPackageFormData({
+                                          package_name: pkg.package_name,
+                                          package_type: pkg.package_type,
+                                          description: pkg.description || '',
+                                          selected_products: pkg.products,
+                                          discount_percentage: pkg.discount_percentage.toString(),
+                                          features: Array.isArray(pkg.features) ? pkg.features.join('\n') : '',
+                                          validity_days: pkg.validity_days?.toString() || '',
+                                          thumbnail_url: pkg.thumbnail_url || '',
+                                          is_active: pkg.is_active
+                                        })
+                                        setView('edit')
+                                      }}>
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={async () => {
+                                          if (confirm(`Are you sure you want to delete package "${pkg.package_id}"?`)) {
+                                            try {
+                                              await supabase.from('packages').delete().eq('id', pkg.id)
+                                              fetchPackages()
+                                            } catch (error) {
+                                              console.error('Failed to delete package:', error)
+                                            }
+                                          }
+                                        }}
+                                        className="text-red-600"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
           </>
         )}
 
@@ -463,17 +803,23 @@ export function Products() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>{view === 'add' ? 'Add Product' : 'Edit Product'}</CardTitle>
+                  <CardTitle>
+                    {activeTab === 'products'
+                      ? (view === 'add' ? 'Add Product' : 'Edit Product')
+                      : (view === 'add' ? 'Add Package' : 'Edit Package')
+                    }
+                  </CardTitle>
                   <Button variant="ghost" size="sm" onClick={() => { setView('list'); resetForm(); }}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
+                {activeTab === 'products' ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Product Name *</label>
                       <Input
                         value={formData.product_name}
                         onChange={(e) => setFormData(prev => ({ ...prev, product_name: e.target.value }))}
@@ -573,19 +919,184 @@ export function Products() {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3 mt-6">
-                    <Button
-                      onClick={view === 'add' ? handleCreateProduct : handleEditProduct}
-                      disabled={!formData.product_name || !formData.product_type || !formData.pricing_model}
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      {view === 'add' ? 'Add Product' : 'Save Changes'}
-                    </Button>
-                    <Button variant="outline" onClick={() => { setView('list'); resetForm(); }}>
-                      Cancel
-                    </Button>
+                    <div className="flex items-center space-x-3 mt-6">
+                      <Button
+                        onClick={view === 'add' ? handleCreateProduct : handleEditProduct}
+                        disabled={!formData.product_name || !formData.product_type || !formData.pricing_model}
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        {view === 'add' ? 'Add Product' : 'Save Changes'}
+                      </Button>
+                      <Button variant="outline" onClick={() => { setView('list'); resetForm(); }}>
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Package Name *</label>
+                        <Input
+                          value={packageFormData.package_name}
+                          onChange={(e) => setPackageFormData(prev => ({ ...prev, package_name: e.target.value }))}
+                          placeholder="Enter package name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Package Type *</label>
+                        <Input
+                          value={packageFormData.package_type}
+                          onChange={(e) => setPackageFormData(prev => ({ ...prev, package_type: e.target.value }))}
+                          placeholder="e.g., Startup Package, Enterprise Package"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                      <Textarea
+                        value={packageFormData.description}
+                        onChange={(e) => setPackageFormData(prev => ({ ...prev, description: e.target.value }))}
+                        placeholder="Enter package description"
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Select Products *</label>
+                      <div className="space-y-2 border rounded-md p-3 max-h-60 overflow-y-auto bg-gray-50">
+                        {products.filter(p => p.is_active).map(product => {
+                          const isSelected = packageFormData.selected_products.some(p => p.product_id === product.product_id)
+                          const selectedProduct = packageFormData.selected_products.find(p => p.product_id === product.product_id)
+
+                          return (
+                            <div key={product.id} className="flex items-center space-x-3 bg-white p-2 rounded border">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setPackageFormData(prev => ({
+                                      ...prev,
+                                      selected_products: [...prev.selected_products, {
+                                        product_id: product.product_id,
+                                        product_name: product.product_name,
+                                        quantity: 1,
+                                        unit_price: product.product_price
+                                      }]
+                                    }))
+                                  } else {
+                                    setPackageFormData(prev => ({
+                                      ...prev,
+                                      selected_products: prev.selected_products.filter(p => p.product_id !== product.product_id)
+                                    }))
+                                  }
+                                }}
+                                className="w-4 h-4"
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{product.product_name}</div>
+                                <div className="text-xs text-gray-500">{product.product_id} • ₹{product.product_price.toLocaleString()}</div>
+                              </div>
+                              {isSelected && (
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={selectedProduct?.quantity || 1}
+                                  onChange={(e) => {
+                                    const qty = parseInt(e.target.value) || 1
+                                    setPackageFormData(prev => ({
+                                      ...prev,
+                                      selected_products: prev.selected_products.map(p =>
+                                        p.product_id === product.product_id ? { ...p, quantity: qty } : p
+                                      )
+                                    }))
+                                  }}
+                                  className="w-20 h-8 text-sm"
+                                  placeholder="Qty"
+                                />
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div className="mt-2 text-sm text-gray-600">
+                        Selected: {packageFormData.selected_products.length} product(s) •
+                        Total: ₹{packageFormData.selected_products.reduce((sum, p) => sum + (p.unit_price * p.quantity), 0).toLocaleString()}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Discount %</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          value={packageFormData.discount_percentage}
+                          onChange={(e) => setPackageFormData(prev => ({ ...prev, discount_percentage: e.target.value }))}
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Validity (Days)</label>
+                        <Input
+                          type="number"
+                          value={packageFormData.validity_days}
+                          onChange={(e) => setPackageFormData(prev => ({ ...prev, validity_days: e.target.value }))}
+                          placeholder="e.g., 365"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Features (one per line)</label>
+                      <Textarea
+                        value={packageFormData.features}
+                        onChange={(e) => setPackageFormData(prev => ({ ...prev, features: e.target.value }))}
+                        placeholder="Feature 1&#10;Feature 2&#10;Feature 3"
+                        rows={4}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Thumbnail URL</label>
+                      <Input
+                        value={packageFormData.thumbnail_url}
+                        onChange={(e) => setPackageFormData(prev => ({ ...prev, thumbnail_url: e.target.value }))}
+                        placeholder="https://..."
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="package-active"
+                        checked={packageFormData.is_active}
+                        onChange={(e) => setPackageFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor="package-active" className="text-sm font-medium text-gray-700">
+                        Active Package
+                      </label>
+                    </div>
+
+                    <div className="flex items-center space-x-3 mt-6">
+                      <Button
+                        onClick={view === 'add' ? handleCreatePackage : handleEditPackage}
+                        disabled={!packageFormData.package_name || !packageFormData.package_type || packageFormData.selected_products.length === 0}
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        {view === 'add' ? 'Add Package' : 'Save Changes'}
+                      </Button>
+                      <Button variant="outline" onClick={() => { setView('list'); resetForm(); }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
