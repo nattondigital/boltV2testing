@@ -1926,7 +1926,7 @@ function FormModal({ title, formData, setFormData, onSave, onCancel, type, loadi
   }
 
   const handleProductSelect = (product: any) => {
-    const price = product.course_price || product.onboarding_fee || product.retainer_fee || 0
+    const price = product.product_price || 0
     const newItem = {
       id: Date.now(),
       product_id: product.product_id,
@@ -2101,7 +2101,7 @@ function FormModal({ title, formData, setFormData, onSave, onCancel, type, loadi
                         >
                           <div className="font-medium">{product.product_name}</div>
                           <div className="text-sm text-gray-500">
-                            {product.product_id} • {formatCurrency(product.course_price || product.onboarding_fee || product.retainer_fee || 0)}
+                            {product.product_id} • {formatCurrency(product.product_price || 0)}
                           </div>
                         </div>
                       ))}
