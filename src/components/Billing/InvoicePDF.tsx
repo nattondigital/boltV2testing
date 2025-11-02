@@ -1,8 +1,9 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 import { X, Download, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 
@@ -11,8 +12,44 @@ interface InvoicePDFProps {
   onClose: () => void
 }
 
+interface BusinessSettings {
+  business_name: string
+  business_tagline: string
+  business_address: string
+  business_city: string
+  business_state: string
+  business_pincode: string
+  business_phone: string
+  business_email: string
+  gst_number: string
+  website: string
+}
+
 export function InvoicePDF({ invoice, onClose }: InvoicePDFProps) {
   const invoiceRef = useRef<HTMLDivElement>(null)
+  const [businessSettings, setBusinessSettings] = useState<BusinessSettings | null>(null)
+
+  useEffect(() => {
+    loadBusinessSettings()
+  }, [])
+
+  const loadBusinessSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('business_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle()
+
+      if (error) throw error
+
+      if (data) {
+        setBusinessSettings(data)
+      }
+    } catch (error) {
+      console.error('Error loading business settings:', error)
+    }
+  }
 
   const generatePDF = async () => {
     if (!invoiceRef.current) return
@@ -80,14 +117,20 @@ export function InvoicePDF({ invoice, onClose }: InvoicePDFProps) {
               <div className="border-b-2 border-sky-600 pb-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h1 className="text-3xl font-bold text-sky-600 mb-2">YOUR COMPANY NAME</h1>
-                    <p className="text-sm text-gray-600">Your Business Tagline</p>
+                    <h1 className="text-3xl font-bold text-sky-600 mb-2">
+                      {businessSettings?.business_name || 'YOUR COMPANY NAME'}
+                    </h1>
+                    <p className="text-sm text-gray-600">
+                      {businessSettings?.business_tagline || 'Your Business Tagline'}
+                    </p>
                     <div className="mt-4 text-sm text-gray-600 space-y-1">
-                      <p>123 Business Street</p>
-                      <p>City - 123456, State</p>
-                      <p>Phone: +91 98765 43210</p>
-                      <p>Email: info@company.com</p>
-                      <p>GST: 22AAAAA0000A1Z5</p>
+                      <p>{businessSettings?.business_address || '123 Business Street'}</p>
+                      <p>
+                        {businessSettings?.business_city || 'City'} - {businessSettings?.business_pincode || '123456'}, {businessSettings?.business_state || 'State'}
+                      </p>
+                      <p>Phone: {businessSettings?.business_phone || '+91 98765 43210'}</p>
+                      <p>Email: {businessSettings?.business_email || 'info@company.com'}</p>
+                      {businessSettings?.gst_number && <p>GST: {businessSettings.gst_number}</p>}
                     </div>
                   </div>
                   <div className="text-right">
@@ -260,7 +303,7 @@ export function InvoicePDF({ invoice, onClose }: InvoicePDFProps) {
                     This is a computer-generated invoice and does not require a signature.
                   </p>
                   <p className="text-xs text-gray-500 mt-4">
-                    Your Company • www.company.com • Quality Service Since 2020
+                    {businessSettings?.business_name || 'Your Company'} • {businessSettings?.website || 'www.company.com'} • Quality Service Since 2020
                   </p>
                 </div>
               </div>

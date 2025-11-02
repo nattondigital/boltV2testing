@@ -198,7 +198,7 @@ export function Settings() {
     }
   }, [userProfile])
 
-  const loadProfileData = () => {
+  const loadProfileData = async () => {
     if (userProfile) {
       setProfileData({
         full_name: userProfile.full_name || '',
@@ -208,6 +208,34 @@ export function Settings() {
         role: userProfile.role || '',
         status: userProfile.status || 'Active'
       })
+    }
+
+    // Load business settings
+    try {
+      const { data, error } = await supabase
+        .from('business_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle()
+
+      if (error) throw error
+
+      if (data) {
+        setBusinessData({
+          business_name: data.business_name || '',
+          business_tagline: data.business_tagline || '',
+          business_address: data.business_address || '',
+          business_city: data.business_city || '',
+          business_state: data.business_state || '',
+          business_pincode: data.business_pincode || '',
+          business_phone: data.business_phone || '',
+          business_email: data.business_email || '',
+          gst_number: data.gst_number || '',
+          website: data.website || ''
+        })
+      }
+    } catch (error) {
+      console.error('Error loading business settings:', error)
     }
   }
 
@@ -242,6 +270,69 @@ export function Settings() {
     } catch (error) {
       console.error('Error updating profile:', error)
       setProfileMessage({ type: 'error', text: 'Failed to update profile. Please try again.' })
+      setTimeout(() => setProfileMessage(null), 5000)
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
+  const handleSaveBusinessDetails = async () => {
+    if (!businessData.business_name || !businessData.business_address || !businessData.business_city ||
+        !businessData.business_state || !businessData.business_pincode || !businessData.business_phone ||
+        !businessData.business_email) {
+      setProfileMessage({ type: 'error', text: 'Please fill in all required business fields' })
+      setTimeout(() => setProfileMessage(null), 5000)
+      return
+    }
+
+    try {
+      setIsSavingProfile(true)
+      setProfileMessage(null)
+
+      // Check if business settings exist
+      const { data: existing } = await supabase
+        .from('business_settings')
+        .select('id')
+        .limit(1)
+        .maybeSingle()
+
+      const businessSettingsData = {
+        business_name: businessData.business_name,
+        business_tagline: businessData.business_tagline || '',
+        business_address: businessData.business_address,
+        business_city: businessData.business_city,
+        business_state: businessData.business_state,
+        business_pincode: businessData.business_pincode,
+        business_phone: businessData.business_phone,
+        business_email: businessData.business_email,
+        gst_number: businessData.gst_number || '',
+        website: businessData.website || '',
+        updated_at: new Date().toISOString()
+      }
+
+      let error
+      if (existing) {
+        // Update existing record
+        const result = await supabase
+          .from('business_settings')
+          .update(businessSettingsData)
+          .eq('id', existing.id)
+        error = result.error
+      } else {
+        // Insert new record
+        const result = await supabase
+          .from('business_settings')
+          .insert([businessSettingsData])
+        error = result.error
+      }
+
+      if (error) throw error
+
+      setProfileMessage({ type: 'success', text: 'Business details saved successfully!' })
+      setTimeout(() => setProfileMessage(null), 5000)
+    } catch (error) {
+      console.error('Error saving business details:', error)
+      setProfileMessage({ type: 'error', text: 'Failed to save business details. Please try again.' })
       setTimeout(() => setProfileMessage(null), 5000)
     } finally {
       setIsSavingProfile(false)
@@ -1064,16 +1155,21 @@ export function Settings() {
 
                 <div className="flex justify-end pt-6 border-t">
                   <Button
-                    onClick={() => {
-                      setProfileMessage({ type: 'success', text: 'Business details saved successfully!' })
-                      setTimeout(() => setProfileMessage(null), 3000)
-                    }}
+                    onClick={handleSaveBusinessDetails}
+                    disabled={isSavingProfile}
                     className="min-w-32"
                   >
-                    <div className="flex items-center space-x-2">
-                      <Save className="w-4 h-4" />
-                      <span>Save Changes</span>
-                    </div>
+                    {isSavingProfile ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Saving...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Save className="w-4 h-4" />
+                        <span>Save Changes</span>
+                      </div>
+                    )}
                   </Button>
                 </div>
               </div>
