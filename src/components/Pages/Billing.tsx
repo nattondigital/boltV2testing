@@ -595,6 +595,7 @@ export function Billing() {
   }
 
   const handleCreateInvoice = (estimate: any) => {
+    const today = new Date().toISOString().split('T')[0]
     setActiveTab('invoices')
     setFormData({
       estimateId: estimate.id,
@@ -614,8 +615,8 @@ export function Billing() {
       terms: '',
       status: 'Draft',
       paymentMethod: '',
-      issueDate: new Date().toISOString().split('T')[0],
-      dueDate: '',
+      issueDate: today,
+      dueDate: today,
       paidDate: ''
     })
     setViewState('add')
