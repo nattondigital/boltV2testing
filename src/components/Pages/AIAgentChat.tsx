@@ -40,16 +40,24 @@ export function AIAgentChat() {
   const [openRouterApiKey, setOpenRouterApiKey] = useState('')
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string>('internal')
+  const [availablePhoneNumbers, setAvailablePhoneNumbers] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (id) {
       fetchAgent()
-      loadChatHistory()
+      fetchPhoneNumbers()
       fetchOpenRouterKey()
     }
   }, [id])
+
+  useEffect(() => {
+    if (id && selectedPhoneNumber) {
+      loadChatHistory(selectedPhoneNumber)
+    }
+  }, [id, selectedPhoneNumber])
 
   useEffect(() => {
     scrollToBottom()
@@ -97,12 +105,30 @@ export function AIAgentChat() {
     }
   }
 
-  const loadChatHistory = async () => {
+  const fetchPhoneNumbers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('ai_agent_chat_memory')
+        .select('phone_number')
+        .eq('agent_id', id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      const uniquePhones = Array.from(new Set(data.map(d => d.phone_number)))
+      setAvailablePhoneNumbers(['internal', ...uniquePhones.filter(p => p !== 'internal')])
+    } catch (error) {
+      console.error('Error fetching phone numbers:', error)
+    }
+  }
+
+  const loadChatHistory = async (phoneNumber: string) => {
     try {
       const { data, error } = await supabase
         .from('ai_agent_chat_memory')
         .select('*')
         .eq('agent_id', id)
+        .eq('phone_number', phoneNumber)
         .order('created_at', { ascending: true })
         .limit(100)
 
@@ -983,8 +1009,26 @@ export function AIAgentChat() {
     }
   }
 
-  const logActivity = async (action: string, module: string, result: string, userMessage: string, agentResponse: string, imageUrl?: string) => {
+  const saveMessageToMemory = async (message: string, role: 'user' | 'assistant', action: string, module: string, result: string, imageUrl?: string, phoneNumber?: string) => {
+    const finalPhoneNumber = phoneNumber || selectedPhoneNumber
     try {
+      await supabase
+        .from('ai_agent_chat_memory')
+        .insert({
+          agent_id: id,
+          phone_number: finalPhoneNumber,
+          message: message,
+          role: role,
+          user_context: 'Internal',
+          action: action,
+          result: result,
+          module: module,
+          metadata: {
+            image_url: imageUrl,
+            timestamp: new Date().toISOString()
+          }
+        })
+
       await supabase
         .from('ai_agent_logs')
         .insert({
@@ -993,15 +1037,14 @@ export function AIAgentChat() {
           module,
           action,
           result,
-          user_context: 'System User',
+          user_context: 'Internal',
           details: {
-            user_message: userMessage,
-            agent_response: agentResponse,
+            user_message: message,
             image_url: imageUrl
           }
         })
     } catch (error) {
-      console.error('Error logging activity:', error)
+      console.error('Error saving message to memory:', error)
     }
   }
 
@@ -1032,7 +1075,18 @@ export function AIAgentChat() {
     removeImage()
     setIsTyping(true)
 
+    const action = messageText.toLowerCase().includes('create') ? 'Create' :
+                   messageText.toLowerCase().includes('update') ? 'Update' :
+                   messageText.toLowerCase().includes('delete') ? 'Delete' : 'Chat'
+
+    const module = messageText.toLowerCase().includes('task') ? 'Tasks' :
+                   messageText.toLowerCase().includes('appointment') ? 'Appointments' :
+                   messageText.toLowerCase().includes('ticket') ? 'Support Tickets' :
+                   messageText.toLowerCase().includes('lead') ? 'Leads' : 'General'
+
     try {
+      await saveMessageToMemory(messageText, 'user', action, module, 'Success', uploadedImageUrl || undefined)
+
       const agentResponse = await callOpenRouter(messageText, uploadedImageUrl || undefined)
 
       const agentMessage: Message = {
@@ -1045,16 +1099,7 @@ export function AIAgentChat() {
 
       setMessages(prev => [...prev, agentMessage])
 
-      const action = messageText.toLowerCase().includes('create') ? 'Create' :
-                     messageText.toLowerCase().includes('update') ? 'Update' :
-                     messageText.toLowerCase().includes('delete') ? 'Delete' : 'Chat'
-
-      const module = messageText.toLowerCase().includes('task') ? 'Tasks' :
-                     messageText.toLowerCase().includes('appointment') ? 'Appointments' :
-                     messageText.toLowerCase().includes('ticket') ? 'Support Tickets' :
-                     messageText.toLowerCase().includes('lead') ? 'Leads' : 'General'
-
-      await logActivity(action, module, agentMessage.result || 'Success', messageText, agentResponse, uploadedImageUrl || undefined)
+      await saveMessageToMemory(agentResponse, 'assistant', action, module, agentMessage.result || 'Success', uploadedImageUrl || undefined)
     } catch (error) {
       console.error('Error sending message:', error)
       const errorMessage: Message = {
@@ -1105,9 +1150,25 @@ export function AIAgentChat() {
             subtitle={`Powered by ${agent?.model}`}
             icon={Bot}
           />
-          <Badge className={agent?.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-            {agent?.status}
-          </Badge>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Phone:</label>
+              <select
+                value={selectedPhoneNumber}
+                onChange={(e) => setSelectedPhoneNumber(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {availablePhoneNumbers.map((phone) => (
+                  <option key={phone} value={phone}>
+                    {phone === 'internal' ? 'Internal Chat' : phone}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Badge className={agent?.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+              {agent?.status}
+            </Badge>
+          </div>
         </div>
       </div>
 
