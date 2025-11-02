@@ -1658,10 +1658,12 @@ function EstimatesTable({ data, onView, onEdit, onDelete, onCreateInvoice, loadi
                               <Eye className="w-4 h-4 mr-2" />
                               View
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onEdit(item)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
+                            {item.status !== 'Invoiced' && (
+                              <DropdownMenuItem onClick={() => onEdit(item)}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                            )}
                             {item.status !== 'Invoiced' && (
                               <DropdownMenuItem onClick={() => onCreateInvoice(item)}>
                                 <FileText className="w-4 h-4 mr-2" />
