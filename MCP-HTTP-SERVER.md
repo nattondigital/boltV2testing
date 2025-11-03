@@ -1,26 +1,39 @@
-# MCP HTTP Server Implementation
+# MCP Streamable HTTP Server Implementation
 
 ## Overview
 
-This document describes the HTTP-based Model Context Protocol (MCP) server implementation for your CRM system. This allows AI agents to interact with your CRM via standard HTTP requests using the MCP protocol.
+This document describes the **Streamable HTTP** Model Context Protocol (MCP) server implementation for your CRM system. This allows AI agents to interact with your CRM via HTTP using the latest MCP transport standard (2025-03-26 specification).
+
+## Transport: Streamable HTTP
+
+This implementation uses **Streamable HTTP**, the modern MCP transport that replaces the legacy HTTP+SSE approach. Key features:
+
+- **Single Endpoint**: All communication through one HTTP path
+- **Bidirectional Communication**: Both streaming and simple request/response
+- **Session Management**: Optional session tracking via `Mcp-Session-Id` header
+- **Backward Compatible**: Falls back to simple JSON for non-streaming clients
+- **Future-Proof**: Follows the 2025-03-26 MCP specification
 
 ## Architecture
 
 ```
 ┌─────────────────┐
 │   AI Agent      │
-│  (OpenRouter,   │
-│   Claude, etc)  │
+│  (N8N, Claude,  │
+│   OpenRouter)   │
 └────────┬────────┘
          │
-         │ HTTP POST (JSON-RPC)
+         │ GET: Establish SSE stream
+         │ POST: Send MCP messages
+         │ (Streamable HTTP Transport)
          │
          ▼
 ┌─────────────────────────────────────┐
 │  Supabase Edge Function             │
 │  /functions/v1/mcp-server           │
 │                                     │
-│  • Handles MCP Protocol             │
+│  • MCP Streamable HTTP Protocol     │
+│  • Session Management               │
 │  • Permission Validation            │
 │  • Audit Logging                    │
 └────────┬────────────────────────────┘
@@ -40,11 +53,13 @@ This document describes the HTTP-based Model Context Protocol (MCP) server imple
 
 **URL:** `https://[YOUR-PROJECT].supabase.co/functions/v1/mcp-server`
 
-**Method:** POST
+**Methods:** GET (streaming), POST (messages), OPTIONS (CORS)
 
 **Headers:**
-- `Content-Type: application/json`
+- `Content-Type: application/json` (for POST)
+- `Accept: text/event-stream` (optional, for streaming responses)
 - `Authorization: Bearer [YOUR-SUPABASE-KEY]`
+- `Mcp-Session-Id: [session-id]` (optional, returned by server)
 
 ## MCP Protocol
 
@@ -332,6 +347,97 @@ All tool executions are logged to `ai_agent_logs` table with:
 - `user_context`: "MCP Server HTTP"
 - `details`: Action-specific details (filters, updates, etc.)
 
+## Streamable HTTP Features
+
+### 1. GET Request - Establish Streaming Connection
+
+Open a persistent SSE connection for server-to-client messages:
+
+```bash
+curl -N -H "Accept: text/event-stream" \
+  -H "Authorization: Bearer YOUR-ANON-KEY" \
+  https://YOUR-PROJECT.supabase.co/functions/v1/mcp-server
+```
+
+**Response:**
+```
+data: {"jsonrpc":"2.0","method":"notifications/message","params":{"level":"info","message":"MCP Streamable HTTP connection established"}}
+
+: heartbeat
+
+: heartbeat
+```
+
+The server will:
+- Return `Mcp-Session-Id` header for session tracking
+- Send initial welcome message
+- Send heartbeat every 30 seconds to keep connection alive
+
+### 2. POST Request - Send Messages
+
+#### Simple JSON Response (Default)
+
+```bash
+curl -X POST https://YOUR-PROJECT.supabase.co/functions/v1/mcp-server \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR-ANON-KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize"
+  }'
+```
+
+**Response:**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {...},
+    "serverInfo": {...}
+  }
+}
+```
+
+#### Streaming Response (with Accept header)
+
+```bash
+curl -X POST https://YOUR-PROJECT.supabase.co/functions/v1/mcp-server \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -H "Authorization: Bearer YOUR-ANON-KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "get_tasks",
+      "arguments": {"agent_id": "YOUR-UUID", "limit": 5}
+    }
+  }'
+```
+
+**Response (SSE stream):**
+```
+data: {"jsonrpc":"2.0","id":1,"result":{...}}
+```
+
+### 3. Batch Requests
+
+Send multiple messages in one request:
+
+```bash
+curl -X POST https://YOUR-PROJECT.supabase.co/functions/v1/mcp-server \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR-ANON-KEY" \
+  -d '[
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize"},
+    {"jsonrpc": "2.0", "id": 2, "method": "tools/list"}
+  ]'
+```
+
 ## Testing
 
 ### Deploy the Edge Function
@@ -353,7 +459,7 @@ npm install
 npx tsx test-mcp-http.ts
 ```
 
-### Manual Testing with curl
+### Manual Testing - Simple JSON Mode
 
 ```bash
 # 1. Initialize
@@ -390,6 +496,30 @@ curl -X POST https://YOUR-PROJECT.supabase.co/functions/v1/mcp-server \
         "agent_id": "YOUR-AGENT-UUID",
         "limit": 5
       }
+    }
+  }'
+```
+
+### Manual Testing - Streaming Mode
+
+```bash
+# 1. Establish SSE stream
+curl -N -H "Accept: text/event-stream" \
+  -H "Authorization: Bearer YOUR-ANON-KEY" \
+  https://YOUR-PROJECT.supabase.co/functions/v1/mcp-server
+
+# 2. Send message with streaming response
+curl -X POST https://YOUR-PROJECT.supabase.co/functions/v1/mcp-server \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -H "Authorization: Bearer YOUR-ANON-KEY" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "get_tasks",
+      "arguments": {"agent_id": "YOUR-UUID", "limit": 5}
     }
   }'
 ```
@@ -434,21 +564,27 @@ async function callMCPTool(toolName: string, args: any) {
 }
 ```
 
-## Comparison: MCP vs Direct Implementation
+## Transport Comparison
 
-### Current (Direct Implementation)
+### Streamable HTTP (Current Implementation)
+- ✅ **Modern Standard**: 2025-03-26 MCP specification
+- ✅ **Single Endpoint**: All communication through one path
+- ✅ **Flexible**: Supports both streaming and simple request/response
+- ✅ **Backward Compatible**: Falls back to JSON for non-streaming clients
+- ✅ **Session Management**: Optional session tracking
+- ✅ **Future-Proof**: Ready for MCP-native AI services
+- ✅ **Batch Requests**: Send multiple messages at once
+
+### Legacy HTTP+SSE (Deprecated)
+- ❌ **Deprecated**: Replaced by Streamable HTTP
+- ❌ **Complex**: Requires separate `/sse` endpoint
+- ❌ **Not Recommended**: Use Streamable HTTP instead
+
+### Simple HTTP (Previous Version)
 - ✅ Simple and fast
-- ✅ No protocol overhead
-- ❌ Tool definitions duplicated in multiple places
+- ✅ No streaming needed for CRUD
+- ❌ Not officially MCP-compliant
 - ❌ No standardization
-
-### New (MCP HTTP Server)
-- ✅ Standardized protocol (future-proof)
-- ✅ Single source of truth for tools
-- ✅ Easy to add new tools
-- ✅ Compatible with MCP-aware AI services
-- ❌ Slight protocol overhead
-- ❌ Requires adapter for current AI services
 
 ## Next Steps
 

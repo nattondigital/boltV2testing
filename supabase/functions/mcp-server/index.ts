@@ -3,54 +3,51 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, Apikey, Accept, Mcp-Session-Id',
 }
 
-interface MCPRequest {
-  method: string
-  params?: {
-    name?: string
-    uri?: string
-    arguments?: Record<string, any>
-  }
-}
-
-interface MCPResponse {
-  jsonrpc: string
-  id: string | number
+interface MCPMessage {
+  jsonrpc: '2.0'
+  id?: string | number
+  method?: string
+  params?: any
   result?: any
   error?: {
     code: number
     message: string
+    data?: any
   }
 }
 
-Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: corsHeaders,
-    })
+// Session storage (in-memory for demo, use Supabase for production)
+const sessions = new Map<string, { agentId?: string; initialized: boolean }>()
+
+function generateSessionId(): string {
+  return `mcp-session-${Date.now()}-${Math.random().toString(36).substring(7)}`
+}
+
+function createSSEMessage(message: MCPMessage): string {
+  return `data: ${JSON.stringify(message)}\n\n`
+}
+
+async function handleMCPRequest(
+  message: MCPMessage,
+  sessionId: string,
+  supabase: any
+): Promise<MCPMessage> {
+  const { method, params, id } = message
+
+  const response: MCPMessage = {
+    jsonrpc: '2.0',
+    id: id || 1,
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-    const mcpRequest: MCPRequest = await req.json()
-
-    console.log('MCP Request:', JSON.stringify(mcpRequest, null, 2))
-
-    const { method, params } = mcpRequest
-
-    let response: MCPResponse = {
-      jsonrpc: '2.0',
-      id: (mcpRequest as any).id || 1,
-    }
-
     switch (method) {
-      case 'initialize':
+      case 'initialize': {
+        // Store session
+        sessions.set(sessionId, { initialized: true })
+
         response.result = {
           protocolVersion: '2024-11-05',
           capabilities: {
@@ -64,8 +61,9 @@ Deno.serve(async (req: Request) => {
           },
         }
         break
+      }
 
-      case 'tools/list':
+      case 'tools/list': {
         response.result = {
           tools: [
             {
@@ -192,8 +190,9 @@ Deno.serve(async (req: Request) => {
           ],
         }
         break
+      }
 
-      case 'tools/call':
+      case 'tools/call': {
         const toolName = params?.name
         const args = params?.arguments || {}
 
@@ -217,7 +216,7 @@ Deno.serve(async (req: Request) => {
         const permissions = permData?.permissions || {}
 
         switch (toolName) {
-          case 'get_tasks':
+          case 'get_tasks': {
             if (!permissions['Tasks']?.can_view) {
               response.result = {
                 content: [{
@@ -254,7 +253,7 @@ Deno.serve(async (req: Request) => {
               action: 'get_tasks',
               result: tasksError ? 'Error' : 'Success',
               error_message: tasksError?.message || null,
-              user_context: 'MCP Server HTTP',
+              user_context: 'MCP Server Streamable HTTP',
               details: { filters: args, count: tasks?.length || 0 },
             })
 
@@ -281,8 +280,9 @@ Deno.serve(async (req: Request) => {
               }
             }
             break
+          }
 
-          case 'create_task':
+          case 'create_task': {
             if (!permissions['Tasks']?.can_create) {
               response.result = {
                 content: [{
@@ -319,7 +319,7 @@ Deno.serve(async (req: Request) => {
               action: 'create_task',
               result: createError ? 'Error' : 'Success',
               error_message: createError?.message || null,
-              user_context: 'MCP Server HTTP',
+              user_context: 'MCP Server Streamable HTTP',
               details: { task: newTask },
             })
 
@@ -346,8 +346,9 @@ Deno.serve(async (req: Request) => {
               }
             }
             break
+          }
 
-          case 'update_task':
+          case 'update_task': {
             if (!permissions['Tasks']?.can_edit) {
               response.result = {
                 content: [{
@@ -382,7 +383,7 @@ Deno.serve(async (req: Request) => {
               action: 'update_task',
               result: updateError ? 'Error' : 'Success',
               error_message: updateError?.message || null,
-              user_context: 'MCP Server HTTP',
+              user_context: 'MCP Server Streamable HTTP',
               details: { task_id: args.task_id, updates },
             })
 
@@ -409,8 +410,9 @@ Deno.serve(async (req: Request) => {
               }
             }
             break
+          }
 
-          case 'delete_task':
+          case 'delete_task': {
             if (!permissions['Tasks']?.can_delete) {
               response.result = {
                 content: [{
@@ -435,7 +437,7 @@ Deno.serve(async (req: Request) => {
               action: 'delete_task',
               result: deleteError ? 'Error' : 'Success',
               error_message: deleteError?.message || null,
-              user_context: 'MCP Server HTTP',
+              user_context: 'MCP Server Streamable HTTP',
               details: { task_id: args.task_id },
             })
 
@@ -461,6 +463,7 @@ Deno.serve(async (req: Request) => {
               }
             }
             break
+          }
 
           default:
             response.error = {
@@ -469,8 +472,9 @@ Deno.serve(async (req: Request) => {
             }
         }
         break
+      }
 
-      case 'resources/list':
+      case 'resources/list': {
         response.result = {
           resources: [
             {
@@ -488,8 +492,9 @@ Deno.serve(async (req: Request) => {
           ],
         }
         break
+      }
 
-      case 'prompts/list':
+      case 'prompts/list': {
         response.result = {
           prompts: [
             {
@@ -499,6 +504,7 @@ Deno.serve(async (req: Request) => {
           ],
         }
         break
+      }
 
       default:
         response.error = {
@@ -506,17 +512,190 @@ Deno.serve(async (req: Request) => {
           message: `Method not found: ${method}`,
         }
     }
+  } catch (error) {
+    console.error('MCP Request Error:', error)
+    response.error = {
+      code: -32603,
+      message: error instanceof Error ? error.message : 'Internal error',
+    }
+  }
 
-    return new Response(JSON.stringify(response), {
+  return response
+}
+
+Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
       status: 200,
+      headers: corsHeaders,
+    })
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Get or create session ID
+    let sessionId = req.headers.get('Mcp-Session-Id')
+    if (!sessionId) {
+      sessionId = generateSessionId()
+    }
+
+    // GET request - establish SSE stream (Streamable HTTP)
+    if (req.method === 'GET') {
+      const stream = new ReadableStream({
+        start(controller) {
+          const encoder = new TextEncoder()
+
+          // Send initial connection message
+          const welcomeMessage: MCPMessage = {
+            jsonrpc: '2.0',
+            method: 'notifications/message',
+            params: {
+              level: 'info',
+              message: 'MCP Streamable HTTP connection established',
+            },
+          }
+
+          controller.enqueue(encoder.encode(createSSEMessage(welcomeMessage)))
+
+          // Keep connection alive with heartbeat
+          const heartbeat = setInterval(() => {
+            try {
+              controller.enqueue(encoder.encode(': heartbeat\n\n'))
+            } catch {
+              clearInterval(heartbeat)
+            }
+          }, 30000)
+
+          // Store cleanup function
+          ;(controller as any).cleanup = () => {
+            clearInterval(heartbeat)
+            sessions.delete(sessionId!)
+          }
+        },
+        cancel() {
+          if ((this as any).cleanup) {
+            ;(this as any).cleanup()
+          }
+        },
+      })
+
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Mcp-Session-Id': sessionId,
+        },
+      })
+    }
+
+    // POST request - handle MCP messages
+    if (req.method === 'POST') {
+      const contentType = req.headers.get('Content-Type') || ''
+      const acceptHeader = req.headers.get('Accept') || ''
+      const supportsStreaming = acceptHeader.includes('text/event-stream')
+
+      // Parse request
+      const messages: MCPMessage[] = []
+
+      if (contentType.includes('application/json')) {
+        const body = await req.json()
+        // Handle both single message and batch
+        if (Array.isArray(body)) {
+          messages.push(...body)
+        } else {
+          messages.push(body)
+        }
+      } else {
+        throw new Error('Unsupported Content-Type. Expected application/json')
+      }
+
+      console.log('MCP Messages:', JSON.stringify(messages, null, 2))
+
+      // If client supports streaming, return SSE stream
+      if (supportsStreaming) {
+        const stream = new ReadableStream({
+          async start(controller) {
+            const encoder = new TextEncoder()
+
+            try {
+              for (const message of messages) {
+                const response = await handleMCPRequest(message, sessionId!, supabase)
+                controller.enqueue(encoder.encode(createSSEMessage(response)))
+              }
+            } catch (error) {
+              const errorMessage: MCPMessage = {
+                jsonrpc: '2.0',
+                id: messages[0]?.id || 1,
+                error: {
+                  code: -32603,
+                  message: error instanceof Error ? error.message : 'Internal error',
+                },
+              }
+              controller.enqueue(encoder.encode(createSSEMessage(errorMessage)))
+            } finally {
+              controller.close()
+            }
+          },
+        })
+
+        return new Response(stream, {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Mcp-Session-Id': sessionId,
+          },
+        })
+      }
+
+      // Fallback: simple JSON response for non-streaming clients
+      const responses = []
+      for (const message of messages) {
+        const response = await handleMCPRequest(message, sessionId, supabase)
+        responses.push(response)
+      }
+
+      // Return single response or batch
+      const responseBody = messages.length === 1 ? responses[0] : responses
+
+      return new Response(JSON.stringify(responseBody), {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+          'Mcp-Session-Id': sessionId,
+        },
+      })
+    }
+
+    // Unsupported method
+    return new Response(JSON.stringify({
+      jsonrpc: '2.0',
+      error: {
+        code: -32600,
+        message: `Unsupported HTTP method: ${req.method}`,
+      },
+    }), {
+      status: 405,
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/json',
       },
     })
+
   } catch (error) {
     console.error('MCP Server Error:', error)
-    const errorResponse: MCPResponse = {
+
+    const errorResponse: MCPMessage = {
       jsonrpc: '2.0',
       id: 1,
       error: {
