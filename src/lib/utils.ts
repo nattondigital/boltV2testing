@@ -142,11 +142,14 @@ export const convertUTCToISTForInput = (utcDateString: string | null): string =>
 
   const date = new Date(utcDateString)
 
-  const istYear = date.toLocaleString('en-IN', { year: 'numeric', timeZone: 'Asia/Kolkata' })
-  const istMonth = date.toLocaleString('en-IN', { month: '2-digit', timeZone: 'Asia/Kolkata' })
-  const istDay = date.toLocaleString('en-IN', { day: '2-digit', timeZone: 'Asia/Kolkata' })
-  const istHours = date.toLocaleString('en-IN', { hour: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' })
-  const istMinutes = date.toLocaleString('en-IN', { minute: '2-digit', timeZone: 'Asia/Kolkata' })
+  const istOffset = 5.5 * 60 * 60 * 1000
+  const istDate = new Date(date.getTime() + istOffset)
 
-  return `${istYear}-${istMonth}-${istDay}T${istHours}:${istMinutes}`
+  const year = istDate.getUTCFullYear()
+  const month = String(istDate.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(istDate.getUTCDate()).padStart(2, '0')
+  const hours = String(istDate.getUTCHours()).padStart(2, '0')
+  const minutes = String(istDate.getUTCMinutes()).padStart(2, '0')
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`
 }
