@@ -13,6 +13,159 @@ interface ChatPayload {
   user_context?: string
 }
 
+interface MCPMessage {
+  jsonrpc: '2.0'
+  id: string | number
+  method?: string
+  params?: any
+  result?: any
+  error?: {
+    code: number
+    message: string
+    data?: any
+  }
+}
+
+interface MCPTool {
+  name: string
+  description: string
+  inputSchema: {
+    type: string
+    properties: Record<string, any>
+    required?: string[]
+  }
+}
+
+class MCPClient {
+  private serverUrl: string
+  private authToken: string
+  private agentId: string
+  private requestId: number = 0
+  private sessionId?: string
+
+  constructor(serverUrl: string, authToken: string, agentId: string) {
+    this.serverUrl = serverUrl
+    this.authToken = authToken
+    this.agentId = agentId
+  }
+
+  private getNextRequestId(): number {
+    return ++this.requestId
+  }
+
+  private async sendRequest(message: MCPMessage): Promise<MCPMessage> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${this.authToken}`,
+    }
+
+    if (this.sessionId) {
+      headers['Mcp-Session-Id'] = this.sessionId
+    }
+
+    const response = await fetch(this.serverUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(message),
+    })
+
+    if (!response.ok) {
+      throw new Error(`MCP request failed: ${response.statusText}`)
+    }
+
+    const sessionIdHeader = response.headers.get('Mcp-Session-Id')
+    if (sessionIdHeader) {
+      this.sessionId = sessionIdHeader
+    }
+
+    return await response.json()
+  }
+
+  async initialize(): Promise<any> {
+    const message: MCPMessage = {
+      jsonrpc: '2.0',
+      id: this.getNextRequestId(),
+      method: 'initialize',
+    }
+
+    const response = await this.sendRequest(message)
+
+    if (response.error) {
+      throw new Error(response.error.message)
+    }
+
+    return response.result
+  }
+
+  async listTools(): Promise<MCPTool[]> {
+    const message: MCPMessage = {
+      jsonrpc: '2.0',
+      id: this.getNextRequestId(),
+      method: 'tools/list',
+    }
+
+    const response = await this.sendRequest(message)
+
+    if (response.error) {
+      throw new Error(response.error.message)
+    }
+
+    return response.result?.tools || []
+  }
+
+  async callTool(toolName: string, args: any): Promise<any> {
+    const toolArgs = { ...args, agent_id: this.agentId }
+
+    const message: MCPMessage = {
+      jsonrpc: '2.0',
+      id: this.getNextRequestId(),
+      method: 'tools/call',
+      params: {
+        name: toolName,
+        arguments: toolArgs,
+      },
+    }
+
+    const response = await this.sendRequest(message)
+
+    if (response.error) {
+      throw new Error(response.error.message)
+    }
+
+    if (response.result?.content && Array.isArray(response.result.content)) {
+      const textContent = response.result.content.find((c: any) => c.type === 'text')
+      if (textContent?.text) {
+        return textContent.text
+      }
+    }
+
+    return response.result
+  }
+}
+
+function convertMCPToolToOpenRouterFunction(mcpTool: MCPTool): any {
+  const properties = { ...mcpTool.inputSchema.properties }
+  delete properties.agent_id
+
+  const required = (mcpTool.inputSchema.required || []).filter(
+    (field: string) => field !== 'agent_id'
+  )
+
+  return {
+    type: 'function',
+    function: {
+      name: mcpTool.name,
+      description: mcpTool.description,
+      parameters: {
+        type: mcpTool.inputSchema.type || 'object',
+        properties,
+        required,
+      },
+    },
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -76,6 +229,11 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    console.log(`Agent ${agent.name} - MCP Enabled: ${agent.use_mcp}`)
+    if (agent.use_mcp && agent.mcp_config) {
+      console.log('MCP Config:', agent.mcp_config)
+    }
+
     if (!agent.is_active) {
       return new Response(
         JSON.stringify({ error: 'Agent is not active' }),
@@ -107,7 +265,39 @@ Deno.serve(async (req: Request) => {
     conversationMessages.push({ role: 'user', content: payload.message })
 
     const permissions = agent.permissions || {}
-    const tools: any[] = []
+    let tools: any[] = []
+    let mcpClient: MCPClient | null = null
+    const useMCP = agent.use_mcp && agent.mcp_config?.enabled
+
+    if (useMCP) {
+      console.log('Using MCP mode for agent:', agent.name)
+      try {
+        const mcpServerUrl = agent.mcp_config.server_url || `${supabaseUrl}/functions/v1/mcp-server`
+        const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+
+        mcpClient = new MCPClient(mcpServerUrl, anonKey, payload.agent_id)
+        await mcpClient.initialize()
+
+        const mcpTools = await mcpClient.listTools()
+        const useForModules = agent.mcp_config.use_for_modules || []
+
+        const filteredTools = mcpTools.filter(tool => {
+          if (useForModules.length === 0) return true
+          return useForModules.some((module: string) =>
+            tool.name.toLowerCase().includes(module.toLowerCase())
+          )
+        })
+
+        tools = filteredTools.map(convertMCPToolToOpenRouterFunction)
+        console.log(`Loaded ${tools.length} MCP tools for agent`)
+      } catch (error) {
+        console.error('Failed to initialize MCP client:', error)
+        console.log('Falling back to hardcoded tools')
+      }
+    }
+
+    if (!useMCP || tools.length === 0) {
+      console.log('Using hardcoded tools mode for agent:', agent.name)
 
     if (permissions['Expenses']?.can_create) {
       tools.push({
@@ -333,6 +523,9 @@ Deno.serve(async (req: Request) => {
         }
       })
     }
+    }
+
+    console.log(`Total tools available: ${tools.length}`)
 
     const enhancedSystemPrompt = `${agent.system_prompt}\n\nYou have access to CRM tools. When a user asks you to perform actions like creating expenses, tasks, or retrieving data, use the available tools to execute those actions immediately. DO NOT ask for confirmation or additional details if you have enough information to proceed. For example:\n- If a user provides a ticket ID like "TKT-2025-061", immediately use get_support_tickets with that ticket_id\n- If a user says "create an expense of 2800 for mumbai flight", immediately use create_expense with the provided details\n- Only ask clarifying questions if critical required information is truly missing\n\nALWAYS use tools when appropriate instead of just describing what you would do or asking unnecessary questions.`
 
@@ -377,6 +570,18 @@ Deno.serve(async (req: Request) => {
         for (const toolCall of assistantMessage.tool_calls) {
           const functionName = toolCall.function.name
           const functionArgs = JSON.parse(toolCall.function.arguments)
+
+          if (useMCP && mcpClient) {
+            console.log(`Executing MCP tool: ${functionName}`)
+            try {
+              const result = await mcpClient.callTool(functionName, functionArgs)
+              toolResults.push(result)
+            } catch (error) {
+              console.error(`MCP tool execution failed for ${functionName}:`, error)
+              toolResults.push(`❌ Failed to execute ${functionName}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            }
+            continue
+          }
 
           if (functionName === 'create_expense') {
             let teamMemberId = null
@@ -770,6 +975,8 @@ Deno.serve(async (req: Request) => {
             }
           }
         }
+
+        console.log(`Tool execution completed. Results: ${toolResults.length} items`)
 
         const finalResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
