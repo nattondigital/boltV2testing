@@ -62,9 +62,10 @@ export async function getMCPTools(
 
     return mcpTools.filter((tool: any) => {
       const toolName = tool.function.name.toLowerCase()
-      return enabledModules.some(module =>
-        toolName.includes(module.toLowerCase())
-      )
+      return enabledModules.some(module => {
+        const moduleName = module.toLowerCase().replace(/s$/, '') // Remove trailing 's'
+        return toolName.includes(moduleName)
+      })
     })
   } catch (error) {
     console.error('Error fetching MCP tools:', error)
