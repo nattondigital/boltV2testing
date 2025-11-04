@@ -976,8 +976,21 @@ export function AIAgentChat() {
       const tools = await getAvailableTools()
 
       const todayDate = new Date().toISOString().split('T')[0]
+      const tomorrowDate = new Date(Date.now() + 86400000).toISOString().split('T')[0]
       const systemPrompt = agent.system_prompt || 'You are a helpful AI assistant with access to CRM functions.'
-      let enhancedSystemPrompt = `${systemPrompt}\n\nToday's date is ${todayDate}. Use this to calculate dates when users say "tomorrow", "next week", etc.
+      let enhancedSystemPrompt = `${systemPrompt}\n\nToday's date is ${todayDate}. Tomorrow's date is ${tomorrowDate}. Use these exact dates when users say "tomorrow", "today", etc.
+
+IMPORTANT: When you create a task and receive a response, you MUST parse the JSON response and display the task details in a formatted way. For example, after creating a task, show:
+
+Task has been created successfully. Here are the details:
+
+* **Task ID**: TASK-XXXXX
+* **Title**: [title]
+* **Assigned To**: [assigned_to_name]
+* **Priority**: [priority]
+* **Status**: [status]
+* **Due Date**: [due_date]
+* **Created At**: [created_at]
 
 You have access to CRM tools. When a user asks you to perform actions like creating expenses, tasks, or retrieving data, use the available tools to execute those actions immediately. DO NOT ask for confirmation or additional details if you have enough information to proceed. For example:
 - If a user provides a ticket ID like "TKT-2025-061", immediately use get_support_tickets with that ticket_id
