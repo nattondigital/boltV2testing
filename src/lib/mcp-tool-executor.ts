@@ -102,6 +102,12 @@ export async function executeMCPTool(
 
     const result = await client.callTool(toolName, args)
 
+    console.log('=== DEBUG: MCP Tool Result ===')
+    console.log('Tool Name:', toolName)
+    console.log('Raw Result:', result)
+    console.log('Result Type:', typeof result)
+    console.log('Is Array:', Array.isArray(result))
+
     // MCP server returns data directly (arrays, objects, or strings)
     // For get_tasks: returns array of tasks
     // For create/update/delete: returns success message string
@@ -129,12 +135,17 @@ export async function executeMCPTool(
       }
     }
 
-    return {
+    const executionResult = {
       success: true,
       message: successMessage,
       data: result,
       usedMCP: true
     }
+
+    console.log('=== DEBUG: Execution Result ===')
+    console.log('Result Object:', executionResult)
+
+    return executionResult
   } catch (error: any) {
     console.error('MCP tool execution error:', error)
     return {
