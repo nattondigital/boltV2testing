@@ -1,0 +1,162 @@
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    ARCHITECTURE COMPARISON                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+  HARDCODED TOOLS ARCHITECTURE (Current - 16 tools)
+═══════════════════════════════════════════════════════════════════════════
+
+┌──────────────┐
+│   AI Agent   │
+│     Chat     │
+└──────┬───────┘
+       │
+       ▼
+┌─────────────────────────────────────────────────────────┐
+│         executeFunction() - 2000+ lines                 │
+│  ┌────────────────────────────────────────────────────┐ │
+│  │ case 'create_task':                                │ │
+│  │   supabase.from('tasks').insert(...)  ────────┐   │ │
+│  │                                                │   │ │
+│  │ case 'update_task':                           │   │ │
+│  │   supabase.from('tasks').update(...)  ────────┤   │ │
+│  │                                                │   │ │
+│  │ case 'create_expense':                        │   │ │
+│  │   supabase.from('expenses').insert(...) ──────┤   │ │
+│  │                                                │   │ │
+│  │ case 'create_lead':                           │   │ │
+│  │   supabase.from('leads').insert(...)  ────────┤   │ │
+│  │                                                │   │ │
+│  │ ... 12 more cases (growing)                   │   │ │
+│  └────────────────────────────────────────────────┼───┘ │
+└───────────────────────────────────────────────────┼─────┘
+                                                    │
+                                                    ▼
+                                          ┌─────────────────┐
+                                          │ Supabase Tables │
+                                          └─────────────────┘
+
+Issues:
+  ❌ Monolithic code (2000+ lines in one function)
+  ❌ No permission checks
+  ❌ No audit logging
+  ❌ No input validation
+  ❌ Linear growth (adding module = adding cases)
+  ❌ 3,120 tokens sent to AI per request
+
+
+═══════════════════════════════════════════════════════════════════════════
+  MCP SERVER ARCHITECTURE (Target - Modular)
+═══════════════════════════════════════════════════════════════════════════
+
+┌──────────────┐
+│   AI Agent   │
+│     Chat     │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────────────────────────────────┐
+│    executeMCPTool()                      │
+│    (Lightweight routing - 50 lines)      │
+└──────┬───────────────────────────────────┘
+       │
+       ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                    MCP Server (Edge Function)                    │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │  1. Permission Check (ai_agent_permissions)                 │ │
+│  │     ├─ Has Tasks.create? ✅                                 │ │
+│  │     └─ Has Tasks.delete? ❌ → Return error                  │ │
+│  │                                                              │ │
+│  │  2. Input Validation                                        │ │
+│  │     ├─ Valid priority? ✅                                   │ │
+│  │     ├─ Valid status? ✅                                     │ │
+│  │     └─ UUID exists? ✅                                      │ │
+│  │                                                              │ │
+│  │  3. Execute Operation                                       │ │
+│  │     └─ supabase.from('tasks').insert(...)                  │ │
+│  │                                                              │ │
+│  │  4. Audit Logging (ai_agent_logs)                          │ │
+│  │     └─ Log: Agent X created Task Y at timestamp Z          │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└──────┬───────────────────────────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────┐
+│ Supabase Tables │
+└─────────────────┘
+
+Modular MCP Servers (Independent):
+  ┌───────────────┐  ┌───────────────┐  ┌───────────────┐
+  │ Tasks Server  │  │ Leads Server  │  │ Expenses      │
+  │ • 4 tools     │  │ • 4 tools     │  │ Server        │
+  │ • 6 resources │  │ • 5 resources │  │ • 4 tools     │
+  │ • 5 prompts   │  │ • 4 prompts   │  │ • 3 resources │
+  └───────────────┘  └───────────────┘  └───────────────┘
+
+Benefits:
+  ✅ Modular (each server 200-300 lines)
+  ✅ Permission-based security
+  ✅ Full audit logging
+  ✅ Input validation
+  ✅ Horizontal scaling (add servers independently)
+  ✅ Only 920 tokens sent to AI per request (70% reduction)
+
+
+═══════════════════════════════════════════════════════════════════════════
+  SIDE-BY-SIDE COMPARISON: create_task Operation
+═══════════════════════════════════════════════════════════════════════════
+
+HARDCODED:                              MCP SERVER:
+─────────────────────────────────────   ─────────────────────────────────────
+User: "Create task for Amit"           User: "Create task for Amit"
+  ↓                                       ↓
+AI calls: create_task                   AI calls: create_task
+  ↓                                       ↓
+executeFunction()                       executeMCPTool()
+  ↓                                       ↓
+NO permission check ⚠️                  ✅ Permission check
+NO validation ⚠️                        ✅ Input validation
+  ↓                                       ↓
+supabase.insert({                       ✅ Name resolution ("Amit" → UUID)
+  title: "Task",                          ↓
+  assigned_to: undefined ❌             supabase.insert({
+})                                        title: "Task",
+  ↓                                       assigned_to: "uuid-123" ✅
+NO logging ⚠️                           })
+  ↓                                       ↓
+Return success                          ✅ Audit log recorded
+                                          ↓
+                                        Return success with metadata
+
+Result: Task created but:               Result: Task created with:
+  ❌ No assigned user                    ✅ Correct user assigned
+  ❌ No audit trail                      ✅ Full audit trail
+  ❌ No validation                       ✅ Validated data
+  ❌ No permission check                 ✅ Permission verified
+
+
+═══════════════════════════════════════════════════════════════════════════
+  TOKEN USAGE BREAKDOWN
+═══════════════════════════════════════════════════════════════════════════
+
+HARDCODED (16 tools):                  MCP (4 tools + Resources + Prompts):
+────────────────────────────────────   ────────────────────────────────────
+create_expense:      ~180 tokens       get_tasks:       ~150 tokens
+create_task:         ~200 tokens       create_task:     ~180 tokens
+update_task:         ~180 tokens       update_task:     ~140 tokens
+delete_task:         ~120 tokens       delete_task:     ~100 tokens
+get_tasks:           ~250 tokens       
+create_lead:         ~220 tokens       PLUS:
+get_leads:           ~180 tokens       ├─ 6 Resources:  ~200 tokens
+get_expenses:        ~240 tokens       └─ 5 Prompts:    ~150 tokens
+get_appointments:    ~220 tokens
+create_appointment:  ~300 tokens       Total:           ~920 tokens
+get_calendars:       ~150 tokens
+get_support_tickets: ~200 tokens       Savings: 2,200 tokens (70%)
+get_contacts:        ~180 tokens
+generate_image:      ~200 tokens       At 100K requests/month:
+read_mcp_resource:   ~150 tokens       → Save $660/month
+get_mcp_prompt:      ~150 tokens       → Save $7,920/year
+────────────────────────────────────
+Total:              ~3,120 tokens
