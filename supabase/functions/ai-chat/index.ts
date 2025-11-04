@@ -427,7 +427,19 @@ Deno.serve(async (req: Request) => {
 
         for (const toolCall of assistantMessage.tool_calls) {
           const functionName = toolCall.function.name
-          const functionArgs = JSON.parse(toolCall.function.arguments)
+
+          let functionArgs: any
+          try {
+            // Handle both string and object formats
+            functionArgs = typeof toolCall.function.arguments === 'string'
+              ? JSON.parse(toolCall.function.arguments)
+              : toolCall.function.arguments
+          } catch (parseError) {
+            console.error(`Failed to parse tool arguments for ${functionName}:`, parseError)
+            console.error(`Raw arguments:`, toolCall.function.arguments)
+            toolResults.push(`❌ Failed to parse arguments for ${functionName}`)
+            continue
+          }
 
           // Inject agent_id into arguments (required by MCP server)
           functionArgs.agent_id = payload.agent_id
