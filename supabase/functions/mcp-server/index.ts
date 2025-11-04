@@ -193,44 +193,36 @@ async function handleMCPRequest(
       }
 
       case 'tools/call': {
-        const toolName = params?.name
-        const args = params?.arguments || {}
+        const { name, arguments: args } = params
+        const agentId = args?.agent_id
 
-        // Get agent_id from args
-        const agentId = args.agent_id
         if (!agentId) {
-          response.error = {
-            code: -32602,
-            message: 'agent_id is required in arguments',
-          }
-          break
+          throw new Error('agent_id is required in arguments')
         }
 
-        // Check permissions
-        const { data: permData } = await supabase
+        // Check agent permissions
+        const { data: permissions, error: permError } = await supabase
           .from('ai_agent_permissions')
           .select('permissions')
           .eq('agent_id', agentId)
           .maybeSingle()
 
-        const permissions = permData?.permissions || {}
+        if (permError || !permissions) {
+          throw new Error('Agent not found or no permissions set')
+        }
 
-        switch (toolName) {
+        const taskPerms = permissions.permissions?.Tasks || {}
+
+        switch (name) {
           case 'get_tasks': {
-            if (!permissions['Tasks']?.can_view) {
-              response.result = {
-                content: [{
-                  type: 'text',
-                  text: JSON.stringify({
-                    success: false,
-                    error: 'Agent does not have permission to view tasks',
-                  }),
-                }],
-              }
-              break
+            if (!taskPerms.can_view) {
+              throw new Error('Agent does not have permission to view tasks')
             }
 
-            let query = supabase.from('tasks').select('*')
+            let query = supabase
+              .from('tasks')
+              .select('*')
+              .order('created_at', { ascending: false })
 
             if (args.task_id) {
               query = query.eq('task_id', args.task_id)
@@ -241,283 +233,165 @@ async function handleMCPRequest(
             if (args.priority) {
               query = query.eq('priority', args.priority)
             }
+            if (args.limit) {
+              query = query.limit(args.limit)
+            } else {
+              query = query.limit(100)
+            }
 
-            query = query.limit(args.limit || 100).order('created_at', { ascending: false })
+            const { data, error } = await query
 
-            const { data: tasks, error: tasksError } = await query
+            if (error) throw error
 
             // Log action
             await supabase.from('ai_agent_logs').insert({
               agent_id: agentId,
-              module: 'Tasks',
               action: 'get_tasks',
-              result: tasksError ? 'Error' : 'Success',
-              error_message: tasksError?.message || null,
-              user_context: 'MCP Server Streamable HTTP',
-              details: { filters: args, count: tasks?.length || 0 },
+              details: { filters: args, result_count: data?.length || 0 },
             })
 
-            if (tasksError) {
-              response.result = {
-                content: [{
+            response.result = {
+              content: [
+                {
                   type: 'text',
-                  text: JSON.stringify({
-                    success: false,
-                    error: tasksError.message,
-                  }),
-                }],
-              }
-            } else {
-              response.result = {
-                content: [{
-                  type: 'text',
-                  text: JSON.stringify({
-                    success: true,
-                    data: tasks,
-                    count: tasks.length,
-                  }, null, 2),
-                }],
-              }
+                  text: JSON.stringify(data, null, 2),
+                },
+              ],
             }
             break
           }
 
           case 'create_task': {
-            if (!permissions['Tasks']?.can_create) {
-              response.result = {
-                content: [{
-                  type: 'text',
-                  text: JSON.stringify({
-                    success: false,
-                    error: 'Agent does not have permission to create tasks',
-                  }),
-                }],
-              }
-              break
+            if (!taskPerms.can_create) {
+              throw new Error('Agent does not have permission to create tasks')
             }
 
-            const newTask = {
+            const taskData = {
               title: args.title,
-              description: args.description || '',
-              status: args.status || 'To Do',
+              description: args.description,
               priority: args.priority || 'Medium',
-              assigned_to: args.assigned_to || null,
-              contact_id: args.contact_id || null,
-              due_date: args.due_date || null,
-              assigned_by: agentId,
+              status: args.status || 'To Do',
+              assigned_to: args.assigned_to,
+              contact_id: args.contact_id,
+              due_date: args.due_date,
             }
 
-            const { data: createdTask, error: createError } = await supabase
+            const { data, error } = await supabase
               .from('tasks')
-              .insert(newTask)
+              .insert(taskData)
               .select()
               .single()
 
+            if (error) throw error
+
+            // Log action
             await supabase.from('ai_agent_logs').insert({
               agent_id: agentId,
-              module: 'Tasks',
               action: 'create_task',
-              result: createError ? 'Error' : 'Success',
-              error_message: createError?.message || null,
-              user_context: 'MCP Server Streamable HTTP',
-              details: { task: newTask },
+              details: { task_id: data.task_id, title: args.title },
             })
 
-            if (createError) {
-              response.result = {
-                content: [{
+            response.result = {
+              content: [
+                {
                   type: 'text',
-                  text: JSON.stringify({
-                    success: false,
-                    error: createError.message,
-                  }),
-                }],
-              }
-            } else {
-              response.result = {
-                content: [{
-                  type: 'text',
-                  text: JSON.stringify({
-                    success: true,
-                    data: createdTask,
-                    message: `Task created successfully with ID: ${createdTask.task_id}`,
-                  }, null, 2),
-                }],
-              }
+                  text: `Task created successfully: ${data.task_id}`,
+                },
+              ],
             }
             break
           }
 
           case 'update_task': {
-            if (!permissions['Tasks']?.can_edit) {
-              response.result = {
-                content: [{
-                  type: 'text',
-                  text: JSON.stringify({
-                    success: false,
-                    error: 'Agent does not have permission to update tasks',
-                  }),
-                }],
-              }
-              break
+            if (!taskPerms.can_edit) {
+              throw new Error('Agent does not have permission to edit tasks')
             }
 
-            const updates: any = {}
-            if (args.title) updates.title = args.title
-            if (args.description !== undefined) updates.description = args.description
-            if (args.status) updates.status = args.status
-            if (args.priority) updates.priority = args.priority
-            if (args.assigned_to !== undefined) updates.assigned_to = args.assigned_to
-            if (args.due_date !== undefined) updates.due_date = args.due_date
+            const { task_id, ...updates } = args
+            delete updates.agent_id
 
-            const { data: updatedTask, error: updateError } = await supabase
+            const { data, error } = await supabase
               .from('tasks')
               .update(updates)
-              .eq('task_id', args.task_id)
+              .eq('task_id', task_id)
               .select()
               .single()
 
+            if (error) throw error
+
+            // Log action
             await supabase.from('ai_agent_logs').insert({
               agent_id: agentId,
-              module: 'Tasks',
               action: 'update_task',
-              result: updateError ? 'Error' : 'Success',
-              error_message: updateError?.message || null,
-              user_context: 'MCP Server Streamable HTTP',
-              details: { task_id: args.task_id, updates },
+              details: { task_id, updates },
             })
 
-            if (updateError) {
-              response.result = {
-                content: [{
+            response.result = {
+              content: [
+                {
                   type: 'text',
-                  text: JSON.stringify({
-                    success: false,
-                    error: updateError.message,
-                  }),
-                }],
-              }
-            } else {
-              response.result = {
-                content: [{
-                  type: 'text',
-                  text: JSON.stringify({
-                    success: true,
-                    data: updatedTask,
-                    message: `Task ${args.task_id} updated successfully`,
-                  }, null, 2),
-                }],
-              }
+                  text: `Task updated successfully: ${task_id}`,
+                },
+              ],
             }
             break
           }
 
           case 'delete_task': {
-            if (!permissions['Tasks']?.can_delete) {
-              response.result = {
-                content: [{
-                  type: 'text',
-                  text: JSON.stringify({
-                    success: false,
-                    error: 'Agent does not have permission to delete tasks',
-                  }),
-                }],
-              }
-              break
+            if (!taskPerms.can_delete) {
+              throw new Error('Agent does not have permission to delete tasks')
             }
 
-            const { error: deleteError } = await supabase
+            const { task_id } = args
+
+            const { error } = await supabase
               .from('tasks')
               .delete()
-              .eq('task_id', args.task_id)
+              .eq('task_id', task_id)
 
+            if (error) throw error
+
+            // Log action
             await supabase.from('ai_agent_logs').insert({
               agent_id: agentId,
-              module: 'Tasks',
               action: 'delete_task',
-              result: deleteError ? 'Error' : 'Success',
-              error_message: deleteError?.message || null,
-              user_context: 'MCP Server Streamable HTTP',
-              details: { task_id: args.task_id },
+              details: { task_id },
             })
 
-            if (deleteError) {
-              response.result = {
-                content: [{
+            response.result = {
+              content: [
+                {
                   type: 'text',
-                  text: JSON.stringify({
-                    success: false,
-                    error: deleteError.message,
-                  }),
-                }],
-              }
-            } else {
-              response.result = {
-                content: [{
-                  type: 'text',
-                  text: JSON.stringify({
-                    success: true,
-                    message: `Task ${args.task_id} deleted successfully`,
-                  }, null, 2),
-                }],
-              }
+                  text: `Task deleted successfully: ${task_id}`,
+                },
+              ],
             }
             break
           }
 
           default:
-            response.error = {
-              code: -32601,
-              message: `Tool not found: ${toolName}`,
-            }
+            throw new Error(`Unknown tool: ${name}`)
         }
         break
       }
 
-      case 'resources/list': {
-        response.result = {
-          resources: [
-            {
-              uri: 'task://tasks/all',
-              name: 'All Tasks',
-              mimeType: 'application/json',
-              description: 'Complete list of all tasks',
-            },
-            {
-              uri: 'task://tasks/pending',
-              name: 'Pending Tasks',
-              mimeType: 'application/json',
-              description: 'Tasks with status To Do or In Progress',
-            },
-          ],
-        }
-        break
-      }
-
-      case 'prompts/list': {
-        response.result = {
-          prompts: [
-            {
-              name: 'task_summary',
-              description: 'Generate a summary of tasks',
-            },
-          ],
-        }
+      case 'resources/list':
+      case 'resources/read':
+      case 'prompts/list':
+      case 'prompts/get': {
+        response.result = {}
         break
       }
 
       default:
-        response.error = {
-          code: -32601,
-          message: `Method not found: ${method}`,
-        }
+        throw new Error(`Method not found: ${method}`)
     }
   } catch (error) {
-    console.error('MCP Request Error:', error)
     response.error = {
       code: -32603,
       message: error instanceof Error ? error.message : 'Internal error',
     }
+    delete response.result
   }
 
   return response
@@ -582,7 +456,6 @@ Deno.serve(async (req: Request) => {
           // Store cleanup function
           ;(controller as any).cleanup = () => {
             clearInterval(heartbeat)
-            sessions.delete(sessionId!)
           }
         },
         cancel() {
@@ -633,8 +506,16 @@ Deno.serve(async (req: Request) => {
 
       console.log('Parsed MCP Messages:', JSON.stringify(messages, null, 2))
 
-      // If client supports streaming, return SSE stream
-      if (supportsStreaming) {
+      // Check if any message is an initialize request
+      const hasInitialize = messages.some(msg => msg.method === 'initialize')
+
+      // Per MCP spec: initialize MUST return plain JSON, not SSE stream
+      // Only use SSE for subsequent requests if client supports it
+      const useStreaming = supportsStreaming && !hasInitialize
+
+      // If client supports streaming AND not initialize, return SSE stream
+      if (useStreaming) {
+        console.log('Using SSE stream for response')
         const stream = new ReadableStream({
           async start(controller) {
             const encoder = new TextEncoder()
@@ -672,7 +553,8 @@ Deno.serve(async (req: Request) => {
         })
       }
 
-      // Fallback: simple JSON response for non-streaming clients
+      // Return plain JSON (for initialize or if client doesn't support streaming)
+      console.log('Using plain JSON response')
       const responses = []
       for (const message of messages) {
         const response = await handleMCPRequest(message, sessionId, supabase)
