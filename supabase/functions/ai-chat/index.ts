@@ -562,7 +562,7 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Total tools available: ${tools.length}`)
 
-    const enhancedSystemPrompt = `${agent.system_prompt}\n\nYou have access to CRM tools. When a user asks you to perform actions like creating expenses, tasks, or retrieving data, use the available tools to execute those actions immediately. DO NOT ask for confirmation or additional details if you have enough information to proceed. For example:\n- If a user provides a ticket ID like "TKT-2025-061", immediately use get_support_tickets with that ticket_id\n- If a user says "create an expense of 2800 for mumbai flight", immediately use create_expense with the provided details\n- Only ask clarifying questions if critical required information is truly missing\n\nALWAYS use tools when appropriate instead of just describing what you would do or asking unnecessary questions.`
+    const enhancedSystemPrompt = `${agent.system_prompt}\n\n**CRITICAL: You MUST use the provided tools to perform actions. NEVER pretend to complete an action without actually calling the tool.**\n\nYou have access to CRM tools. When a user asks you to perform actions like creating expenses, tasks, appointments, or retrieving data:\n\n1. **YOU MUST call the appropriate tool** - Do NOT respond as if you completed the action without calling the tool\n2. Execute actions immediately if you have enough information\n3. DO NOT ask for confirmation or additional details if you have sufficient information\n4. Only ask clarifying questions if critical required information is truly missing\n\nExamples of CORRECT behavior:\n- User: "create a task for tomorrow" → YOU MUST call create_task tool with the details\n- User: "show ticket TKT-2025-061" → YOU MUST call get_support_tickets tool\n- User: "create expense for mumbai flight 2800" → YOU MUST call create_expense tool\n\nExamples of INCORRECT behavior (DO NOT DO THIS):\n- User: "create a task" → Responding "I've created the task" WITHOUT calling create_task tool ❌\n- User: "add expense" → Saying "Expense added" WITHOUT calling create_expense tool ❌\n\n**Remember: If you don't call the tool, the action won't actually happen in the system. Always use tools for actions.**`
 
     const messages = [
       { role: 'system', content: enhancedSystemPrompt },
@@ -667,22 +667,26 @@ Deno.serve(async (req: Request) => {
               contactId = contact?.id
             }
 
-            const { error: taskError } = await supabase
+            const { data: newTask, error: taskError } = await supabase
               .from('tasks')
               .insert({
                 title: functionArgs.title,
                 description: functionArgs.description,
-                status: functionArgs.status,
-                priority: functionArgs.priority,
+                status: functionArgs.status || 'To Do',
+                priority: functionArgs.priority || 'Medium',
                 due_date: functionArgs.due_date,
                 assigned_to: assignedToId,
                 contact_id: contactId
               })
+              .select('task_id, title, status, priority, due_date, assigned_to_name')
+              .single()
 
             if (taskError) {
               toolResults.push(`❌ Failed to create task: ${taskError.message}`)
             } else {
-              toolResults.push(`✅ Task created: ${functionArgs.title}`)
+              const assignedToText = newTask.assigned_to_name ? ` assigned to ${newTask.assigned_to_name}` : ''
+              const dueDateText = newTask.due_date ? ` due on ${newTask.due_date}` : ''
+              toolResults.push(`✅ Task created successfully:\n- ID: ${newTask.task_id}\n- Title: ${newTask.title}\n- Status: ${newTask.status}\n- Priority: ${newTask.priority}${assignedToText}${dueDateText}`)
             }
           } else if (functionName === 'create_support_ticket') {
             let contactId = null
