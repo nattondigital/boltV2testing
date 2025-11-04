@@ -136,13 +136,26 @@ async function handleMCPRequest(
                     type: 'string',
                     description: 'UUID of assigned team member',
                   },
+                  assigned_to_name: {
+                    type: 'string',
+                    description: 'Name of assigned team member (e.g., "Amit", "Prince")',
+                  },
                   contact_id: {
                     type: 'string',
                     description: 'UUID of related contact',
                   },
                   due_date: {
                     type: 'string',
-                    description: 'Due date (YYYY-MM-DD)',
+                    description: 'Due date (YYYY-MM-DD format)',
+                  },
+                  due_time: {
+                    type: 'string',
+                    description: 'Due time (HH:MM format, 24-hour)',
+                  },
+                  supporting_docs: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Array of document URLs or file paths',
                   },
                 },
                 required: ['title'],
@@ -277,12 +290,15 @@ async function handleMCPRequest(
 
             const taskData = {
               title: args.title,
-              description: args.description,
+              description: args.description || null,
               priority: args.priority || 'Medium',
               status: args.status || 'To Do',
-              assigned_to: args.assigned_to,
-              contact_id: args.contact_id,
-              due_date: args.due_date,
+              assigned_to: args.assigned_to || null,
+              assigned_to_name: args.assigned_to_name || null,
+              contact_id: args.contact_id || null,
+              due_date: args.due_date || null,
+              due_time: args.due_time || null,
+              supporting_docs: args.supporting_docs || null,
             }
 
             const { data, error } = await supabase
@@ -304,7 +320,11 @@ async function handleMCPRequest(
               content: [
                 {
                   type: 'text',
-                  text: `Task created successfully: ${data.task_id}`,
+                  text: JSON.stringify({
+                    success: true,
+                    message: 'Task created successfully',
+                    task: data
+                  }, null, 2),
                 },
               ],
             }
