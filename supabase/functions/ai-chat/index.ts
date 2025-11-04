@@ -266,7 +266,6 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    // Fetch OpenRouter API key from integrations table
     const { data: openrouterIntegration } = await supabase
       .from('integrations')
       .select('config')
@@ -307,14 +306,12 @@ Deno.serve(async (req: Request) => {
 
     conversationMessages.push({ role: 'user', content: payload.message })
 
-    // Fetch agent permissions from separate table
     const { data: agentPerms } = await supabase
       .from('ai_agent_permissions')
       .select('permissions')
       .eq('agent_id', payload.agent_id)
       .maybeSingle()
 
-    // Permissions are stored as JSONB: { "Tasks": { can_view, can_create, can_edit, can_delete }, ... }
     const permissions: Record<string, any> = agentPerms?.permissions || {}
 
     console.log(`Agent permissions loaded: ${Object.keys(permissions).length} modules`)
@@ -343,8 +340,7 @@ Deno.serve(async (req: Request) => {
         }
         const matches = useForModules.some((module: string) => {
           const toolName = tool.name.toLowerCase()
-          const moduleName = module.toLowerCase().replace(/s$/, '') // Remove trailing 's' from module name
-          // Check if tool name includes module name (e.g., "create_task" includes "task")
+          const moduleName = module.toLowerCase().replace(/s$/, '')
           const isMatch = toolName.includes(moduleName)
           console.log(`Checking tool "${tool.name}" against module "${module}" (normalized: "${moduleName}"): ${isMatch}`)
           return isMatch
@@ -375,7 +371,18 @@ Deno.serve(async (req: Request) => {
     console.log(`Total MCP tools available: ${tools.length}`)
     console.log(`Tool names being sent to OpenRouter:`, tools.map((t: any) => t.function?.name))
 
-    const enhancedSystemPrompt = `${agent.system_prompt}\n\n**CRITICAL INSTRUCTION: You MUST use the provided tools to perform actions. NEVER respond as if you completed an action without actually calling the appropriate tool.**\n\n## Tool Usage Rules:\n\n1. **ALWAYS call tools** - Do NOT respond as if you completed an action without calling the tool\n2. **Execute immediately** - If you have enough information, call the tool right away\n3. **Use ONLY the tools provided to you** - Do not try to use tools that don't exist\n4. **Match the request to the correct tool** - Read tool descriptions carefully\n5. **Ask for missing info** - Only if critical required parameters are missing\n\n## Examples of CORRECT Behavior:\n\n✅ User: "create a task for tomorrow" \n   → AI calls create_task tool with parameters\n   \n✅ User: "show me pending tasks" \n   → AI calls get_tasks tool with status filter\n   \n✅ User: "get task TASK-10031" \n   → AI calls get_tasks tool with task_id parameter\n\n## Examples of INCORRECT Behavior (NEVER DO THIS):\n\n❌ User: "create a task" \n   → AI responds: "I've created the task" WITHOUT calling any tool\n   \n❌ User: "add a task"\n   → AI responds: "Task added successfully" WITHOUT calling create_task\n   \n❌ User asks for tasks\n   → AI invents/guesses task data WITHOUT calling get_tasks\n\n**REMEMBER: If you don't call the tool, the action won't happen in the system. Every action requires a tool call!**`
+    const now = new Date()
+    const istOffset = 5.5 * 60 * 60 * 1000
+    const istDate = new Date(now.getTime() + istOffset)
+    const todayDate = istDate.toISOString().split('T')[0]
+    const tomorrowDate = new Date(istDate.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const currentTime = istDate.toTimeString().split(' ')[0].substring(0, 5)
+
+    const daysUntilSunday = (7 - istDate.getDay()) % 7 || 7
+    const nextSunday = new Date(istDate.getTime() + daysUntilSunday * 24 * 60 * 60 * 1000)
+    const sundayDate = nextSunday.toISOString().split('T')[0]
+
+    const enhancedSystemPrompt = `${agent.system_prompt}\n\n**CURRENT DATE & TIME CONTEXT (Asia/Kolkata IST - UTC+5:30):**\n- Today's date: ${todayDate}\n- Tomorrow's date: ${tomorrowDate}\n- Current time: ${currentTime} IST\n- Next Sunday: ${sundayDate}\n- Current day: ${istDate.toLocaleDateString('en-US', { weekday: 'long' })}\n\n**CRITICAL INSTRUCTION: You MUST use the provided tools to perform actions. NEVER respond as if you completed an action without actually calling the appropriate tool.**\n\n## Tool Usage Rules:\n\n1. **ALWAYS call tools** - Do NOT respond as if you completed an action without calling the tool\n2. **Execute immediately** - If you have enough information, call the tool right away\n3. **Use ONLY the tools provided to you** - Do not try to use tools that don't exist\n4. **Match the request to the correct tool** - Read tool descriptions carefully\n5. **Ask for missing info** - Only if critical required parameters are missing\n\n## Date/Time Handling:\n\n**IMPORTANT:** When users provide times, they are in IST. You MUST convert to UTC (subtract 5:30) before passing to tools.\n\nExamples:\n- User says "tomorrow 10 AM" → due_date: "${tomorrowDate}", due_time: "04:30" (10:00 AM IST = 04:30 UTC)\n- User says "today 3 PM" → due_date: "${todayDate}", due_time: "09:30" (3:00 PM IST = 09:30 UTC)\n- User says "this Sunday 12 PM" → due_date: "${sundayDate}", due_time: "06:30" (12:00 PM IST = 06:30 UTC)\n\n**Common time conversions (IST to UTC):**\n- 12:00 AM IST = 18:30 UTC (previous day)\n- 6:00 AM IST = 00:30 UTC\n- 12:00 PM IST = 06:30 UTC\n- 6:00 PM IST = 12:30 UTC\n- 11:59 PM IST = 18:29 UTC\n\n## Examples of CORRECT Behavior:\n\n✅ User: "create a task for tomorrow"\n   → AI calls create_task tool with parameters\n\n✅ User: "show me pending tasks"\n   → AI calls get_tasks tool with status filter\n\n✅ User: "get task TASK-10031"\n   → AI calls get_tasks tool with task_id parameter\n\n## Examples of INCORRECT Behavior (NEVER DO THIS):\n\n❌ User: "create a task"\n   → AI responds: "I've created the task" WITHOUT calling any tool\n\n❌ User: "add a task"\n   → AI responds: "Task added successfully" WITHOUT calling create_task\n\n❌ User asks for tasks\n   → AI invents/guesses task data WITHOUT calling get_tasks\n\n**REMEMBER: If you don't call the tool, the action won't happen in the system. Every action requires a tool call!**`
 
     const messages = [
       { role: 'system', content: enhancedSystemPrompt },
@@ -430,7 +437,6 @@ Deno.serve(async (req: Request) => {
 
           let functionArgs: any
           try {
-            // Handle both string and object formats
             functionArgs = typeof toolCall.function.arguments === 'string'
               ? JSON.parse(toolCall.function.arguments)
               : toolCall.function.arguments
@@ -441,7 +447,6 @@ Deno.serve(async (req: Request) => {
             continue
           }
 
-          // Inject agent_id into arguments (required by MCP server)
           functionArgs.agent_id = payload.agent_id
 
           console.log(`Executing MCP tool: ${functionName} with args:`, functionArgs)
