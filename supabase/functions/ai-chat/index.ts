@@ -304,6 +304,9 @@ Deno.serve(async (req: Request) => {
     let mcpClient: MCPClient | null = null
     const useMCP = agent.use_mcp && agent.mcp_config?.enabled
 
+    // Track which modules are handled by MCP
+    const mcpModules: string[] = []
+
     if (useMCP) {
       console.log('Using MCP mode for agent:', agent.name)
       try {
@@ -324,17 +327,18 @@ Deno.serve(async (req: Request) => {
         })
 
         tools = filteredTools.map(convertMCPToolToOpenRouterFunction)
-        console.log(`Loaded ${tools.length} MCP tools for agent`)
+        mcpModules.push(...useForModules)
+        console.log(`Loaded ${tools.length} MCP tools for modules: ${mcpModules.join(', ')}`)
       } catch (error) {
         console.error('Failed to initialize MCP client:', error)
         console.log('Falling back to hardcoded tools')
       }
     }
 
-    if (!useMCP || tools.length === 0) {
-      console.log('Using hardcoded tools mode for agent:', agent.name)
+    // Add hardcoded tools for modules NOT using MCP
+    console.log('Adding hardcoded tools for non-MCP modules')
 
-    if (permissions['Expenses']?.can_create) {
+    if (permissions['Expenses']?.can_create && !mcpModules.includes('Expenses')) {
       tools.push({
         type: 'function',
         function: {
@@ -356,7 +360,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    if (permissions['Tasks']?.can_create) {
+    if (permissions['Tasks']?.can_create && !mcpModules.includes('Tasks')) {
       tools.push({
         type: 'function',
         function: {
@@ -380,7 +384,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    if (permissions['Support Tickets']?.can_create) {
+    if (permissions['Support Tickets']?.can_create && !mcpModules.includes('Support Tickets')) {
       tools.push({
         type: 'function',
         function: {
@@ -403,7 +407,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    if (permissions['Leads']?.can_create) {
+    if (permissions['Leads']?.can_create && !mcpModules.includes('Leads')) {
       tools.push({
         type: 'function',
         function: {
@@ -426,7 +430,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    if (permissions['Appointments']?.can_create) {
+    if (permissions['Appointments']?.can_create && !mcpModules.includes('Appointments')) {
       tools.push({
         type: 'function',
         function: {
@@ -451,7 +455,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    if (permissions['Support Tickets']?.can_view) {
+    if (permissions['Support Tickets']?.can_view && !mcpModules.includes('Support Tickets')) {
       tools.push({
         type: 'function',
         function: {
@@ -488,7 +492,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    if (permissions['Tasks']?.can_view) {
+    if (permissions['Tasks']?.can_view && !mcpModules.includes('Tasks')) {
       tools.push({
         type: 'function',
         function: {
@@ -507,7 +511,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    if (permissions['Leads']?.can_view) {
+    if (permissions['Leads']?.can_view && !mcpModules.includes('Leads')) {
       tools.push({
         type: 'function',
         function: {
@@ -524,7 +528,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    if (permissions['Appointments']?.can_view) {
+    if (permissions['Appointments']?.can_view && !mcpModules.includes('Appointments')) {
       tools.push({
         type: 'function',
         function: {
@@ -542,7 +546,7 @@ Deno.serve(async (req: Request) => {
       })
     }
 
-    if (permissions['Contacts']?.can_view) {
+    if (permissions['Contacts']?.can_view && !mcpModules.includes('Contacts')) {
       tools.push({
         type: 'function',
         function: {
