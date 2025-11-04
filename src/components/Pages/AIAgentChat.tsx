@@ -501,6 +501,39 @@ export function AIAgentChat() {
       return "AI model is not configured for this agent."
     }
 
+    // If MCP is enabled, use the ai-chat edge function instead
+    if (agent.use_mcp && agent.mcp_config?.enabled) {
+      try {
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+        const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`,
+            'apikey': supabaseAnonKey
+          },
+          body: JSON.stringify({
+            agent_id: id,
+            phone_number: selectedPhoneNumber || 'web-user',
+            message: userMessage
+          })
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `AI Chat API request failed with status ${response.status}`)
+        }
+
+        const data = await response.json()
+        return data.response || 'No response from AI'
+      } catch (error: any) {
+        console.error('Error calling ai-chat function:', error)
+        return `Error communicating with AI: ${error.message}`
+      }
+    }
+
     try {
       const messageContent: any[] = [
         {
