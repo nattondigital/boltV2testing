@@ -538,7 +538,14 @@ async function handleMCPRequest(
                     enum: ['Low', 'Medium', 'High', 'Urgent'],
                   },
                   assigned_to: { type: 'string' },
-                  due_date: { type: 'string' },
+                  due_date: {
+                    type: 'string',
+                    description: 'Due date (YYYY-MM-DD format)',
+                  },
+                  due_time: {
+                    type: 'string',
+                    description: 'Due time (HH:MM format, 24-hour)',
+                  },
                 },
                 required: ['task_id'],
               },
@@ -788,9 +795,22 @@ async function handleMCPRequest(
                 throw new Error('Agent does not have permission to edit tasks')
               }
 
-              const { task_id, ...updates } = args
+              const { task_id, due_time, ...updates } = args
               delete updates.agent_id
               delete updates.phone_number
+
+              // Handle due_date and due_time combination
+              if (args.due_date || due_time) {
+                let dueDateTimestamp = null
+                if (args.due_date) {
+                  if (due_time) {
+                    dueDateTimestamp = `${args.due_date}T${due_time}:00`
+                  } else {
+                    dueDateTimestamp = `${args.due_date}T00:00:00`
+                  }
+                  updates.due_date = dueDateTimestamp
+                }
+              }
 
               const { data, error } = await supabase
                 .from('tasks')
