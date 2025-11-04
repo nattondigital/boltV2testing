@@ -916,7 +916,12 @@ When users ask about expenses with time periods (like "this month", "today", "la
                    messageText.toLowerCase().includes('lead') ? 'Leads' : 'General'
 
     try {
-      await saveMessageToMemory(messageText, 'user', action, module, 'Success', uploadedImageUrl || undefined)
+      // Only save to memory if MCP is NOT enabled (ai-chat function handles saving when MCP is enabled)
+      const useMCP = agent?.use_mcp && agent.mcp_config?.enabled
+
+      if (!useMCP) {
+        await saveMessageToMemory(messageText, 'user', action, module, 'Success', uploadedImageUrl || undefined)
+      }
 
       const agentResponse = await callOpenRouter(messageText, uploadedImageUrl || undefined)
 
@@ -930,7 +935,9 @@ When users ask about expenses with time periods (like "this month", "today", "la
 
       setMessages(prev => [...prev, agentMessage])
 
-      await saveMessageToMemory(agentResponse, 'assistant', action, module, agentMessage.result || 'Success', uploadedImageUrl || undefined)
+      if (!useMCP) {
+        await saveMessageToMemory(agentResponse, 'assistant', action, module, agentMessage.result || 'Success', uploadedImageUrl || undefined)
+      }
     } catch (error) {
       console.error('Error sending message:', error)
       const errorMessage: Message = {
