@@ -288,17 +288,42 @@ async function handleMCPRequest(
               throw new Error('Agent does not have permission to create tasks')
             }
 
+            // Combine due_date and due_time into a single timestamp
+            let dueDateTimestamp = null
+            if (args.due_date) {
+              if (args.due_time) {
+                // Combine date and time: "2025-11-06" + "15:00" = "2025-11-06T15:00:00"
+                dueDateTimestamp = `${args.due_date}T${args.due_time}:00`
+              } else {
+                // Just date, set to start of day
+                dueDateTimestamp = `${args.due_date}T00:00:00`
+              }
+            }
+
+            // If assigned_to_name is provided but not assigned_to UUID, look it up
+            let assignedToUuid = args.assigned_to || null
+            if (args.assigned_to_name && !assignedToUuid) {
+              const { data: userData } = await supabase
+                .from('admin_users')
+                .select('id')
+                .ilike('full_name', `%${args.assigned_to_name}%`)
+                .limit(1)
+                .maybeSingle()
+
+              if (userData) {
+                assignedToUuid = userData.id
+              }
+            }
+
             const taskData = {
               title: args.title,
               description: args.description || null,
               priority: args.priority || 'Medium',
               status: args.status || 'To Do',
-              assigned_to: args.assigned_to || null,
-              assigned_to_name: args.assigned_to_name || null,
+              assigned_to: assignedToUuid,
               contact_id: args.contact_id || null,
-              due_date: args.due_date || null,
-              due_time: args.due_time || null,
-              supporting_docs: args.supporting_docs || null,
+              due_date: dueDateTimestamp,
+              supporting_documents: args.supporting_docs || null,
             }
 
             const { data, error } = await supabase
