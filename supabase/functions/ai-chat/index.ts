@@ -40,13 +40,15 @@ class MCPClient {
   private serverUrl: string
   private authToken: string
   private agentId: string
+  private phoneNumber: string
   private requestId: number = 0
   private sessionId?: string
 
-  constructor(serverUrl: string, authToken: string, agentId: string) {
+  constructor(serverUrl: string, authToken: string, agentId: string, phoneNumber: string) {
     this.serverUrl = serverUrl
     this.authToken = authToken
     this.agentId = agentId
+    this.phoneNumber = phoneNumber
   }
 
   private getNextRequestId(): number {
@@ -115,7 +117,7 @@ class MCPClient {
   }
 
   async callTool(toolName: string, args: any): Promise<any> {
-    const toolArgs = { ...args, agent_id: this.agentId }
+    const toolArgs = { ...args, agent_id: this.agentId, phone_number: this.phoneNumber }
 
     const message: MCPMessage = {
       jsonrpc: '2.0',
@@ -147,9 +149,10 @@ class MCPClient {
 function convertMCPToolToOpenRouterFunction(mcpTool: MCPTool): any {
   const properties = { ...mcpTool.inputSchema.properties }
   delete properties.agent_id
+  delete properties.phone_number
 
   const required = (mcpTool.inputSchema.required || []).filter(
-    (field: string) => field !== 'agent_id'
+    (field: string) => field !== 'agent_id' && field !== 'phone_number'
   )
 
   return {
@@ -324,7 +327,7 @@ Deno.serve(async (req: Request) => {
       const mcpServerUrl = agent.mcp_config.server_url || `${supabaseUrl}/functions/v1/mcp-server`
       const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-      mcpClient = new MCPClient(mcpServerUrl, anonKey, payload.agent_id)
+      mcpClient = new MCPClient(mcpServerUrl, anonKey, payload.agent_id, payload.phone_number)
       await mcpClient.initialize()
 
       const mcpTools = await mcpClient.listTools()

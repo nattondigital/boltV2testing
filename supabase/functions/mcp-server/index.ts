@@ -99,18 +99,6 @@ async function handleMCPRequest(
               description: 'Tasks with priority "High" or "Urgent"',
               mimeType: 'application/json',
             },
-            {
-              uri: 'tasks://statistics',
-              name: 'Task Statistics',
-              description: 'Aggregate statistics about tasks',
-              mimeType: 'application/json',
-            },
-            {
-              uri: 'tasks://task/{id}',
-              name: 'Individual Task',
-              description: 'Get details of a specific task by ID',
-              mimeType: 'application/json',
-            },
           ],
         }
         break
@@ -120,155 +108,34 @@ async function handleMCPRequest(
         const { uri } = params
 
         if (!uri) {
-          throw new Error('uri parameter is required')
+          throw new Error('URI is required')
         }
 
-        if (uri === 'tasks://all') {
-          const { data, error } = await supabase
-            .from('tasks')
-            .select('*')
-            .order('created_at', { ascending: false })
+        let query = supabase.from('tasks').select('*')
 
-          if (error) throw error
-
-          response.result = {
-            contents: [{
-              uri,
-              mimeType: 'application/json',
-              text: JSON.stringify({ tasks: data || [], count: data?.length || 0 }, null, 2),
-            }],
-          }
-        } else if (uri === 'tasks://pending') {
-          const { data, error } = await supabase
-            .from('tasks')
-            .select('*')
-            .in('status', ['To Do', 'In Progress'])
-            .order('priority', { ascending: false })
-            .order('due_date', { ascending: true })
-
-          if (error) throw error
-
-          response.result = {
-            contents: [{
-              uri,
-              mimeType: 'application/json',
-              text: JSON.stringify({ tasks: data || [], count: data?.length || 0 }, null, 2),
-            }],
-          }
+        if (uri === 'tasks://pending') {
+          query = query.in('status', ['To Do', 'In Progress'])
         } else if (uri === 'tasks://overdue') {
           const today = new Date().toISOString().split('T')[0]
-
-          const { data, error } = await supabase
-            .from('tasks')
-            .select('*')
+          query = query
             .lt('due_date', today)
             .in('status', ['To Do', 'In Progress'])
-            .order('due_date', { ascending: true })
-
-          if (error) throw error
-
-          response.result = {
-            contents: [{
-              uri,
-              mimeType: 'application/json',
-              text: JSON.stringify({ tasks: data || [], count: data?.length || 0 }, null, 2),
-            }],
-          }
         } else if (uri === 'tasks://high-priority') {
-          const { data, error } = await supabase
-            .from('tasks')
-            .select('*')
-            .in('priority', ['High', 'Urgent'])
-            .in('status', ['To Do', 'In Progress'])
-            .order('priority', { ascending: false })
-            .order('due_date', { ascending: true })
+          query = query.in('priority', ['High', 'Urgent'])
+        }
 
-          if (error) throw error
+        const { data, error } = await query
 
-          response.result = {
-            contents: [{
-              uri,
-              mimeType: 'application/json',
-              text: JSON.stringify({ tasks: data || [], count: data?.length || 0 }, null, 2),
-            }],
-          }
-        } else if (uri === 'tasks://statistics') {
-          const { data: allTasks, error } = await supabase
-            .from('tasks')
-            .select('status, priority, due_date')
+        if (error) throw error
 
-          if (error) throw error
-
-          const today = new Date().toISOString().split('T')[0]
-          const weekFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-
-          const statistics = {
-            total: allTasks?.length || 0,
-            by_status: {
-              'To Do': 0,
-              'In Progress': 0,
-              'Completed': 0,
-              'Cancelled': 0,
-            },
-            by_priority: {
-              'Low': 0,
-              'Medium': 0,
-              'High': 0,
-              'Urgent': 0,
-            },
-            overdue: 0,
-            due_today: 0,
-            due_this_week: 0,
-          }
-
-          allTasks?.forEach((task: any) => {
-            if (task.status) statistics.by_status[task.status as keyof typeof statistics.by_status]++
-            if (task.priority) statistics.by_priority[task.priority as keyof typeof statistics.by_priority]++
-
-            if (task.due_date) {
-              if (task.due_date < today && (task.status === 'To Do' || task.status === 'In Progress')) {
-                statistics.overdue++
-              }
-              if (task.due_date === today) {
-                statistics.due_today++
-              }
-              if (task.due_date <= weekFromNow && task.due_date >= today) {
-                statistics.due_this_week++
-              }
-            }
-          })
-
-          response.result = {
-            contents: [{
-              uri,
-              mimeType: 'application/json',
-              text: JSON.stringify(statistics, null, 2),
-            }],
-          }
-        } else if (uri.startsWith('tasks://task/')) {
-          const taskId = uri.replace('tasks://task/', '')
-
-          const { data, error } = await supabase
-            .from('tasks')
-            .select('*')
-            .eq('id', taskId)
-            .maybeSingle()
-
-          if (error) throw error
-
-          if (!data) {
-            throw new Error(`Task not found: ${taskId}`)
-          }
-
-          response.result = {
-            contents: [{
+        response.result = {
+          contents: [
+            {
               uri,
               mimeType: 'application/json',
               text: JSON.stringify(data, null, 2),
-            }],
-          }
-        } else {
-          throw new Error(`Unknown resource URI: ${uri}`)
+            },
+          ],
         }
         break
       }
@@ -278,19 +145,8 @@ async function handleMCPRequest(
           prompts: [
             {
               name: 'task_summary',
-              description: 'Generate a comprehensive summary of current tasks with statistics and insights',
-              arguments: [
-                {
-                  name: 'include_overdue',
-                  description: 'Whether to include overdue tasks in the summary',
-                  required: false,
-                },
-                {
-                  name: 'include_high_priority',
-                  description: 'Whether to include high-priority tasks in the summary',
-                  required: false,
-                },
-              ],
+              description: 'Provides a comprehensive summary of tasks including pending, overdue, and completed',
+              arguments: [],
             },
             {
               name: 'task_creation_guide',
@@ -342,43 +198,32 @@ async function handleMCPRequest(
           const today = new Date().toISOString().split('T')[0]
           const pending = allTasks?.filter((t: any) => t.status === 'To Do' || t.status === 'In Progress') || []
           const overdue = allTasks?.filter((t: any) => t.due_date < today && (t.status === 'To Do' || t.status === 'In Progress')) || []
-          const highPriority = allTasks?.filter((t: any) => (t.priority === 'High' || t.priority === 'Urgent') && (t.status === 'To Do' || t.status === 'In Progress')) || []
+          const completed = allTasks?.filter((t: any) => t.status === 'Completed') || []
 
-          let summary = `# Task Management Summary\n\n`
-          summary += `## Overview\n`
-          summary += `- **Total Tasks**: ${allTasks?.length || 0}\n`
-          summary += `- **Pending Tasks**: ${pending.length}\n`
-          summary += `- **Completed Tasks**: ${allTasks?.filter((t: any) => t.status === 'Completed').length || 0}\n\n`
-
-          if (args.include_overdue !== false && overdue.length > 0) {
-            summary += `## ⚠️ Overdue Tasks (${overdue.length})\n\n`
-            overdue.forEach((task: any) => {
-              summary += `- **${task.title}** (Due: ${task.due_date}, Priority: ${task.priority})\n`
-            })
-            summary += `\n`
-          }
-
-          if (args.include_high_priority !== false && highPriority.length > 0) {
-            summary += `## 🔥 High Priority Tasks (${highPriority.length})\n\n`
-            highPriority.slice(0, 5).forEach((task: any) => {
-              summary += `- **${task.title}** (Priority: ${task.priority}, Due: ${task.due_date || 'Not set'})\n`
-            })
-            if (highPriority.length > 5) {
-              summary += `\n...and ${highPriority.length - 5} more\n`
-            }
-            summary += `\n`
-          }
-
+          let summary = `# Task Summary Report\n\n`
+          summary += `**Total Tasks:** ${allTasks?.length || 0}\n\n`
           summary += `## Status Breakdown\n`
-          const statusCounts = {
-            'To Do': allTasks?.filter((t: any) => t.status === 'To Do').length || 0,
-            'In Progress': allTasks?.filter((t: any) => t.status === 'In Progress').length || 0,
-            'Completed': allTasks?.filter((t: any) => t.status === 'Completed').length || 0,
-            'Cancelled': allTasks?.filter((t: any) => t.status === 'Cancelled').length || 0,
+          summary += `- ✅ Completed: ${completed.length}\n`
+          summary += `- 🚧 Pending: ${pending.length}\n`
+          summary += `- ⚠️ Overdue: ${overdue.length}\n\n`
+
+          if (overdue.length > 0) {
+            summary += `## ⚠️ Overdue Tasks (Immediate Attention)\n`
+            overdue.forEach((task: any) => {
+              summary += `- **${task.title}** (${task.priority}) - Due: ${task.due_date}\n`
+            })
+            summary += `\n`
           }
-          Object.entries(statusCounts).forEach(([status, count]) => {
-            summary += `- ${status}: ${count}\n`
-          })
+
+          if (pending.length > 0) {
+            summary += `## 🚧 Pending Tasks\n`
+            pending.slice(0, 10).forEach((task: any) => {
+              summary += `- **${task.title}** (${task.status}) - Priority: ${task.priority}\n`
+            })
+            if (pending.length > 10) {
+              summary += `\n_... and ${pending.length - 10} more pending tasks_\n`
+            }
+          }
 
           response.result = {
             messages: [
@@ -392,69 +237,7 @@ async function handleMCPRequest(
             ],
           }
         } else if (name === 'task_creation_guide') {
-          const guide = `# Task Creation Best Practices
-
-## Essential Components of a Well-Structured Task
-
-### 1. Clear and Actionable Title
-- Start with an action verb (e.g., "Review", "Update", "Create", "Contact")
-- Be specific and concise
-- Avoid vague language
-
-**Good Examples:**
-- "Review Q4 financial report and provide feedback"
-- "Update customer database with new contacts"
-- "Contact John Smith regarding project timeline"
-
-**Bad Examples:**
-- "Finance stuff"
-- "Customer thing"
-- "Follow up"
-
-### 2. Detailed Description
-- Explain the context and purpose
-- List specific requirements or deliverables
-- Include relevant links or references
-- Note any dependencies or prerequisites
-
-### 3. Appropriate Priority
-- **Urgent**: Requires immediate attention, blocks other work
-- **High**: Important and time-sensitive
-- **Medium**: Standard priority, normal workflow
-- **Low**: Can be done when time permits
-
-### 4. Realistic Due Date
-- Consider task complexity
-- Account for dependencies
-- Allow buffer time for review
-- Coordinate with assignee's availability
-
-### 5. Clear Assignment
-- Assign to the most appropriate team member
-- Ensure assignee has necessary skills and resources
-- Consider current workload
-
-### 6. Supporting Documentation
-- Attach relevant files or documents
-- Link to related tasks or projects
-- Include screenshots or examples if helpful
-
-## Task Management Tips
-
-1. **Break down large tasks**: If a task takes more than 4-8 hours, consider breaking it into smaller subtasks
-2. **Regular updates**: Update task status as work progresses
-3. **Communication**: Use task comments for questions and updates
-4. **Review cycle**: Regularly review and reprioritize tasks
-5. **Complete promptly**: Mark tasks as complete when done to maintain accurate metrics
-
-## Common Mistakes to Avoid
-
-- Creating tasks that are too vague
-- Setting unrealistic deadlines
-- Forgetting to assign tasks
-- Not updating task status
-- Creating duplicate tasks
-- Missing priority indicators`
+          const guide = `# Task Creation Guide\n\n## Best Practices\n\n1. **Clear Title**: Use descriptive, action-oriented titles\n   - Good: "Review Q1 financial report"\n   - Bad: "Financial stuff"\n\n2. **Detailed Description**: Include context, requirements, and success criteria\n\n3. **Priority Setting**:\n   - Urgent: Must be done today\n   - High: Important, should be done this week\n   - Medium: Regular priority\n   - Low: Nice to have\n\n4. **Due Dates**: Set realistic deadlines considering complexity\n\n5. **Assignment**: Assign to the most appropriate team member\n\n6. **Status Updates**: Keep tasks current\n   - To Do: Not started\n   - In Progress: Actively working\n   - Completed: Finished\n   - Cancelled: No longer needed\n\n## Example Task\n\n**Title:** Review and approve Q1 marketing budget\n**Description:** Review the proposed Q1 marketing budget, verify alignment with strategic goals, and approve or request revisions. Include feedback on specific line items.\n**Priority:** High\n**Due Date:** Next Friday\n**Assigned To:** Marketing Director`
 
           response.result = {
             messages: [
@@ -470,66 +253,7 @@ async function handleMCPRequest(
         } else if (name === 'task_prioritization') {
           const context = args.user_context ? `\n\nUser Context: ${args.user_context}\n` : ''
 
-          const recommendations = `# Task Prioritization Framework${context}
-
-## The RICE Method
-
-Prioritize tasks based on:
-- **Reach**: How many people are impacted?
-- **Impact**: What's the magnitude of the effect?
-- **Confidence**: How certain are you about the estimates?
-- **Effort**: How much time/resources required?
-
-## Priority Matrix
-
-### Urgent + Important (Do First)
-- Critical bugs or issues
-- Deadline-driven deliverables
-- Emergency requests
-- Compliance requirements
-
-### Important but Not Urgent (Schedule)
-- Strategic planning
-- Relationship building
-- Process improvements
-- Professional development
-
-### Urgent but Not Important (Delegate)
-- Some meetings
-- Minor requests
-- Routine tasks
-- Low-impact interruptions
-
-### Neither Urgent nor Important (Eliminate)
-- Busy work
-- Time wasters
-- Outdated tasks
-- Nice-to-haves with no clear value
-
-## Daily Prioritization Tips
-
-1. **Start with the MITs**: Identify 3 Most Important Tasks each morning
-2. **Time-block high-priority work**: Protect focus time for critical tasks
-3. **Batch similar tasks**: Group related activities for efficiency
-4. **Limit WIP**: Work on 3-5 tasks at a time maximum
-5. **Review and adjust**: Reprioritize as new information emerges
-
-## Red Flags for Reprioritization
-
-- Overdue tasks accumulating
-- High-priority tasks sitting idle
-- Team members overloaded
-- Shifting business priorities
-- External dependencies resolved
-- New urgent requests
-
-## Recommended Actions
-
-1. Review all "To Do" tasks weekly
-2. Adjust priorities based on current goals
-3. Break down large tasks that are stuck
-4. Archive or delete tasks no longer relevant
-5. Ensure balanced workload across team`
+          const prioritization = `# Task Prioritization Guidelines${context}\n\n## Priority Matrix\n\n### 1. Urgent + Important (Do First)\n- Tasks with imminent deadlines\n- Critical business operations\n- Customer-facing issues\n\n### 2. Important + Not Urgent (Schedule)\n- Strategic planning\n- Relationship building\n- Professional development\n\n### 3. Urgent + Not Important (Delegate)\n- Some meetings\n- Many emails\n- Routine tasks that others can handle\n\n### 4. Not Urgent + Not Important (Eliminate)\n- Time wasters\n- Unnecessary activities\n- Busy work\n\n## Practical Tips\n\n1. **Start with High-Priority Tasks**\n   - Begin each day with your most important task\n   - Don't let urgent-but-unimportant tasks hijack your day\n\n2. **Use the 2-Minute Rule**\n   - If it takes less than 2 minutes, do it now\n   - Otherwise, schedule or delegate it\n\n3. **Batch Similar Tasks**\n   - Group similar activities together\n   - Reduces context switching\n   - Increases efficiency\n\n4. **Review Regularly**\n   - Daily: Review today's tasks\n   - Weekly: Plan the week ahead\n   - Monthly: Adjust long-term priorities`
 
           response.result = {
             messages: [
@@ -537,7 +261,7 @@ Prioritize tasks based on:
                 role: 'user',
                 content: {
                   type: 'text',
-                  text: recommendations,
+                  text: prioritization,
                 },
               },
             ],
@@ -648,38 +372,28 @@ Prioritize tasks based on:
               details += `- **Assigned to:** ${task.assigned_to_name || 'Unassigned'}\n`
               details += `- **Assigned by:** ${task.assigned_by_name || 'N/A'}\n\n`
 
-              if (task.contact_name) {
-                details += `### Contact Information\n`
-                details += `- **Contact:** ${task.contact_name}\n`
+              if (task.contact_phone || task.contact_name) {
+                details += `### Contact\n`
+                if (task.contact_name) {
+                  details += `- **Name:** ${task.contact_name}\n`
+                }
                 if (task.contact_phone) {
                   details += `- **Phone:** ${task.contact_phone}\n`
                 }
                 details += `\n`
               }
 
-              details += `### Dates\n`
-              if (task.start_date) {
-                details += `- **Start Date:** ${task.start_date}\n`
-              }
               if (task.due_date) {
-                details += `- **Due Date:** ${task.due_date}\n`
+                details += `### Dates\n`
+                details += `- **Due:** ${task.due_date}\n`
+                details += `- **Created:** ${task.created_at}\n\n`
               }
-              if (task.completion_date) {
-                details += `- **Completed:** ${task.completion_date}\n`
-              }
-              details += `- **Created:** ${task.created_at}\n`
-              details += `- **Last Updated:** ${task.updated_at}\n\n`
 
               if (task.supporting_documents && task.supporting_documents.length > 0) {
                 details += `### Supporting Documents\n`
-                task.supporting_documents.forEach((doc: string, index: number) => {
-                  details += `${index + 1}. ${doc}\n`
+                task.supporting_documents.forEach((doc: string) => {
+                  details += `- ${doc}\n`
                 })
-                details += `\n`
-              }
-
-              if (task.category) {
-                details += `**Category:** ${task.category}\n`
               }
 
               response.result = {
@@ -714,6 +428,10 @@ Prioritize tasks based on:
                     type: 'string',
                     description: 'AI Agent ID for permission checking',
                   },
+                  phone_number: {
+                    type: 'string',
+                    description: 'User phone number for logging',
+                  },
                   task_id: {
                     type: 'string',
                     description: 'Get a specific task by its task_id (e.g., TASK-10031)',
@@ -742,6 +460,10 @@ Prioritize tasks based on:
                   agent_id: {
                     type: 'string',
                     description: 'AI Agent ID for permission checking',
+                  },
+                  phone_number: {
+                    type: 'string',
+                    description: 'User phone number for logging',
                   },
                   title: {
                     type: 'string',
@@ -800,6 +522,10 @@ Prioritize tasks based on:
                     type: 'string',
                     description: 'AI Agent ID for permission checking',
                   },
+                  phone_number: {
+                    type: 'string',
+                    description: 'User phone number for logging',
+                  },
                   task_id: {
                     type: 'string',
                     description: 'Task ID to update (e.g., TASK-10031)',
@@ -830,6 +556,10 @@ Prioritize tasks based on:
                     type: 'string',
                     description: 'AI Agent ID for permission checking',
                   },
+                  phone_number: {
+                    type: 'string',
+                    description: 'User phone number for logging',
+                  },
                   task_id: {
                     type: 'string',
                     description: 'Task ID to delete (e.g., TASK-10031)',
@@ -850,6 +580,19 @@ Prioritize tasks based on:
         if (!agentId) {
           throw new Error('agent_id is required in arguments')
         }
+
+        // Fetch agent details
+        const { data: agent, error: agentError } = await supabase
+          .from('ai_agents')
+          .select('name')
+          .eq('id', agentId)
+          .maybeSingle()
+
+        if (agentError || !agent) {
+          throw new Error('Agent not found')
+        }
+
+        const agentName = agent.name
 
         // Check agent permissions
         const { data: permissions, error: permError } = await supabase
@@ -897,7 +640,11 @@ Prioritize tasks based on:
             // Log action
             await supabase.from('ai_agent_logs').insert({
               agent_id: agentId,
+              agent_name: agentName,
+              module: 'Tasks',
               action: 'get_tasks',
+              result: 'Success',
+              user_context: args.phone_number || null,
               details: { filters: args, result_count: data?.length || 0 },
             })
 
@@ -966,7 +713,11 @@ Prioritize tasks based on:
             // Log action
             await supabase.from('ai_agent_logs').insert({
               agent_id: agentId,
+              agent_name: agentName,
+              module: 'Tasks',
               action: 'create_task',
+              result: 'Success',
+              user_context: args.phone_number || null,
               details: { task_id: data.task_id, title: args.title },
             })
 
@@ -992,6 +743,7 @@ Prioritize tasks based on:
 
             const { task_id, ...updates } = args
             delete updates.agent_id
+            delete updates.phone_number
 
             const { data, error } = await supabase
               .from('tasks')
@@ -1005,7 +757,11 @@ Prioritize tasks based on:
             // Log action
             await supabase.from('ai_agent_logs').insert({
               agent_id: agentId,
+              agent_name: agentName,
+              module: 'Tasks',
               action: 'update_task',
+              result: 'Success',
+              user_context: args.phone_number || null,
               details: { task_id, updates },
             })
 
@@ -1013,7 +769,7 @@ Prioritize tasks based on:
               content: [
                 {
                   type: 'text',
-                  text: JSON.stringify(data, null, 2),
+                  text: JSON.stringify({ success: true, message: 'Task updated successfully', task: data }),
                 },
               ],
             }
@@ -1035,7 +791,11 @@ Prioritize tasks based on:
             // Log action
             await supabase.from('ai_agent_logs').insert({
               agent_id: agentId,
+              agent_name: agentName,
+              module: 'Tasks',
               action: 'delete_task',
+              result: 'Success',
+              user_context: args.phone_number || null,
               details: { task_id: args.task_id },
             })
 
@@ -1060,7 +820,6 @@ Prioritize tasks based on:
         throw new Error(`Unknown method: ${method}`)
     }
   } catch (error: any) {
-    console.error('MCP request error:', error)
     response.error = {
       code: -32603,
       message: error.message || 'Internal error',
@@ -1080,15 +839,17 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    let sessionId = req.headers.get('Mcp-Session-Id') || generateSessionId()
+    let sessionId = req.headers.get('Mcp-Session-Id')
+    if (!sessionId) {
+      sessionId = generateSessionId()
+    }
 
-    const body = await req.json()
-    const response = await handleMCPRequest(body, sessionId, supabase)
+    const message: MCPMessage = await req.json()
+    const response = await handleMCPRequest(message, sessionId, supabase)
 
     return new Response(JSON.stringify(response), {
       status: 200,
@@ -1099,7 +860,7 @@ Deno.serve(async (req: Request) => {
       },
     })
   } catch (error: any) {
-    console.error('Server error:', error)
+    console.error('MCP Server Error:', error)
     return new Response(
       JSON.stringify({
         jsonrpc: '2.0',
