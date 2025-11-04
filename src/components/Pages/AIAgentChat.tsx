@@ -282,13 +282,13 @@ export function AIAgentChat() {
         type: 'function',
         function: {
           name: 'read_mcp_resource',
-          description: 'Read data from an MCP resource (e.g., task statistics, pending tasks, overdue tasks)',
+          description: 'Read data from an MCP resource. Use this for getting task lists and summaries without filtering.',
           parameters: {
             type: 'object',
             properties: {
               uri: {
                 type: 'string',
-                description: 'The resource URI to read (e.g., "tasks://statistics", "tasks://overdue", "tasks://pending")',
+                description: 'The resource URI to read. Available URIs: "tasks://all" (all tasks), "tasks://pending" (To Do/In Progress), "tasks://overdue" (past due date), "tasks://high-priority" (High/Urgent priority), "tasks://statistics" (aggregated stats)',
               },
             },
             required: ['uri'],
@@ -577,7 +577,7 @@ export function AIAgentChat() {
             resources.forEach((r: any) => {
               mcpResourcesInfo += `- **${r.uri}**: ${r.description}\n`
             })
-            mcpResourcesInfo += `\nTo access these resources, you can ask questions like "show me task statistics" or "what are the overdue tasks".`
+            mcpResourcesInfo += `\n**When to use Resources:**\n- User asks "how many tasks..." → use read_mcp_resource with tasks://all or tasks://statistics\n- User asks "show pending tasks" → use read_mcp_resource with tasks://pending\n- User asks "what's overdue" → use read_mcp_resource with tasks://overdue\n- User asks "high priority tasks" → use read_mcp_resource with tasks://high-priority\n\nResources give you raw data to analyze and summarize for the user.`
           }
 
           // Get prompts
@@ -587,7 +587,7 @@ export function AIAgentChat() {
             prompts.forEach((p: any) => {
               mcpPromptsInfo += `- **${p.name}**: ${p.description}\n`
             })
-            mcpPromptsInfo += `\nUsers can ask for things like "give me a task summary" or "show me task creation best practices".`
+            mcpPromptsInfo += `\n**When to use Prompts:**\n- User asks "give me a summary" → use get_mcp_prompt('task_summary')\n- User asks "how to create a task" → use get_mcp_prompt('task_creation_guide')\n- User asks "how to prioritize" → use get_mcp_prompt('task_prioritization')\n- User asks "any overdue tasks?" → use get_mcp_prompt('overdue_alert')\n- User asks "how to find a task" → use get_mcp_prompt('get_task_by_id')\n\nPrompts provide pre-formatted, user-friendly responses with guidance and recommendations.`
           }
         } catch (error) {
           console.error('Error fetching MCP resources/prompts:', error)

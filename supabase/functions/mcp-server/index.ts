@@ -96,6 +96,12 @@ async function handleMCPRequest(
               description: 'Tasks with priority \"High\" or \"Urgent\"',
               mimeType: 'application/json',
             },
+            {
+              uri: 'tasks://statistics',
+              name: 'Task Statistics',
+              description: 'Aggregated statistics about tasks (counts by status, priority, overdue, etc.)',
+              mimeType: 'application/json',
+            },
           ],
         }
         break
@@ -108,31 +114,67 @@ async function handleMCPRequest(
           throw new Error('URI is required')
         }
 
-        let query = supabase.from('tasks').select('*')
+        if (uri === 'tasks://statistics') {
+          const { data: allTasks, error: allError } = await supabase.from('tasks').select('*')
+          if (allError) throw allError
 
-        if (uri === 'tasks://pending') {
-          query = query.in('status', ['To Do', 'In Progress'])
-        } else if (uri === 'tasks://overdue') {
           const today = new Date().toISOString().split('T')[0]
-          query = query
-            .lt('due_date', today)
-            .in('status', ['To Do', 'In Progress'])
-        } else if (uri === 'tasks://high-priority') {
-          query = query.in('priority', ['High', 'Urgent'])
-        }
-
-        const { data, error } = await query
-
-        if (error) throw error
-
-        response.result = {
-          contents: [
-            {
-              uri,
-              mimeType: 'application/json',
-              text: JSON.stringify(data, null, 2),
+          const stats = {
+            total: allTasks?.length || 0,
+            by_status: {
+              'To Do': allTasks?.filter((t: any) => t.status === 'To Do').length || 0,
+              'In Progress': allTasks?.filter((t: any) => t.status === 'In Progress').length || 0,
+              'Completed': allTasks?.filter((t: any) => t.status === 'Completed').length || 0,
+              'Cancelled': allTasks?.filter((t: any) => t.status === 'Cancelled').length || 0,
             },
-          ],
+            by_priority: {
+              'Low': allTasks?.filter((t: any) => t.priority === 'Low').length || 0,
+              'Medium': allTasks?.filter((t: any) => t.priority === 'Medium').length || 0,
+              'High': allTasks?.filter((t: any) => t.priority === 'High').length || 0,
+              'Urgent': allTasks?.filter((t: any) => t.priority === 'Urgent').length || 0,
+            },
+            pending: allTasks?.filter((t: any) => t.status === 'To Do' || t.status === 'In Progress').length || 0,
+            completed: allTasks?.filter((t: any) => t.status === 'Completed').length || 0,
+            overdue: allTasks?.filter((t: any) => t.due_date && t.due_date < today && (t.status === 'To Do' || t.status === 'In Progress')).length || 0,
+            high_priority: allTasks?.filter((t: any) => t.priority === 'High' || t.priority === 'Urgent').length || 0,
+          }
+
+          response.result = {
+            contents: [
+              {
+                uri,
+                mimeType: 'application/json',
+                text: JSON.stringify(stats, null, 2),
+              },
+            ],
+          }
+        } else {
+          let query = supabase.from('tasks').select('*')
+
+          if (uri === 'tasks://pending') {
+            query = query.in('status', ['To Do', 'In Progress'])
+          } else if (uri === 'tasks://overdue') {
+            const today = new Date().toISOString().split('T')[0]
+            query = query
+              .lt('due_date', today)
+              .in('status', ['To Do', 'In Progress'])
+          } else if (uri === 'tasks://high-priority') {
+            query = query.in('priority', ['High', 'Urgent'])
+          }
+
+          const { data, error } = await query
+
+          if (error) throw error
+
+          response.result = {
+            contents: [
+              {
+                uri,
+                mimeType: 'application/json',
+                text: JSON.stringify(data, null, 2),
+              },
+            ],
+          }
         }
         break
       }
