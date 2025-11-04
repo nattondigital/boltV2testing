@@ -232,271 +232,21 @@ export function AIAgentChat() {
       }
     }
 
-    if (permissions['Expenses']?.can_create) {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'create_expense',
-          description: 'Create a new expense entry in the CRM',
-          parameters: {
-            type: 'object',
-            properties: {
-              description: {
-                type: 'string',
-                description: 'Description of the expense'
-              },
-              amount: {
-                type: 'number',
-                description: 'Amount of the expense'
-              },
-              category: {
-                type: 'string',
-                description: 'Category of the expense (e.g., Marketing, Software, Travel, Food, Transportation). If not specified in the request, infer from the description (e.g., "flight" -> Travel, "lunch" -> Food)'
-              },
-              date: {
-                type: 'string',
-                description: 'Date of expense in YYYY-MM-DD format'
-              }
-            },
-            required: ['description', 'amount']
-          }
-        }
-      })
-    }
+    // Expenses tools removed - use MCP server instead
 
-    // Only add native task tools if Tasks module is NOT handled by MCP
-    if (permissions['Tasks']?.can_create && !mcpHandledModules.includes('Tasks')) {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'create_task',
-          description: 'Create a new task in the CRM',
-          parameters: {
-            type: 'object',
-            properties: {
-              title: {
-                type: 'string',
-                description: 'Title of the task'
-              },
-              description: {
-                type: 'string',
-                description: 'Detailed description of the task'
-              },
-              due_date: {
-                type: 'string',
-                description: 'Due date in YYYY-MM-DD format'
-              },
-              priority: {
-                type: 'string',
-                enum: ['Low', 'Medium', 'High'],
-                description: 'Priority level of the task'
-              }
-            },
-            required: ['title']
-          }
-        }
-      })
-    }
+    // Task tools removed - use MCP server instead
 
-    if (permissions['Leads']?.can_create) {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'create_lead',
-          description: 'Create a new lead in the CRM',
-          parameters: {
-            type: 'object',
-            properties: {
-              name: {
-                type: 'string',
-                description: 'Name of the lead'
-              },
-              phone: {
-                type: 'string',
-                description: 'Phone number of the lead'
-              },
-              email: {
-                type: 'string',
-                description: 'Email address of the lead'
-              },
-              company: {
-                type: 'string',
-                description: 'Company name'
-              },
-              pipeline: {
-                type: 'string',
-                description: 'Pipeline name (e.g., "ITR FILING", "Ai Automation 2.0")'
-              },
-              interest: {
-                type: 'string',
-                enum: ['Hot', 'Warm', 'Cold'],
-                description: 'Interest level of the lead'
-              },
-              source: {
-                type: 'string',
-                description: 'Source of the lead (e.g., Website, Referral, Phone)'
-              }
-            },
-            required: ['name', 'phone']
-          }
-        }
-      })
-    }
+    // Lead tools removed - use MCP server instead
 
-    if (permissions['Leads']?.can_view) {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'get_leads',
-          description: 'Get list of leads from the CRM',
-          parameters: {
-            type: 'object',
-            properties: {
-              stage: {
-                type: 'string',
-                description: 'Filter by lead stage (e.g., New, Contacted, Qualified)'
-              },
-              limit: {
-                type: 'number',
-                description: 'Number of leads to retrieve'
-              }
-            }
-          }
-        }
-      })
-    }
+    // Lead view tools removed - use MCP server instead
 
-    if (permissions['Expenses']?.can_view) {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'get_expenses',
-          description: 'Get list of expenses from the CRM with optional filtering and grouping. Can filter by date range, category, and group by category with totals.',
-          parameters: {
-            type: 'object',
-            properties: {
-              date_filter: {
-                type: 'string',
-                description: 'Filter by date: "today", "this_week", "this_month", "last_month", or specific date in YYYY-MM-DD format'
-              },
-              category: {
-                type: 'string',
-                description: 'Filter by specific category (e.g., Travel, Marketing, Software)'
-              },
-              group_by_category: {
-                type: 'boolean',
-                description: 'If true, groups expenses by category and returns totals for each category'
-              },
-              limit: {
-                type: 'number',
-                description: 'Number of expenses to retrieve (not applicable when group_by_category is true)'
-              }
-            }
-          }
-        }
-      })
-    }
+    // Expense view tools removed - use MCP server instead
 
-    if (permissions['Appointments']?.can_view) {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'get_appointments',
-          description: 'Get list of appointments from the CRM. Can filter by date, status, or appointment ID.',
-          parameters: {
-            type: 'object',
-            properties: {
-              date_filter: {
-                type: 'string',
-                enum: ['today', 'upcoming', 'past', 'this_month', 'all'],
-                description: 'Filter appointments by date: today (today only), upcoming (future), past (previous), this_month (current month), all (no filter)'
-              },
-              appointment_id: {
-                type: 'string',
-                description: 'Specific appointment ID to retrieve (e.g., APT-472048279)'
-              },
-              specific_date: {
-                type: 'string',
-                description: 'Specific date in YYYY-MM-DD format'
-              },
-              limit: {
-                type: 'number',
-                description: 'Number of appointments to retrieve'
-              }
-            }
-          }
-        }
-      })
-    }
+    // Appointment view tools removed - use MCP server instead
 
-    if (permissions['Appointments']?.can_create) {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'create_appointment',
-          description: 'Create a new appointment in the CRM',
-          parameters: {
-            type: 'object',
-            properties: {
-              title: {
-                type: 'string',
-                description: 'Title of the appointment'
-              },
-              contact_name: {
-                type: 'string',
-                description: 'Name of the contact'
-              },
-              contact_phone: {
-                type: 'string',
-                description: 'Phone number of the contact'
-              },
-              contact_email: {
-                type: 'string',
-                description: 'Email of the contact'
-              },
-              appointment_date: {
-                type: 'string',
-                description: 'Date in YYYY-MM-DD format'
-              },
-              appointment_time: {
-                type: 'string',
-                description: 'Time in HH:MM format (24-hour)'
-              },
-              duration_minutes: {
-                type: 'number',
-                description: 'Duration in minutes'
-              },
-              location: {
-                type: 'string',
-                description: 'Location of the appointment'
-              },
-              purpose: {
-                type: 'string',
-                description: 'Purpose of the appointment'
-              }
-            },
-            required: ['title', 'appointment_date', 'appointment_time']
-          }
-        }
-      })
-    }
+    // Appointment create tools removed - use MCP server instead
 
-    tools.push({
-      type: 'function',
-      function: {
-        name: 'get_calendars',
-        description: 'Get list of calendars in the CRM',
-        parameters: {
-          type: 'object',
-          properties: {
-            limit: {
-              type: 'number',
-              description: 'Number of calendars to retrieve'
-            }
-          }
-        }
-      }
-    })
+    // Calendar tools removed - use MCP server instead
 
     tools.push({
       type: 'function',
@@ -520,85 +270,11 @@ export function AIAgentChat() {
       }
     })
 
-    if (permissions['Support Tickets']?.can_view) {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'get_support_tickets',
-          description: 'Get list of support tickets from the CRM',
-          parameters: {
-            type: 'object',
-            properties: {
-              status: {
-                type: 'string',
-                enum: ['Open', 'In Progress', 'Resolved', 'Closed'],
-                description: 'Filter by ticket status'
-              },
-              limit: {
-                type: 'number',
-                description: 'Number of tickets to retrieve'
-              }
-            }
-          }
-        }
-      })
-    }
+    // Support ticket tools removed - use MCP server instead
 
-    if (permissions['Contacts']?.can_view) {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'get_contacts',
-          description: 'Get list of contacts from the CRM',
-          parameters: {
-            type: 'object',
-            properties: {
-              search: {
-                type: 'string',
-                description: 'Search contacts by name, email, or phone'
-              },
-              limit: {
-                type: 'number',
-                description: 'Number of contacts to retrieve'
-              }
-            }
-          }
-        }
-      })
-    }
+    // Contact tools removed - use MCP server instead
 
-    if (permissions['Tasks']?.can_view && !mcpHandledModules.includes('Tasks')) {
-      tools.push({
-        type: 'function',
-        function: {
-          name: 'get_tasks',
-          description: 'Get list of tasks from the CRM. Can retrieve a specific task by task_id or filter by status/priority.',
-          parameters: {
-            type: 'object',
-            properties: {
-              task_id: {
-                type: 'string',
-                description: 'Get a specific task by its task_id (e.g., TASK-10031)'
-              },
-              status: {
-                type: 'string',
-                enum: ['Pending', 'In Progress', 'Completed'],
-                description: 'Filter by task status'
-              },
-              priority: {
-                type: 'string',
-                enum: ['Low', 'Medium', 'High'],
-                description: 'Filter by task priority'
-              },
-              limit: {
-                type: 'number',
-                description: 'Number of tasks to retrieve'
-              }
-            }
-          }
-        }
-      })
-    }
+    // Task view tools removed - use MCP server instead
 
     // Add MCP resource and prompt tools if MCP is enabled
     if (agent?.use_mcp && id) {
@@ -650,331 +326,43 @@ export function AIAgentChat() {
     try {
       switch (functionName) {
         case 'create_expense':
-          const { error: expenseError } = await supabase
-            .from('expenses')
-            .insert({
-              description: args.description,
-              amount: args.amount,
-              category: args.category || 'Other',
-              expense_date: args.date || new Date().toISOString().split('T')[0],
-              status: 'Pending'
-            })
-
-          if (expenseError) throw expenseError
-          return { success: true, message: `Expense created: ${args.description} for ₹${args.amount} (Category: ${args.category || 'Other'})` }
+          return { success: false, message: 'create_expense has been removed. Please use MCP server instead.' }
 
         case 'create_task':
-          if (id && await shouldUseMCP(id, 'create_task')) {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-            const mcpResult = await executeMCPTool(id, 'create_task', args, supabaseUrl, supabaseAnonKey)
-            return { ...mcpResult, usedMCP: true }
-          }
-
-          const { error: taskError } = await supabase
-            .from('tasks')
-            .insert({
-              title: args.title,
-              description: args.description,
-              due_date: args.due_date,
-              priority: args.priority || 'Medium',
-              status: 'Pending'
-            })
-
-          if (taskError) throw taskError
-          return { success: true, message: `Task created: ${args.title}` }
+          return { success: false, message: 'create_task has been removed. Please use MCP server instead.' }
 
         case 'create_lead':
-          const { data: pipelines, error: pipelineError } = await supabase
-            .from('pipelines')
-            .select('id, name')
-
-          if (pipelineError) throw pipelineError
-
-          let pipelineId = pipelines?.find(p =>
-            p.name.toLowerCase() === (args.pipeline || '').toLowerCase()
-          )?.id
-
-          if (!pipelineId && pipelines && pipelines.length > 0) {
-            pipelineId = pipelines.find(p => p.is_default)?.id || pipelines[0].id
-          }
-
-          const { data: stages, error: stageError } = await supabase
-            .from('pipeline_stages')
-            .select('stage_id')
-            .eq('pipeline_id', pipelineId)
-            .order('display_order', { ascending: true })
-            .limit(1)
-
-          if (stageError) throw stageError
-          const firstStageId = stages?.[0]?.stage_id || 'new_lead'
-
-          const { error: leadError } = await supabase
-            .from('leads')
-            .insert({
-              name: args.name,
-              phone: args.phone,
-              email: args.email,
-              company: args.company,
-              pipeline_id: pipelineId,
-              stage: firstStageId,
-              interest: args.interest || 'Warm',
-              source: args.source || 'Manual Entry'
-            })
-
-          if (leadError) throw leadError
-          return { success: true, message: `Lead created: ${args.name} (${args.phone})` }
+          return { success: false, message: 'create_lead has been removed. Please use MCP server instead.' }
 
         case 'get_leads':
-          const leadsQuery = supabase
-            .from('leads')
-            .select('*')
-            .limit(args.limit || 10)
-
-          if (args.stage) {
-            leadsQuery.eq('stage', args.stage)
-          }
-
-          const { data: leads, error: leadsError } = await leadsQuery
-          if (leadsError) throw leadsError
-
-          return { success: true, data: leads, count: leads.length }
+          return { success: false, message: 'get_leads has been removed. Please use MCP server instead.' }
 
         case 'get_expenses':
-          let expensesQuery = supabase
-            .from('expenses')
-            .select('*')
-            .order('expense_date', { ascending: false })
-
-          const todayDate = new Date().toISOString().split('T')[0]
-          const currentYear = new Date().getFullYear()
-          const currentMonth = new Date().getMonth() + 1
-          const firstDayOfMonth = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`
-          const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1
-          const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear
-          const firstDayOfLastMonth = `${lastMonthYear}-${lastMonth.toString().padStart(2, '0')}-01`
-          const lastDayOfLastMonth = new Date(lastMonthYear, lastMonth, 0).toISOString().split('T')[0]
-
-          if (args.date_filter === 'today') {
-            expensesQuery = expensesQuery.eq('expense_date', todayDate)
-          } else if (args.date_filter === 'this_week') {
-            const weekAgo = new Date()
-            weekAgo.setDate(weekAgo.getDate() - 7)
-            expensesQuery = expensesQuery.gte('expense_date', weekAgo.toISOString().split('T')[0])
-          } else if (args.date_filter === 'this_month') {
-            expensesQuery = expensesQuery.gte('expense_date', firstDayOfMonth)
-          } else if (args.date_filter === 'last_month') {
-            expensesQuery = expensesQuery
-              .gte('expense_date', firstDayOfLastMonth)
-              .lte('expense_date', lastDayOfLastMonth)
-          } else if (args.date_filter && args.date_filter.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            expensesQuery = expensesQuery.eq('expense_date', args.date_filter)
-          }
-
-          if (args.category) {
-            expensesQuery = expensesQuery.eq('category', args.category)
-          }
-
-          if (!args.group_by_category && args.limit) {
-            expensesQuery = expensesQuery.limit(args.limit)
-          }
-
-          const { data: expenses, error: expensesError } = await expensesQuery
-
-          if (expensesError) throw expensesError
-
-          if (args.group_by_category) {
-            const categoryTotals: Record<string, { count: number, total: number }> = {}
-            expenses?.forEach(expense => {
-              const cat = expense.category || 'Uncategorized'
-              if (!categoryTotals[cat]) {
-                categoryTotals[cat] = { count: 0, total: 0 }
-              }
-              categoryTotals[cat].count++
-              categoryTotals[cat].total += parseFloat(expense.amount) || 0
-            })
-
-            const summary = Object.entries(categoryTotals).map(([category, data]) => ({
-              category,
-              count: data.count,
-              total: data.total
-            }))
-
-            const grandTotal = summary.reduce((sum, item) => sum + item.total, 0)
-
-            return {
-              success: true,
-              summary,
-              grand_total: grandTotal,
-              message: `Found ${expenses?.length || 0} expenses across ${summary.length} categories with a total of ₹${grandTotal.toFixed(2)}`
-            }
-          }
-
-          return { success: true, data: expenses, count: expenses?.length || 0 }
+          return { success: false, message: 'get_expenses has been removed. Please use MCP server instead.' }
 
         case 'get_appointments':
-          let appointmentsQuery = supabase
-            .from('appointments')
-            .select('*')
-            .order('appointment_date', { ascending: true })
-            .order('appointment_time', { ascending: true })
-
-          const today = new Date().toISOString().split('T')[0]
-          const currentMonthStr = today.substring(0, 7)
-
-          if (args.appointment_id) {
-            appointmentsQuery = appointmentsQuery.eq('appointment_id', args.appointment_id)
-          } else if (args.specific_date) {
-            appointmentsQuery = appointmentsQuery.eq('appointment_date', args.specific_date)
-          } else if (args.date_filter === 'today') {
-            appointmentsQuery = appointmentsQuery.eq('appointment_date', today)
-          } else if (args.date_filter === 'upcoming') {
-            appointmentsQuery = appointmentsQuery.gte('appointment_date', today)
-          } else if (args.date_filter === 'past') {
-            appointmentsQuery = appointmentsQuery.lt('appointment_date', today)
-          } else if (args.date_filter === 'this_month') {
-            appointmentsQuery = appointmentsQuery.like('appointment_date', `${currentMonthStr}%`)
-          }
-
-          appointmentsQuery = appointmentsQuery.limit(args.limit || 10)
-
-          const { data: appointments, error: appointmentsError } = await appointmentsQuery
-          if (appointmentsError) throw appointmentsError
-
-          return { success: true, data: appointments, count: appointments.length }
+          return { success: false, message: 'get_appointments has been removed. Please use MCP server instead.' }
 
         case 'create_appointment':
-          const appointmentId = `APT-${Math.floor(Math.random() * 1000000000)}`
-          const { error: appointmentError } = await supabase
-            .from('appointments')
-            .insert({
-              appointment_id: appointmentId,
-              title: args.title,
-              contact_name: args.contact_name,
-              contact_phone: args.contact_phone,
-              contact_email: args.contact_email,
-              appointment_date: args.appointment_date,
-              appointment_time: args.appointment_time,
-              duration_minutes: args.duration_minutes || 60,
-              location: args.location,
-              purpose: args.purpose,
-              status: 'Scheduled',
-              reminder_sent: false
-            })
-
-          if (appointmentError) throw appointmentError
-          return { success: true, message: `Appointment created: ${args.title} (${appointmentId})` }
+          return { success: false, message: 'create_appointment has been removed. Please use MCP server instead.' }
 
         case 'get_calendars':
-          const { data: calendars, error: calendarsError } = await supabase
-            .from('calendars')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(args.limit || 10)
-
-          if (calendarsError) throw calendarsError
-          return { success: true, data: calendars, count: calendars.length }
+          return { success: false, message: 'get_calendars has been removed. Please use MCP server instead.' }
 
         case 'get_support_tickets':
-          let ticketsQuery = supabase
-            .from('support_tickets')
-            .select('*')
-            .order('created_at', { ascending: false })
-
-          if (args.status) {
-            ticketsQuery = ticketsQuery.eq('status', args.status)
-          }
-
-          ticketsQuery = ticketsQuery.limit(args.limit || 10)
-
-          const { data: tickets, error: ticketsError } = await ticketsQuery
-          if (ticketsError) throw ticketsError
-
-          return { success: true, data: tickets, count: tickets.length }
+          return { success: false, message: 'get_support_tickets has been removed. Please use MCP server instead.' }
 
         case 'get_contacts':
-          let contactsQuery = supabase
-            .from('contacts_master')
-            .select('*')
-            .order('created_at', { ascending: false })
-
-          if (args.search) {
-            contactsQuery = contactsQuery.or(`name.ilike.%${args.search}%,email.ilike.%${args.search}%,phone.ilike.%${args.search}%`)
-          }
-
-          contactsQuery = contactsQuery.limit(args.limit || 10)
-
-          const { data: contacts, error: contactsError } = await contactsQuery
-          if (contactsError) throw contactsError
-
-          return { success: true, data: contacts, count: contacts.length }
+          return { success: false, message: 'get_contacts has been removed. Please use MCP server instead.' }
 
         case 'update_task':
-          if (id && await shouldUseMCP(id, 'update_task')) {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-            const mcpResult = await executeMCPTool(id, 'update_task', args, supabaseUrl, supabaseAnonKey)
-            return { ...mcpResult, usedMCP: true }
-          }
-
-          const { task_id: updateTaskId, ...taskUpdates } = args
-          const { data: updatedTask, error: updateError } = await supabase
-            .from('tasks')
-            .update(taskUpdates)
-            .eq('task_id', updateTaskId)
-            .select()
-            .single()
-
-          if (updateError) throw updateError
-          return { success: true, message: `Task ${updateTaskId} updated successfully`, data: updatedTask }
+          return { success: false, message: 'update_task has been removed. Please use MCP server instead.' }
 
         case 'delete_task':
-          if (id && await shouldUseMCP(id, 'delete_task')) {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-            const mcpResult = await executeMCPTool(id, 'delete_task', args, supabaseUrl, supabaseAnonKey)
-            return { ...mcpResult, usedMCP: true }
-          }
-
-          const { error: deleteError } = await supabase
-            .from('tasks')
-            .delete()
-            .eq('task_id', args.task_id)
-
-          if (deleteError) throw deleteError
-          return { success: true, message: `Task ${args.task_id} deleted successfully` }
+          return { success: false, message: 'delete_task has been removed. Please use MCP server instead.' }
 
         case 'get_tasks':
-          if (id && await shouldUseMCP(id, 'get_tasks')) {
-            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-            const mcpResult = await executeMCPTool(id, 'get_tasks', args, supabaseUrl, supabaseAnonKey)
-            return { ...mcpResult, usedMCP: true }
-          }
-
-          let tasksQuery = supabase
-            .from('tasks')
-            .select('*')
-            .order('created_at', { ascending: false })
-
-          if (args.task_id) {
-            tasksQuery = tasksQuery.eq('task_id', args.task_id)
-          }
-
-          if (args.status) {
-            tasksQuery = tasksQuery.eq('status', args.status)
-          }
-
-          if (args.priority) {
-            tasksQuery = tasksQuery.eq('priority', args.priority)
-          }
-
-          tasksQuery = tasksQuery.limit(args.limit || 10)
-
-          const { data: tasks, error: tasksError } = await tasksQuery
-          if (tasksError) throw tasksError
-
-          return { success: true, data: tasks, count: tasks.length }
+          return { success: false, message: 'get_tasks has been removed. Please use MCP server instead.' }
 
         case 'generate_image':
           if (!openRouterApiKey) {
