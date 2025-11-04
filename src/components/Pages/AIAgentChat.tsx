@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatDateTime } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { getMCPTools, executeMCPTool, shouldUseMCP } from '@/lib/mcp-tool-executor'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface Message {
   id: string
@@ -36,6 +37,7 @@ interface Agent {
 export function AIAgentChat() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const { userProfile } = useAuth()
   const [agent, setAgent] = useState<Agent | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState('')
@@ -44,7 +46,7 @@ export function AIAgentChat() {
   const [openRouterApiKey, setOpenRouterApiKey] = useState('')
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string>('internal')
+  const [selectedPhoneNumber, setSelectedPhoneNumber] = useState<string>('')
   const [availablePhoneNumbers, setAvailablePhoneNumbers] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -52,10 +54,18 @@ export function AIAgentChat() {
   useEffect(() => {
     if (id) {
       fetchAgent()
-      fetchPhoneNumbers()
       fetchOpenRouterKey()
     }
   }, [id])
+
+  useEffect(() => {
+    if (userProfile?.phone) {
+      if (!selectedPhoneNumber) {
+        setSelectedPhoneNumber(userProfile.phone)
+      }
+      fetchPhoneNumbers()
+    }
+  }, [userProfile, id])
 
   useEffect(() => {
     if (id && selectedPhoneNumber) {
@@ -119,8 +129,14 @@ export function AIAgentChat() {
 
       if (error) throw error
 
-      const uniquePhones = Array.from(new Set(data.map(d => d.phone_number)))
-      setAvailablePhoneNumbers(['internal', ...uniquePhones.filter(p => p !== 'internal')])
+      const uniquePhones = Array.from(new Set(data.map(d => d.phone_number).filter(p => p)))
+
+      // Add logged-in user's phone if available
+      if (userProfile?.phone && !uniquePhones.includes(userProfile.phone)) {
+        uniquePhones.unshift(userProfile.phone)
+      }
+
+      setAvailablePhoneNumbers(uniquePhones)
     } catch (error) {
       console.error('Error fetching phone numbers:', error)
     }
@@ -1372,7 +1388,7 @@ When users ask about expenses with time periods (like "this month", "today", "la
               >
                 {availablePhoneNumbers.map((phone) => (
                   <option key={phone} value={phone}>
-                    {phone === 'internal' ? 'Internal Chat' : phone}
+                    {phone}
                   </option>
                 ))}
               </select>
