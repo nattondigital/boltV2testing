@@ -211,3 +211,62 @@ export interface LeadStatistics {
   with_phone: number;
   contacted_recently: number;
 }
+
+export interface Appointment {
+  id: string;
+  appointment_id: string;
+  title: string;
+  contact_id: string | null;
+  contact_name: string;
+  contact_phone: string;
+  contact_email: string | null;
+  appointment_date: string;
+  appointment_time: string;
+  duration_minutes: number;
+  location: string | null;
+  meeting_type: string;
+  status: string;
+  purpose: string;
+  notes: string | null;
+  reminder_sent: boolean;
+  assigned_to: string | null;
+  calendar_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AppointmentFilters {
+  status?: string;
+  meeting_type?: string;
+  contact_id?: string;
+  assigned_to?: string;
+  calendar_id?: string;
+  date_from?: string;
+  date_to?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AppointmentStatistics {
+  total: number;
+  by_status: {
+    Scheduled: number;
+    Confirmed: number;
+    Completed: number;
+    'No-Show': number;
+  };
+  by_meeting_type: {
+    'In-Person': number;
+    'Phone Call': number;
+    'Video Call': number;
+  };
+  today: number;
+  this_week: number;
+  this_month: number;
+  upcoming: number;
+  past_due: number;
+  average_duration: number;
+  no_show_rate: number;
+}
