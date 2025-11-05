@@ -232,32 +232,13 @@ Deno.serve(async (req: Request) => {
       )
     }
 
-    console.log(`Agent ${agent.name} - Status: ${agent.status} - MCP Enabled: ${agent.use_mcp}`)
-    if (agent.use_mcp && agent.mcp_config) {
-      console.log('MCP Config:', agent.mcp_config)
-    }
+    console.log(`Agent ${agent.name} - Status: ${agent.status} - MCP Architecture: Enabled`)
 
     if (agent.status !== 'Active') {
       return new Response(
         JSON.stringify({ error: 'Agent is not active', current_status: agent.status }),
         {
           status: 403,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
-        }
-      )
-    }
-
-    if (!agent.use_mcp || !agent.mcp_config?.enabled) {
-      return new Response(
-        JSON.stringify({
-          error: 'MCP server is required but not enabled for this agent. Please enable MCP in agent settings.',
-          mcp_enabled: false
-        }),
-        {
-          status: 400,
           headers: {
             ...corsHeaders,
             'Content-Type': 'application/json',
@@ -382,7 +363,20 @@ Deno.serve(async (req: Request) => {
     const nextSunday = new Date(istDate.getTime() + daysUntilSunday * 24 * 60 * 60 * 1000)
     const sundayDate = nextSunday.toISOString().split('T')[0]
 
-    const enhancedSystemPrompt = `${agent.system_prompt}\n\n**CURRENT DATE & TIME CONTEXT (Asia/Kolkata IST - UTC+5:30):**\n- Today's date: ${todayDate}\n- Tomorrow's date: ${tomorrowDate}\n- Current time: ${currentTime} IST\n- Next Sunday: ${sundayDate}\n- Current day: ${istDate.toLocaleDateString('en-US', { weekday: 'long' })}\n\n**CRITICAL INSTRUCTION: You MUST use the provided tools to perform actions. NEVER respond as if you completed an action without actually calling the appropriate tool.**\n\n## Tool Usage Rules:\n\n1. **ALWAYS call tools** - Do NOT respond as if you completed an action without calling the tool\n2. **Execute immediately** - If you have enough information, call the tool right away\n3. **Use ONLY the tools provided to you** - Do not try to use tools that don't exist\n4. **Match the request to the correct tool** - Read tool descriptions carefully\n5. **Ask for missing info** - Only if critical required parameters are missing\n\n## Date/Time Handling:\n\n**IMPORTANT:** When users provide times, they are in IST. You MUST convert to UTC (subtract 5:30) before passing to tools.\n\nExamples:\n- User says "tomorrow 10 AM" → due_date: "${tomorrowDate}", due_time: "04:30" (10:00 AM IST = 04:30 UTC)\n- User says "today 3 PM" → due_date: "${todayDate}", due_time: "09:30" (3:00 PM IST = 09:30 UTC)\n- User says "this Sunday 12 PM" → due_date: "${sundayDate}", due_time: "06:30" (12:00 PM IST = 06:30 UTC)\n\n**Common time conversions (IST to UTC):**\n- 12:00 AM IST = 18:30 UTC (previous day)\n- 6:00 AM IST = 00:30 UTC\n- 12:00 PM IST = 06:30 UTC\n- 6:00 PM IST = 12:30 UTC\n- 11:59 PM IST = 18:29 UTC\n\n## Examples of CORRECT Behavior:\n\n✅ User: "create a task for tomorrow"\n   → AI calls create_task tool with parameters\n\n✅ User: "show me pending tasks"\n   → AI calls get_tasks tool with status filter\n\n✅ User: "get task TASK-10031"\n   → AI calls get_tasks tool with task_id parameter\n\n## Examples of INCORRECT Behavior (NEVER DO THIS):\n\n❌ User: "create a task"\n   → AI responds: "I've created the task" WITHOUT calling any tool\n\n❌ User: "add a task"\n   → AI responds: "Task added successfully" WITHOUT calling create_task\n\n❌ User asks for tasks\n   → AI invents/guesses task data WITHOUT calling get_tasks\n\n**REMEMBER: If you don't call the tool, the action won't happen in the system. Every action requires a tool call!**`
+    // Fetch dynamic system prompt based on MCP permissions
+    const systemPromptResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/generate-system-prompt`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+      },
+      body: JSON.stringify({ agent_id: payload.agent_id }),
+    })
+
+    const systemPromptData = await systemPromptResponse.json()
+    const baseSystemPrompt = systemPromptData.system_prompt || agent.system_prompt || 'You are a helpful AI assistant.'
+
+    const enhancedSystemPrompt = `${baseSystemPrompt}\n\n**CURRENT DATE & TIME CONTEXT (Asia/Kolkata IST - UTC+5:30):**\n- Today's date: ${todayDate}\n- Tomorrow's date: ${tomorrowDate}\n- Current time: ${currentTime} IST\n- Next Sunday: ${sundayDate}\n- Current day: ${istDate.toLocaleDateString('en-US', { weekday: 'long' })}\n\n## Date/Time Handling:\n\n**IMPORTANT:** When users provide times, they are in IST. You MUST convert to UTC (subtract 5:30) before passing to tools.\n\nExamples:\n- User says "tomorrow 10 AM" → due_date: "${tomorrowDate}", due_time: "04:30" (10:00 AM IST = 04:30 UTC)\n- User says "today 3 PM" → due_date: "${todayDate}", due_time: "09:30" (3:00 PM IST = 09:30 UTC)\n- User says "this Sunday 12 PM" → due_date: "${sundayDate}", due_time: "06:30" (12:00 PM IST = 06:30 UTC)\n\n**Common time conversions (IST to UTC):**\n- 12:00 AM IST = 18:30 UTC (previous day)\n- 6:00 AM IST = 00:30 UTC\n- 12:00 PM IST = 06:30 UTC\n- 6:00 PM IST = 12:30 UTC\n- 11:59 PM IST = 18:29 UTC`
 
     const messages = [
       { role: 'system', content: enhancedSystemPrompt },

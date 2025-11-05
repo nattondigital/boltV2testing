@@ -1,44 +1,71 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Shield, Save, ArrowLeft, Check, X as XIcon } from 'lucide-react'
+import { Shield, Save, ArrowLeft, Check, X as XIcon, Server } from 'lucide-react'
 import { PageHeader } from '@/components/Common/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
 
-interface ModulePermission {
-  can_view: boolean
-  can_create: boolean
-  can_edit: boolean
-  can_delete: boolean
+interface MCPServerConfig {
+  enabled: boolean
+  tools: string[]
 }
 
-interface Permission {
-  [moduleName: string]: ModulePermission
+interface MCPPermissions {
+  [serverName: string]: MCPServerConfig
 }
 
-const CRM_MODULES = [
-  'Leads',
-  'Tasks',
-  'Appointments',
-  'Support Tickets',
-  'Notes',
-  'Files',
-  'Contacts',
-  'Members',
-  'Affiliates',
-  'Expenses',
-  'Products',
-  'Billing'
-]
+// Define available MCP servers and their tools
+const MCP_SERVERS = {
+  'tasks-server': {
+    name: 'Tasks Server',
+    description: 'Manage tasks, assignments, and workflow tracking',
+    tools: [
+      { id: 'get_tasks', name: 'Get Tasks', description: 'View and search tasks' },
+      { id: 'create_task', name: 'Create Task', description: 'Create new tasks' },
+      { id: 'update_task', name: 'Update Task', description: 'Modify existing tasks' },
+      { id: 'delete_task', name: 'Delete Task', description: 'Remove tasks' },
+    ],
+  },
+  'contacts-server': {
+    name: 'Contacts Server',
+    description: 'Manage contacts and customer relationships',
+    tools: [
+      { id: 'get_contacts', name: 'Get Contacts', description: 'View and search contacts' },
+      { id: 'create_contact', name: 'Create Contact', description: 'Add new contacts' },
+      { id: 'update_contact', name: 'Update Contact', description: 'Modify contact details' },
+      { id: 'delete_contact', name: 'Delete Contact', description: 'Remove contacts' },
+    ],
+  },
+  'leads-server': {
+    name: 'Leads Server',
+    description: 'Track and manage sales leads',
+    tools: [
+      { id: 'get_leads', name: 'Get Leads', description: 'View and search leads' },
+      { id: 'create_lead', name: 'Create Lead', description: 'Add new leads' },
+      { id: 'update_lead', name: 'Update Lead', description: 'Modify lead information' },
+      { id: 'delete_lead', name: 'Delete Lead', description: 'Remove leads' },
+    ],
+  },
+  'appointments-server': {
+    name: 'Appointments Server',
+    description: 'Schedule and manage appointments',
+    tools: [
+      { id: 'get_appointments', name: 'Get Appointments', description: 'View and search appointments' },
+      { id: 'create_appointment', name: 'Create Appointment', description: 'Schedule new appointments' },
+      { id: 'update_appointment', name: 'Update Appointment', description: 'Modify appointment details' },
+      { id: 'delete_appointment', name: 'Delete Appointment', description: 'Cancel appointments' },
+    ],
+  },
+}
 
 export function AIAgentPermissions() {
   const navigate = useNavigate()
   const { id } = useParams()
   const [loading, setLoading] = useState(false)
   const [agentName, setAgentName] = useState('')
-  const [permissions, setPermissions] = useState<Permission>({})
+  const [permissions, setPermissions] = useState<MCPPermissions>({})
 
   useEffect(() => {
     if (id) {
@@ -67,21 +94,20 @@ export function AIAgentPermissions() {
 
       if (permError) throw permError
 
-      const defaultPermissions: Permission = {}
-      CRM_MODULES.forEach(module => {
-        defaultPermissions[module] = {
-          can_view: true,
-          can_create: false,
-          can_edit: false,
-          can_delete: false
+      // Initialize with default structure
+      const defaultPermissions: MCPPermissions = {}
+      Object.keys(MCP_SERVERS).forEach(serverKey => {
+        defaultPermissions[serverKey] = {
+          enabled: false,
+          tools: []
         }
       })
 
       if (permData && permData.permissions) {
-        const existingPerms = permData.permissions as Permission
-        Object.keys(existingPerms).forEach(module => {
-          if (defaultPermissions[module]) {
-            defaultPermissions[module] = existingPerms[module]
+        const existingPerms = permData.permissions as MCPPermissions
+        Object.keys(existingPerms).forEach(serverKey => {
+          if (defaultPermissions[serverKey]) {
+            defaultPermissions[serverKey] = existingPerms[serverKey]
           }
         })
       }
@@ -96,12 +122,52 @@ export function AIAgentPermissions() {
     }
   }
 
-  const handlePermissionToggle = (moduleName: string, permissionType: 'can_view' | 'can_create' | 'can_edit' | 'can_delete') => {
+  const handleServerToggle = (serverKey: string) => {
     setPermissions(prev => ({
       ...prev,
-      [moduleName]: {
-        ...prev[moduleName],
-        [permissionType]: !prev[moduleName][permissionType]
+      [serverKey]: {
+        ...prev[serverKey],
+        enabled: !prev[serverKey].enabled,
+        tools: !prev[serverKey].enabled ? [] : prev[serverKey].tools
+      }
+    }))
+  }
+
+  const handleToolToggle = (serverKey: string, toolId: string) => {
+    setPermissions(prev => {
+      const currentTools = prev[serverKey].tools || []
+      const hasTool = currentTools.includes(toolId)
+
+      return {
+        ...prev,
+        [serverKey]: {
+          ...prev[serverKey],
+          tools: hasTool
+            ? currentTools.filter(t => t !== toolId)
+            : [...currentTools, toolId]
+        }
+      }
+    })
+  }
+
+  const handleSelectAllTools = (serverKey: string) => {
+    const allTools = MCP_SERVERS[serverKey as keyof typeof MCP_SERVERS].tools.map(t => t.id)
+    setPermissions(prev => ({
+      ...prev,
+      [serverKey]: {
+        ...prev[serverKey],
+        enabled: true,
+        tools: allTools
+      }
+    }))
+  }
+
+  const handleDeselectAllTools = (serverKey: string) => {
+    setPermissions(prev => ({
+      ...prev,
+      [serverKey]: {
+        ...prev[serverKey],
+        tools: []
       }
     }))
   }
@@ -121,7 +187,7 @@ export function AIAgentPermissions() {
       if (existingData) {
         const { error: updateError } = await supabase
           .from('ai_agent_permissions')
-          .update({ permissions })
+          .update({ permissions, updated_at: new Date().toISOString() })
           .eq('agent_id', id)
 
         if (updateError) throw updateError
@@ -133,7 +199,7 @@ export function AIAgentPermissions() {
         if (insertError) throw insertError
       }
 
-      alert('Permissions saved successfully')
+      alert('MCP permissions saved successfully')
       navigate('/ai-agents')
     } catch (error) {
       console.error('Error saving permissions:', error)
@@ -141,10 +207,6 @@ export function AIAgentPermissions() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const getPermissionCount = (module: ModulePermission) => {
-    return [module.can_view, module.can_create, module.can_edit, module.can_delete].filter(Boolean).length
   }
 
   return (
@@ -159,8 +221,8 @@ export function AIAgentPermissions() {
           Back to Agents
         </Button>
         <PageHeader
-          title="Module Access Permissions"
-          subtitle={`Configure permissions for ${agentName}`}
+          title="MCP Server Permissions"
+          subtitle={`Configure Model Context Protocol server access for ${agentName}`}
           icon={Shield}
         />
       </div>
@@ -168,154 +230,155 @@ export function AIAgentPermissions() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        className="space-y-6"
       >
-        <Card>
-          <CardHeader>
-            <CardTitle>CRM Module Permissions</CardTitle>
-            <p className="text-sm text-gray-500 mt-2">
-              Control what actions this AI agent can perform in each module. By default, only View is enabled.
-            </p>
-          </CardHeader>
-          <CardContent>
-            {loading && permissions.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="text-gray-500 mt-4">Loading permissions...</p>
-              </div>
-            ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Module
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          View
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Create
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Edit
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Delete
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Permissions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {CRM_MODULES.map((moduleName) => {
-                        const permission = permissions[moduleName]
-                        if (!permission) return null
+        {Object.entries(MCP_SERVERS).map(([serverKey, serverConfig]) => {
+          const serverPerms = permissions[serverKey]
+          if (!serverPerms) return null
 
-                        return (
-                          <tr key={moduleName} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">
-                                {moduleName}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                              <button
-                                onClick={() => handlePermissionToggle(moduleName, 'can_view')}
-                                className={`
-                                  w-8 h-8 rounded-lg flex items-center justify-center transition-colors
-                                  ${permission.can_view
-                                    ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                  }
-                                `}
-                              >
-                                {permission.can_view ? <Check className="w-5 h-5" /> : <XIcon className="w-5 h-5" />}
-                              </button>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                              <button
-                                onClick={() => handlePermissionToggle(moduleName, 'can_create')}
-                                className={`
-                                  w-8 h-8 rounded-lg flex items-center justify-center transition-colors
-                                  ${permission.can_create
-                                    ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                  }
-                                `}
-                              >
-                                {permission.can_create ? <Check className="w-5 h-5" /> : <XIcon className="w-5 h-5" />}
-                              </button>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                              <button
-                                onClick={() => handlePermissionToggle(moduleName, 'can_edit')}
-                                className={`
-                                  w-8 h-8 rounded-lg flex items-center justify-center transition-colors
-                                  ${permission.can_edit
-                                    ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
-                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                  }
-                                `}
-                              >
-                                {permission.can_edit ? <Check className="w-5 h-5" /> : <XIcon className="w-5 h-5" />}
-                              </button>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                              <button
-                                onClick={() => handlePermissionToggle(moduleName, 'can_delete')}
-                                className={`
-                                  w-8 h-8 rounded-lg flex items-center justify-center transition-colors
-                                  ${permission.can_delete
-                                    ? 'bg-red-100 text-red-600 hover:bg-red-200'
-                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                  }
-                                `}
-                              >
-                                {permission.can_delete ? <Check className="w-5 h-5" /> : <XIcon className="w-5 h-5" />}
-                              </button>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-center">
-                              <span className="text-sm text-gray-500">
-                                {getPermissionCount(permission)}/4
+          const enabledTools = serverPerms.tools?.length || 0
+          const totalTools = serverConfig.tools.length
+
+          return (
+            <Card key={serverKey}>
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className={`
+                      p-3 rounded-lg transition-colors
+                      ${serverPerms.enabled
+                        ? 'bg-green-100 text-green-600'
+                        : 'bg-gray-100 text-gray-400'
+                      }
+                    `}>
+                      <Server className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="flex items-center gap-3">
+                        {serverConfig.name}
+                        <button
+                          onClick={() => handleServerToggle(serverKey)}
+                          className={`
+                            px-3 py-1 rounded-full text-xs font-semibold transition-colors
+                            ${serverPerms.enabled
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }
+                          `}
+                        >
+                          {serverPerms.enabled ? 'Enabled' : 'Disabled'}
+                        </button>
+                      </CardTitle>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {serverConfig.description}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-2">
+                        {enabledTools} of {totalTools} tools enabled
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSelectAllTools(serverKey)}
+                      disabled={!serverPerms.enabled}
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeselectAllTools(serverKey)}
+                      disabled={!serverPerms.enabled}
+                    >
+                      Deselect All
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {serverConfig.tools.map(tool => {
+                    const isEnabled = serverPerms.tools?.includes(tool.id) || false
+                    const canToggle = serverPerms.enabled
+
+                    return (
+                      <button
+                        key={tool.id}
+                        onClick={() => canToggle && handleToolToggle(serverKey, tool.id)}
+                        disabled={!canToggle}
+                        className={`
+                          p-4 rounded-lg border-2 text-left transition-all
+                          ${!canToggle
+                            ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200'
+                            : isEnabled
+                              ? 'bg-blue-50 border-blue-300 hover:border-blue-400'
+                              : 'bg-white border-gray-200 hover:border-gray-300'
+                          }
+                        `}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`
+                                text-sm font-semibold
+                                ${isEnabled && canToggle ? 'text-blue-700' : 'text-gray-700'}
+                              `}>
+                                {tool.name}
                               </span>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {tool.description}
+                            </p>
+                          </div>
+                          <div className={`
+                            w-6 h-6 rounded flex items-center justify-center flex-shrink-0 ml-2
+                            ${isEnabled && canToggle
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-200 text-gray-400'
+                            }
+                          `}>
+                            {isEnabled ? <Check className="w-4 h-4" /> : <XIcon className="w-4 h-4" />}
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
+              </CardContent>
+            </Card>
+          )
+        })}
 
-                <div className="flex gap-4 mt-6 pt-6 border-t">
-                  <Button
-                    onClick={handleSavePermissions}
-                    disabled={loading}
-                    className="flex-1"
-                  >
-                    {loading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4 mr-2" />
-                        Save Permissions
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate('/ai-agents')}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </>
-            )}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex gap-4">
+              <Button
+                onClick={handleSavePermissions}
+                disabled={loading}
+                className="flex-1"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save MCP Permissions
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/ai-agents')}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </motion.div>
