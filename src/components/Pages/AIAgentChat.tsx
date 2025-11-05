@@ -30,8 +30,6 @@ interface Agent {
   model: string
   status: string
   system_prompt?: string
-  use_mcp?: boolean
-  mcp_config?: any
 }
 
 export function AIAgentChat() {
@@ -85,7 +83,7 @@ export function AIAgentChat() {
     try {
       const { data, error } = await supabase
         .from('ai_agents')
-        .select('id, name, model, status, system_prompt, use_mcp, mcp_config')
+        .select('id, name, model, status, system_prompt')
         .eq('id', id)
         .single()
 
@@ -212,25 +210,9 @@ export function AIAgentChat() {
 
     const tools: any[] = []
 
-    // Check which modules are handled by MCP
+    // MCP is always enabled in this architecture
+    // All tools are now handled via ai-chat edge function
     let mcpHandledModules: string[] = []
-    if (agent?.use_mcp && id) {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-      try {
-        const mcpTools = await getMCPTools(id, supabaseUrl, supabaseAnonKey)
-        tools.push(...mcpTools)
-
-        // Track which modules are handled by MCP
-        const mcpConfig = agent.mcp_config as any
-        if (mcpConfig?.use_for_modules) {
-          mcpHandledModules = mcpConfig.use_for_modules
-        }
-      } catch (error) {
-        console.error('Error fetching MCP tools:', error)
-      }
-    }
 
     // Expenses tools removed - use MCP server instead
 
@@ -276,8 +258,9 @@ export function AIAgentChat() {
 
     // Task view tools removed - use MCP server instead
 
-    // Add MCP resource and prompt tools if MCP is enabled
-    if (agent?.use_mcp && id) {
+    // MCP resources are handled by ai-chat edge function
+    // Keeping this for backward compatibility with older chat instances
+    if (id) {
       tools.push({
         type: 'function',
         function: {
@@ -422,7 +405,7 @@ export function AIAgentChat() {
           }
 
         case 'read_mcp_resource':
-          if (id && agent?.use_mcp) {
+          if (id) {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
             const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
@@ -451,10 +434,10 @@ export function AIAgentChat() {
               return { success: false, error: error.message, usedMCP: true }
             }
           }
-          return { success: false, error: 'MCP is not enabled for this agent' }
+          return { success: false, error: 'Agent ID not available' }
 
         case 'get_mcp_prompt':
-          if (id && agent?.use_mcp) {
+          if (id) {
             const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
             const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
@@ -482,7 +465,7 @@ export function AIAgentChat() {
               return { success: false, error: error.message, usedMCP: true }
             }
           }
-          return { success: false, error: 'MCP is not enabled for this agent' }
+          return { success: false, error: 'Agent ID not available' }
 
         default:
           return { success: false, message: `Unknown function: ${functionName}` }
@@ -501,8 +484,8 @@ export function AIAgentChat() {
       return "AI model is not configured for this agent."
     }
 
-    // If MCP is enabled, use the ai-chat edge function instead
-    if (agent.use_mcp && agent.mcp_config?.enabled) {
+    // Always use the ai-chat edge function (MCP-only architecture)
+    if (true) {
       try {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
         const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -556,7 +539,7 @@ export function AIAgentChat() {
       // Fetch MCP resources and prompts info if MCP is enabled
       let mcpResourcesInfo = ''
       let mcpPromptsInfo = ''
-      if (agent.use_mcp && id) {
+      if (id) {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
         const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
@@ -916,13 +899,7 @@ When users ask about expenses with time periods (like "this month", "today", "la
                    messageText.toLowerCase().includes('lead') ? 'Leads' : 'General'
 
     try {
-      // Only save to memory if MCP is NOT enabled (ai-chat function handles saving when MCP is enabled)
-      const useMCP = agent?.use_mcp && agent.mcp_config?.enabled
-
-      if (!useMCP) {
-        await saveMessageToMemory(messageText, 'user', action, module, 'Success', uploadedImageUrl || undefined)
-      }
-
+      // ai-chat function handles saving to memory in MCP-only architecture
       const agentResponse = await callOpenRouter(messageText, uploadedImageUrl || undefined)
 
       const agentMessage: Message = {
@@ -934,10 +911,6 @@ When users ask about expenses with time periods (like "this month", "today", "la
       }
 
       setMessages(prev => [...prev, agentMessage])
-
-      if (!useMCP) {
-        await saveMessageToMemory(agentResponse, 'assistant', action, module, agentMessage.result || 'Success', uploadedImageUrl || undefined)
-      }
     } catch (error) {
       console.error('Error sending message:', error)
       const errorMessage: Message = {
@@ -1004,12 +977,10 @@ When users ask about expenses with time periods (like "this month", "today", "la
               </select>
             </div>
             <div className="flex items-center gap-2">
-              {agent?.use_mcp && (
-                <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
-                  <Zap className="w-3 h-3" />
-                  MCP Enabled
-                </Badge>
-              )}
+              <Badge className="bg-blue-100 text-blue-800 flex items-center gap-1">
+                <Zap className="w-3 h-3" />
+                MCP Architecture
+              </Badge>
               <Badge className={agent?.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
                 {agent?.status}
               </Badge>
