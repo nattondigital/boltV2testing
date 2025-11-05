@@ -139,7 +139,6 @@ async function handleMCPRequest(
             average_score: allLeads?.reduce((sum: number, l: any) => sum + (l.lead_score || 0), 0) / (allLeads?.length || 1),
           }
 
-          // Count by source
           allLeads?.forEach((lead: any) => {
             const source = lead.source || 'Unknown'
             stats.by_source[source] = (stats.by_source[source] || 0) + 1
@@ -204,7 +203,7 @@ async function handleMCPRequest(
           tools: [
             {
               name: 'get_leads',
-              description: 'Retrieve leads with advanced filtering. Use lead_id to get a specific lead.',
+              description: 'Retrieve leads with advanced filtering. Use lead_id to get a specific lead. Can filter by name, stage, and other fields.',
               inputSchema: {
                 type: 'object',
                 properties: {
@@ -218,7 +217,11 @@ async function handleMCPRequest(
                   },
                   lead_id: {
                     type: 'string',
-                    description: 'Get a specific lead by lead_id (e.g., LEAD0001)',
+                    description: 'Get a specific lead by lead_id (e.g., LEAD0001, L034)',
+                  },
+                  name: {
+                    type: 'string',
+                    description: 'Search by lead name (partial match supported)',
                   },
                   email: {
                     type: 'string',
@@ -230,8 +233,7 @@ async function handleMCPRequest(
                   },
                   stage: {
                     type: 'string',
-                    enum: ['New', 'Contacted', 'Demo Booked', 'No Show', 'Won', 'Lost'],
-                    description: 'Filter by lead stage',
+                    description: 'Filter by lead stage (e.g., New, Contacted, computation, Won, Lost)',
                   },
                   interest: {
                     type: 'string',
@@ -277,7 +279,7 @@ async function handleMCPRequest(
                   },
                   source: {
                     type: 'string',
-                    description: 'Lead source (e.g., Website, Ad, Referral)',
+                    description: 'Lead source (e.g., Website, Ad, Referral, FB ADS)',
                   },
                   interest: {
                     type: 'string',
@@ -286,7 +288,6 @@ async function handleMCPRequest(
                   },
                   stage: {
                     type: 'string',
-                    enum: ['New', 'Contacted', 'Demo Booked', 'No Show', 'Won', 'Lost'],
                     description: 'Lead stage (default: New)',
                   },
                   company: {
@@ -337,7 +338,6 @@ async function handleMCPRequest(
                   },
                   stage: {
                     type: 'string',
-                    enum: ['New', 'Contacted', 'Demo Booked', 'No Show', 'Won', 'Lost'],
                   },
                   company: { type: 'string' },
                   address: { type: 'string' },
@@ -431,6 +431,9 @@ async function handleMCPRequest(
             if (args.lead_id) {
               query = query.eq('lead_id', args.lead_id)
             }
+            if (args.name) {
+              query = query.ilike('name', `%${args.name}%`)
+            }
             if (args.email) {
               query = query.eq('email', args.email)
             }
@@ -438,7 +441,7 @@ async function handleMCPRequest(
               query = query.eq('phone', args.phone)
             }
             if (args.stage) {
-              query = query.eq('stage', args.stage)
+              query = query.ilike('stage', `%${args.stage}%`)
             }
             if (args.interest) {
               query = query.eq('interest', args.interest)
