@@ -40,9 +40,7 @@ export function AIAgentForm() {
     model: '',
     system_prompt: '',
     status: 'Active',
-    channels: [] as string[],
-    use_mcp: false,
-    mcp_server_url: ''
+    channels: [] as string[]
   })
 
   useEffect(() => {
@@ -62,16 +60,13 @@ export function AIAgentForm() {
 
       if (error) throw error
 
-      const mcpServerUrl = data.mcp_config?.server_url || ''
       setFormData({
         name: data.name,
         agent_type: data.agent_type || 'BACKEND',
         model: data.model,
         system_prompt: data.system_prompt,
         status: data.status,
-        channels: data.channels || [],
-        use_mcp: data.use_mcp || false,
-        mcp_server_url: mcpServerUrl
+        channels: data.channels || []
       })
     } catch (error) {
       console.error('Error fetching agent:', error)
@@ -105,15 +100,6 @@ export function AIAgentForm() {
     try {
       setLoading(true)
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const mcpServerUrl = formData.mcp_server_url || `${supabaseUrl}/functions/v1/mcp-server`
-
-      const mcpConfig = formData.use_mcp ? {
-        enabled: true,
-        server_url: mcpServerUrl,
-        use_for_modules: ['Tasks']
-      } : null
-
       if (isEdit) {
         const { error } = await supabase
           .from('ai_agents')
@@ -124,8 +110,6 @@ export function AIAgentForm() {
             system_prompt: formData.system_prompt,
             status: formData.status,
             channels: formData.channels,
-            use_mcp: formData.use_mcp,
-            mcp_config: mcpConfig,
             updated_at: new Date().toISOString()
           })
           .eq('id', id)
@@ -141,8 +125,6 @@ export function AIAgentForm() {
             system_prompt: formData.system_prompt,
             status: formData.status,
             channels: formData.channels,
-            use_mcp: formData.use_mcp,
-            mcp_config: mcpConfig,
             last_activity: new Date().toISOString()
           })
 
@@ -312,42 +294,7 @@ export function AIAgentForm() {
               </div>
             </div>
 
-            <div className="border-t pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Enable MCP Integration
-                  </label>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Use Model Context Protocol for standardized tool execution
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={formData.use_mcp}
-                  onChange={(e) => setFormData(prev => ({ ...prev, use_mcp: e.target.checked }))}
-                  className="h-5 w-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {formData.use_mcp && (
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    MCP Server URL (Optional)
-                  </label>
-                  <Input
-                    placeholder="Leave empty to use default Supabase MCP server"
-                    value={formData.mcp_server_url}
-                    onChange={(e) => setFormData(prev => ({ ...prev, mcp_server_url: e.target.value }))}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Default: {import.meta.env.VITE_SUPABASE_URL}/functions/v1/mcp-server
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-4 pt-6 border-t">
               <Button
                 onClick={handleSubmit}
                 disabled={loading}
