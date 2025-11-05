@@ -190,7 +190,7 @@ async function handleMCPRequest(
           tools: [
             {
               name: 'get_expenses',
-              description: 'Retrieve expenses with advanced filtering. Use expense_id to get a specific expense. Can filter by category, status, date range, and other fields.',
+              description: 'Retrieve individual expense records with filtering. Returns full expense details including expense_id, category, amount, description, date, status. Use this to get specific expenses or filtered lists. For category breakdowns or summaries, use get_expense_summary instead.',
               inputSchema: {
                 type: 'object',
                 properties: {
@@ -243,8 +243,37 @@ async function handleMCPRequest(
               },
             },
             {
+              name: 'get_expense_summary',
+              description: 'Get aggregated expense statistics and breakdowns. Returns total count, total amount, breakdown by category (with count and sum), breakdown by status, and latest expenses. Use this for questions about expense summaries, totals, or category counts.',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  agent_id: {
+                    type: 'string',
+                    description: 'AI Agent ID for permission checking',
+                  },
+                  phone_number: {
+                    type: 'string',
+                    description: 'User phone number for logging',
+                  },
+                  from_date: {
+                    type: 'string',
+                    description: 'Start date for summary (YYYY-MM-DD format, optional)',
+                  },
+                  to_date: {
+                    type: 'string',
+                    description: 'End date for summary (YYYY-MM-DD format, optional)',
+                  },
+                  category: {
+                    type: 'string',
+                    description: 'Filter summary by specific category (optional)',
+                  },
+                },
+              },
+            },
+            {
               name: 'create_expense',
-              description: 'Create a new expense record',
+              description: 'Create a new expense record. IMPORTANT: Infer the category from the description. Common mappings: cab/taxi/flight/bus/train → Travel, food/meal/lunch/dinner → Food, laptop/software/tools → Office Supplies, advertisement/ads → Marketing, repair/maintenance → Maintenance.',
               inputSchema: {
                 type: 'object',
                 properties: {
@@ -258,7 +287,7 @@ async function handleMCPRequest(
                   },
                   category: {
                     type: 'string',
-                    description: 'Expense category (required)',
+                    description: 'Expense category - infer from description if not explicitly provided. Common categories: Travel, Food, Office Supplies, Marketing, Maintenance, Entertainment, Transportation, Software (required)',
                   },
                   amount: {
                     type: 'number',
@@ -472,6 +501,104 @@ async function handleMCPRequest(
                 {
                   type: 'text',
                   text: JSON.stringify({ success: true, data, count: data?.length || 0 }, null, 2),
+                },
+              ],
+            }
+            break
+          }
+
+          case 'get_expense_summary': {
+            if (!enabledTools.includes('get_expenses')) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Expenses',
+                action: 'get_expense_summary',
+                result: 'Denied',
+                user_context: args.phone_number || null,
+                details: { reason: 'No permission to view expenses' },
+              })
+              throw new Error('Agent does not have permission to view expenses')
+            }
+
+            let query = supabase.from('expenses').select('*')
+
+            if (args.from_date) {
+              query = query.gte('expense_date', args.from_date)
+            }
+            if (args.to_date) {
+              query = query.lte('expense_date', args.to_date)
+            }
+            if (args.category) {
+              query = query.ilike('category', `%${args.category}%`)
+            }
+
+            const { data: expenses, error } = await query
+
+            if (error) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Expenses',
+                action: 'get_expense_summary',
+                result: 'Error',
+                user_context: args.phone_number || null,
+                details: { error: error.message },
+              })
+              throw error
+            }
+
+            const summary = {
+              total_count: expenses?.length || 0,
+              total_amount: expenses?.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0) || 0,
+              currency: 'INR',
+              by_category: {} as Record<string, { count: number; total_amount: number }>,
+              by_status: {
+                'Pending': { count: 0, total_amount: 0 },
+                'Approved': { count: 0, total_amount: 0 },
+                'Rejected': { count: 0, total_amount: 0 },
+              },
+              latest_expenses: expenses?.slice(0, 5).map(e => ({
+                expense_id: e.expense_id,
+                category: e.category,
+                amount: e.amount,
+                description: e.description,
+                expense_date: e.expense_date,
+              })) || [],
+            }
+
+            expenses?.forEach((expense) => {
+              const category = expense.category || 'Unknown'
+              const status = expense.status || 'Pending'
+              const amount = parseFloat(expense.amount || 0)
+
+              if (!summary.by_category[category]) {
+                summary.by_category[category] = { count: 0, total_amount: 0 }
+              }
+              summary.by_category[category].count += 1
+              summary.by_category[category].total_amount += amount
+
+              if (status in summary.by_status) {
+                summary.by_status[status].count += 1
+                summary.by_status[status].total_amount += amount
+              }
+            })
+
+            await supabase.from('ai_agent_logs').insert({
+              agent_id: agentId,
+              agent_name: agentName,
+              module: 'Expenses',
+              action: 'get_expense_summary',
+              result: 'Success',
+              user_context: args.phone_number || null,
+              details: { filters: args, total_expenses: summary.total_count },
+            })
+
+            response.result = {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({ success: true, summary }, null, 2),
                 },
               ],
             }
