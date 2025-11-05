@@ -300,41 +300,52 @@ Deno.serve(async (req: Request) => {
     let tools: any[] = []
     let mcpClient: MCPClient | null = null
 
-    console.log('Using MCP server ONLY mode for agent:', agent.name)
+    console.log('Using MODULAR MCP architecture for agent:', agent.name)
+
+    // Map of MCP servers to their endpoints
+    const mcpServers: Record<string, string> = {
+      'tasks-server': `${supabaseUrl}/functions/v1/mcp-tasks-server`,
+      'contacts-server': `${supabaseUrl}/functions/v1/mcp-server`, // TODO: Create separate servers
+      'leads-server': `${supabaseUrl}/functions/v1/mcp-server`,
+      'appointments-server': `${supabaseUrl}/functions/v1/mcp-server`,
+    }
+
     try {
-      const mcpServerUrl = `${supabaseUrl}/functions/v1/mcp-server`
       const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+      const allMCPTools: MCPTool[] = []
 
-      mcpClient = new MCPClient(mcpServerUrl, anonKey, payload.agent_id, payload.phone_number)
-      await mcpClient.initialize()
+      // Connect to each enabled MCP server and collect tools
+      for (const [serverKey, serverUrl] of Object.entries(mcpServers)) {
+        const serverConfig = permissions[serverKey]
 
-      const mcpTools = await mcpClient.listTools()
-      console.log(`Raw MCP tools received: ${mcpTools.length}`, mcpTools.map(t => t.name))
-
-      // Get enabled tools from permissions (MCP-only architecture)
-      const enabledTools: string[] = []
-      Object.entries(permissions).forEach(([serverKey, serverConfig]: [string, any]) => {
-        if (serverConfig?.enabled && serverConfig?.tools) {
-          enabledTools.push(...serverConfig.tools)
+        if (!serverConfig?.enabled) {
+          console.log(`Server ${serverKey} is disabled, skipping`)
+          continue
         }
-      })
 
-      console.log(`Enabled tools from permissions:`, enabledTools)
+        console.log(`Connecting to ${serverKey} at ${serverUrl}`)
 
-      // Filter MCP tools based on permissions
-      const filteredTools = mcpTools.filter(tool => {
-        if (enabledTools.length === 0) {
-          console.log(`No tools enabled in permissions - agent has no access`)
-          return false
+        try {
+          const client = new MCPClient(serverUrl, anonKey, payload.agent_id, payload.phone_number)
+          await client.initialize()
+
+          const serverTools = await client.listTools()
+          console.log(`${serverKey} returned ${serverTools.length} tools:`, serverTools.map(t => t.name))
+
+          // Filter tools based on permissions
+          const enabledToolNames = serverConfig.tools || []
+          const filteredServerTools = serverTools.filter(tool => enabledToolNames.includes(tool.name))
+
+          console.log(`${serverKey} enabled tools:`, filteredServerTools.map(t => t.name))
+          allMCPTools.push(...filteredServerTools)
+        } catch (error) {
+          console.error(`Failed to connect to ${serverKey}:`, error)
         }
-        const isEnabled = enabledTools.includes(tool.name)
-        console.log(`Tool "${tool.name}" enabled: ${isEnabled}`)
-        return isEnabled
-      })
+      }
 
-      console.log(`Filtered tools: ${filteredTools.length}`, filteredTools.map(t => t.name))
-      tools = filteredTools.map(convertMCPToolToOpenRouterFunction)
-      console.log(`Loaded ${tools.length} MCP tools`)
+      console.log(`Total MCP tools collected from all servers: ${allMCPTools.length}`, allMCPTools.map(t => t.name))
+      tools = allMCPTools.map(convertMCPToolToOpenRouterFunction)
+      console.log(`Converted ${tools.length} MCP tools for OpenRouter`)
     } catch (error) {
       console.error('Failed to initialize MCP client:', error)
       return new Response(
@@ -448,7 +459,25 @@ Deno.serve(async (req: Request) => {
 
           console.log(`Executing MCP tool: ${functionName} with args:`, functionArgs)
           try {
-            const result = await mcpClient!.callTool(functionName, functionArgs)
+            // Determine which MCP server this tool belongs to
+            let targetServerUrl = `${supabaseUrl}/functions/v1/mcp-server` // fallback
+
+            // Tool-to-server mapping
+            if (functionName.includes('task')) {
+              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-tasks-server`
+            } else if (functionName.includes('contact')) {
+              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-server` // TODO
+            } else if (functionName.includes('lead')) {
+              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-server` // TODO
+            } else if (functionName.includes('appointment')) {
+              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-server` // TODO
+            }
+
+            console.log(`Routing ${functionName} to ${targetServerUrl}`)
+
+            const targetClient = new MCPClient(targetServerUrl, Deno.env.get('SUPABASE_ANON_KEY')!, payload.agent_id, payload.phone_number)
+            await targetClient.initialize()
+            const result = await targetClient.callTool(functionName, functionArgs)
             toolResults.push(result)
           } catch (error) {
             console.error(`MCP tool execution failed for ${functionName}:`, error)
