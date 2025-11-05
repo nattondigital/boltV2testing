@@ -113,7 +113,7 @@ async function handleMCPRequest(
         if (uri === 'support://statistics') {
           const { data: allTickets, error: allError } = await supabase
             .from('support_tickets')
-            .select('*, contacts_master(name, email, phone)')
+            .select('*, contacts_master(full_name, email, phone)')
 
           if (allError) throw allError
 
@@ -164,7 +164,7 @@ async function handleMCPRequest(
         } else {
           let query = supabase
             .from('support_tickets')
-            .select('*, contacts_master(name, email, phone)')
+            .select('*, contacts_master(full_name, email, phone)')
             .order('created_at', { ascending: false })
 
           if (uri === 'support://open') {
@@ -469,7 +469,7 @@ async function handleMCPRequest(
 
             let query = supabase
               .from('support_tickets')
-              .select('*, contacts_master(name, email, phone)')
+              .select('*, contacts_master(full_name, email, phone)')
               .order('created_at', { ascending: false })
 
             if (args.ticket_id) {
@@ -699,7 +699,7 @@ async function handleMCPRequest(
                 .insert({
                   phone: args.contact_phone,
                   email: args.contact_email || null,
-                  name: args.contact_name || null,
+                  full_name: args.contact_name || null,
                 })
                 .select('id')
                 .single()
@@ -722,7 +722,7 @@ async function handleMCPRequest(
             const { data, error } = await supabase
               .from('support_tickets')
               .insert(ticketData)
-              .select('*, contacts_master(name, email, phone)')
+              .select('*, contacts_master(full_name, email, phone)')
               .single()
 
             if (error) {
@@ -785,7 +785,7 @@ async function handleMCPRequest(
               .from('support_tickets')
               .update(updates)
               .eq('ticket_id', ticket_id)
-              .select('*, contacts_master(name, email, phone)')
+              .select('*, contacts_master(full_name, email, phone)')
               .single()
 
             if (error) {
