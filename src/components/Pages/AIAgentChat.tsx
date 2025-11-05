@@ -599,6 +599,13 @@ export function AIAgentChat() {
       const systemPrompt = agent.system_prompt || 'You are a helpful AI assistant with access to CRM functions.'
       let enhancedSystemPrompt = `${systemPrompt}\n\nToday's date is ${todayDate}. Tomorrow's date is ${tomorrowDate}. Use these exact dates when users say "tomorrow", "today", etc.${mcpResourcesInfo}${mcpPromptsInfo}
 
+CRITICAL RESPONSE GUIDELINES:
+- ONLY respond to the current user message
+- DO NOT repeat or summarize previous actions in your response
+- DO NOT include confirmations from earlier messages
+- Each response should ONLY address what the user just asked
+- Be concise and direct - just answer the current question
+
 IMPORTANT TIMEZONE HANDLING:
 - All dates/times in the database are stored in UTC
 - When displaying dates/times to users, ALWAYS convert from UTC to Asia/Kolkata timezone (IST)
