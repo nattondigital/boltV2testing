@@ -202,8 +202,47 @@ async function handleMCPRequest(
         response.result = {
           tools: [
             {
+              name: 'get_pipelines',
+              description: 'Get all available pipelines. Use this BEFORE updating a lead to see which pipelines exist.',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  agent_id: {
+                    type: 'string',
+                    description: 'AI Agent ID for permission checking',
+                  },
+                  phone_number: {
+                    type: 'string',
+                    description: 'User phone number for logging',
+                  },
+                },
+              },
+            },
+            {
+              name: 'get_pipeline_stages',
+              description: 'Get all valid stages for a specific pipeline. ALWAYS use this before updating a lead stage to ensure you use a valid stage name.',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  agent_id: {
+                    type: 'string',
+                    description: 'AI Agent ID for permission checking',
+                  },
+                  phone_number: {
+                    type: 'string',
+                    description: 'User phone number for logging',
+                  },
+                  pipeline_id: {
+                    type: 'string',
+                    description: 'Pipeline ID to get stages for (get from lead.pipeline_id or use get_pipelines first)',
+                  },
+                },
+                required: ['pipeline_id'],
+              },
+            },
+            {
               name: 'get_leads',
-              description: 'Retrieve leads with advanced filtering. Use lead_id to get a specific lead. Can filter by name, stage, and other fields.',
+              description: 'Retrieve leads with advanced filtering. Use lead_id to get a specific lead. Can filter by name, stage, and other fields. Returns pipeline_id which you can use with get_pipeline_stages.',
               inputSchema: {
                 type: 'object',
                 properties: {
@@ -312,7 +351,7 @@ async function handleMCPRequest(
             },
             {
               name: 'update_lead',
-              description: 'Update an existing lead',
+              description: 'Update an existing lead. IMPORTANT: Before updating stage, you MUST first use get_leads to get the lead\'s pipeline_id, then use get_pipeline_stages to see valid stages. Only use stage names that exist in that pipeline.',
               inputSchema: {
                 type: 'object',
                 properties: {
@@ -338,6 +377,7 @@ async function handleMCPRequest(
                   },
                   stage: {
                     type: 'string',
+                    description: 'Must be a valid stage from the lead\'s pipeline. Use get_pipeline_stages first to see valid options.',
                   },
                   company: { type: 'string' },
                   address: { type: 'string' },
@@ -409,6 +449,130 @@ async function handleMCPRequest(
         const enabledTools = leadsServerPerms.tools || []
 
         switch (name) {
+          case 'get_pipelines': {
+            if (!enabledTools.includes('get_pipelines')) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Leads',
+                action: 'get_pipelines',
+                result: 'Denied',
+                user_context: args.phone_number || null,
+                details: { reason: 'No permission to view pipelines' },
+              })
+              throw new Error('Agent does not have permission to view pipelines')
+            }
+
+            const { data, error } = await supabase
+              .from('pipelines')
+              .select('*')
+              .eq('entity_type', 'lead')
+              .eq('is_active', true)
+              .order('display_order')
+
+            if (error) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Leads',
+                action: 'get_pipelines',
+                result: 'Error',
+                user_context: args.phone_number || null,
+                details: { error: error.message },
+              })
+              throw error
+            }
+
+            await supabase.from('ai_agent_logs').insert({
+              agent_id: agentId,
+              agent_name: agentName,
+              module: 'Leads',
+              action: 'get_pipelines',
+              result: 'Success',
+              user_context: args.phone_number || null,
+              details: { count: data?.length || 0 },
+            })
+
+            response.result = {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({
+                    success: true,
+                    pipelines: data,
+                    count: data?.length || 0
+                  }, null, 2),
+                },
+              ],
+            }
+            break
+          }
+
+          case 'get_pipeline_stages': {
+            if (!enabledTools.includes('get_pipeline_stages')) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Leads',
+                action: 'get_pipeline_stages',
+                result: 'Denied',
+                user_context: args.phone_number || null,
+                details: { reason: 'No permission to view pipeline stages' },
+              })
+              throw new Error('Agent does not have permission to view pipeline stages')
+            }
+
+            if (!args.pipeline_id) {
+              throw new Error('pipeline_id is required')
+            }
+
+            const { data, error } = await supabase
+              .from('pipeline_stages')
+              .select('*')
+              .eq('pipeline_id', args.pipeline_id)
+              .eq('is_active', true)
+              .order('display_order')
+
+            if (error) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Leads',
+                action: 'get_pipeline_stages',
+                result: 'Error',
+                user_context: args.phone_number || null,
+                details: { error: error.message, pipeline_id: args.pipeline_id },
+              })
+              throw error
+            }
+
+            await supabase.from('ai_agent_logs').insert({
+              agent_id: agentId,
+              agent_name: agentName,
+              module: 'Leads',
+              action: 'get_pipeline_stages',
+              result: 'Success',
+              user_context: args.phone_number || null,
+              details: { pipeline_id: args.pipeline_id, stage_count: data?.length || 0 },
+            })
+
+            response.result = {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({
+                    success: true,
+                    pipeline_id: args.pipeline_id,
+                    stages: data,
+                    count: data?.length || 0,
+                    stage_names: data?.map((s: any) => s.name) || []
+                  }, null, 2),
+                },
+              ],
+            }
+            break
+          }
+
           case 'get_leads': {
             if (!enabledTools.includes('get_leads')) {
               await supabase.from('ai_agent_logs').insert({
@@ -579,6 +743,62 @@ async function handleMCPRequest(
             const { lead_id, ...updates } = args
             delete updates.agent_id
             delete updates.phone_number
+
+            // CRITICAL: Validate stage if it's being updated
+            if (updates.stage) {
+              // First get the lead to find its pipeline
+              const { data: existingLead, error: leadError } = await supabase
+                .from('leads')
+                .select('pipeline_id, name')
+                .eq('lead_id', lead_id)
+                .maybeSingle()
+
+              if (leadError || !existingLead) {
+                throw new Error(`Lead ${lead_id} not found`)
+              }
+
+              // Get valid stages for this pipeline
+              const { data: validStages, error: stagesError } = await supabase
+                .from('pipeline_stages')
+                .select('name')
+                .eq('pipeline_id', existingLead.pipeline_id)
+                .eq('is_active', true)
+
+              if (stagesError) {
+                throw new Error(`Failed to validate stage: ${stagesError.message}`)
+              }
+
+              const validStageNames = validStages?.map((s: any) => s.name.toLowerCase()) || []
+              const requestedStage = updates.stage.toLowerCase()
+
+              // Check if requested stage is valid
+              const matchedStage = validStages?.find((s: any) => s.name.toLowerCase() === requestedStage)
+
+              if (!matchedStage) {
+                const errorMsg = `Invalid stage "${updates.stage}" for lead ${existingLead.name}. Valid stages: ${validStages?.map((s: any) => s.name).join(', ')}`
+
+                await supabase.from('ai_agent_logs').insert({
+                  agent_id: agentId,
+                  agent_name: agentName,
+                  module: 'Leads',
+                  action: 'update_lead',
+                  result: 'Error',
+                  user_context: args.phone_number || null,
+                  details: {
+                    error: 'Invalid stage',
+                    lead_id,
+                    requested_stage: updates.stage,
+                    valid_stages: validStages?.map((s: any) => s.name),
+                    pipeline_id: existingLead.pipeline_id
+                  },
+                })
+
+                throw new Error(errorMsg)
+              }
+
+              // Use the exact case from the database
+              updates.stage = matchedStage.name
+            }
 
             const { data, error } = await supabase
               .from('leads')
