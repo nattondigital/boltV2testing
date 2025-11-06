@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bot, Plus, Search, Edit, Trash2, Power, PowerOff, Clock, Activity, Filter, MoreVertical, Shield, MessageSquare } from 'lucide-react'
+import { Bot, Plus, Search, Edit, Trash2, Power, PowerOff, Clock, Activity, Filter, MoreVertical, Shield, MessageSquare, Copy } from 'lucide-react'
 import { PageHeader } from '@/components/Common/PageHeader'
 import { KPICard } from '@/components/Common/KPICard'
 import { Button } from '@/components/ui/button'
@@ -91,6 +91,17 @@ export function AIAgents() {
       console.error('Error updating status:', error)
       alert('Failed to update status')
     }
+  }
+
+  const handleCopyAgentId = (agentId: string) => {
+    navigator.clipboard.writeText(agentId)
+      .then(() => {
+        alert('Agent ID copied to clipboard!')
+      })
+      .catch((error) => {
+        console.error('Failed to copy agent ID:', error)
+        alert('Failed to copy agent ID')
+      })
   }
 
   const filteredAgents = agents.filter(agent => {
@@ -220,6 +231,10 @@ export function AIAgents() {
                               <DropdownMenuItem onClick={() => navigate(`/ai-agents/permissions/${agent.id}`)}>
                                 <Shield className="mr-2 h-4 w-4" />
                                 <span>Module Permissions</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleCopyAgentId(agent.id)}>
+                                <Copy className="mr-2 h-4 w-4" />
+                                <span>Copy Agent ID</span>
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
