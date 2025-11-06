@@ -44,7 +44,7 @@ const MCP_SERVER_DESCRIPTIONS = {
       'get_pipeline_stages': 'Get valid stages for a specific pipeline (use before updating lead stage)',
       'get_leads': 'View and search leads with scoring and qualification data',
       'create_lead': 'Add new leads with source, interest level, and contact information',
-      'update_lead': 'Modify lead stage, score, and qualification status (always check pipeline stages first)',
+      'update_lead': 'Update any lead field including name, email, phone, source, interest, stage, company, address, notes, and score',
       'delete_lead': 'Remove leads from the pipeline',
       'get_custom_fields': 'View custom fields available for a pipeline',
       'get_lead_custom_values': 'Get custom field values for a specific lead',

@@ -351,7 +351,7 @@ async function handleMCPRequest(
             },
             {
               name: 'update_lead',
-              description: 'Update an existing lead. IMPORTANT: Before updating stage, you MUST first use get_leads to get the lead\'s pipeline_id, then use get_pipeline_stages to see valid stages. Only use stage names that exist in that pipeline.',
+              description: 'Update any field of an existing lead including name, email, phone, source, interest, stage, company, address, notes, and lead_score. You can update one or multiple fields in a single call. IMPORTANT: Before updating stage, you MUST first use get_leads to get the lead\'s pipeline_id, then use get_pipeline_stages to see valid stages. Only use stage names that exist in that pipeline.',
               inputSchema: {
                 type: 'object',
                 properties: {
