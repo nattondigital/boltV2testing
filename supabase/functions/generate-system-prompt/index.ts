@@ -94,6 +94,30 @@ const MCP_SERVER_DESCRIPTIONS = {
       'delete_product': 'Remove products from catalog',
     }
   },
+  'billing-server': {
+    name: 'Billing',
+    description: 'comprehensive billing, invoicing, and subscription management',
+    tools: {
+      'get_estimates': 'View and search estimates with customer and status filtering',
+      'create_estimate': 'Create new estimates with line items, taxes, and discounts',
+      'update_estimate': 'Modify estimate details, status, and line items',
+      'delete_estimate': 'Remove estimates from system',
+      'get_invoices': 'View and search invoices with payment status filtering',
+      'get_invoice_summary': 'Get revenue statistics, outstanding amounts, and payment breakdowns',
+      'create_invoice': 'Create new invoices with items, payment terms, and due dates',
+      'update_invoice': 'Modify invoice details, payment status, and amounts',
+      'delete_invoice': 'Remove invoices from system',
+      'get_subscriptions': 'View and search recurring subscriptions',
+      'get_subscription_summary': 'Get MRR, active subscriptions, and revenue analytics',
+      'create_subscription': 'Create new recurring subscriptions with billing cycles',
+      'update_subscription': 'Modify subscription status, amounts, and billing dates',
+      'delete_subscription': 'Cancel or remove subscriptions',
+      'get_receipts': 'View and search payment receipts',
+      'create_receipt': 'Record new payment receipts with payment details',
+      'update_receipt': 'Modify receipt status and refund information',
+      'delete_receipt': 'Remove payment receipts',
+    }
+  },
 }
 
 function generateSystemPrompt(permissions: MCPPermissions): string {

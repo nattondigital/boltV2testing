@@ -96,6 +96,30 @@ const MCP_SERVERS = {
       { id: 'delete_product', name: 'Delete Product', description: 'Remove products' },
     ],
   },
+  'billing-server': {
+    name: 'Billing Server',
+    description: 'Manage estimates, invoices, subscriptions, and receipts',
+    tools: [
+      { id: 'get_estimates', name: 'Get Estimates', description: 'View and search estimates' },
+      { id: 'create_estimate', name: 'Create Estimate', description: 'Create new estimates' },
+      { id: 'update_estimate', name: 'Update Estimate', description: 'Modify estimates' },
+      { id: 'delete_estimate', name: 'Delete Estimate', description: 'Remove estimates' },
+      { id: 'get_invoices', name: 'Get Invoices', description: 'View and search invoices' },
+      { id: 'get_invoice_summary', name: 'Get Invoice Summary', description: 'Get invoice statistics and revenue data' },
+      { id: 'create_invoice', name: 'Create Invoice', description: 'Create new invoices' },
+      { id: 'update_invoice', name: 'Update Invoice', description: 'Modify invoices' },
+      { id: 'delete_invoice', name: 'Delete Invoice', description: 'Remove invoices' },
+      { id: 'get_subscriptions', name: 'Get Subscriptions', description: 'View and search subscriptions' },
+      { id: 'get_subscription_summary', name: 'Get Subscription Summary', description: 'Get subscription statistics and MRR' },
+      { id: 'create_subscription', name: 'Create Subscription', description: 'Create new subscriptions' },
+      { id: 'update_subscription', name: 'Update Subscription', description: 'Modify subscriptions' },
+      { id: 'delete_subscription', name: 'Delete Subscription', description: 'Remove subscriptions' },
+      { id: 'get_receipts', name: 'Get Receipts', description: 'View and search receipts' },
+      { id: 'create_receipt', name: 'Create Receipt', description: 'Create new receipts' },
+      { id: 'update_receipt', name: 'Update Receipt', description: 'Modify receipts' },
+      { id: 'delete_receipt', name: 'Delete Receipt', description: 'Remove receipts' },
+    ],
+  },
 }
 
 export function AIAgentPermissions() {
