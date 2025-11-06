@@ -61,6 +61,28 @@ const MCP_SERVER_DESCRIPTIONS = {
       'delete_appointment': 'Cancel and remove appointments',
     }
   },
+  'support-server': {
+    name: 'Support Tickets',
+    description: 'support ticket management and customer issue tracking',
+    tools: {
+      'get_support_tickets': 'View and search support tickets with filtering',
+      'get_support_summary': 'Get aggregated support ticket statistics and breakdowns',
+      'create_support_ticket': 'Create new support tickets for customer issues',
+      'update_support_ticket': 'Update ticket status, priority, and details',
+      'delete_support_ticket': 'Remove support tickets',
+    }
+  },
+  'expenses-server': {
+    name: 'Expenses',
+    description: 'business expense tracking and management',
+    tools: {
+      'get_expenses': 'View and search expense records with filtering',
+      'get_expense_summary': 'Get aggregated expense statistics and category breakdowns',
+      'create_expense': 'Add new expense records with receipts and details',
+      'update_expense': 'Modify expense details, approval status, and amounts',
+      'delete_expense': 'Remove expense records',
+    }
+  },
 }
 
 function generateSystemPrompt(permissions: MCPPermissions): string {
@@ -261,7 +283,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ error: error.message }),
       {
-      status: 500,
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )

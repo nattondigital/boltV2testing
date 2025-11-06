@@ -63,6 +63,28 @@ const MCP_SERVERS = {
       { id: 'delete_appointment', name: 'Delete Appointment', description: 'Cancel appointments' },
     ],
   },
+  'support-server': {
+    name: 'Support Server',
+    description: 'Manage support tickets and customer issues',
+    tools: [
+      { id: 'get_support_tickets', name: 'Get Support Tickets', description: 'View and search support tickets' },
+      { id: 'get_support_summary', name: 'Get Support Summary', description: 'Get aggregated support statistics' },
+      { id: 'create_support_ticket', name: 'Create Support Ticket', description: 'Create new support tickets' },
+      { id: 'update_support_ticket', name: 'Update Support Ticket', description: 'Update existing tickets' },
+      { id: 'delete_support_ticket', name: 'Delete Support Ticket', description: 'Remove support tickets' },
+    ],
+  },
+  'expenses-server': {
+    name: 'Expenses Server',
+    description: 'Track and manage business expenses',
+    tools: [
+      { id: 'get_expenses', name: 'Get Expenses', description: 'View and search expense records' },
+      { id: 'get_expense_summary', name: 'Get Expense Summary', description: 'Get aggregated expense statistics' },
+      { id: 'create_expense', name: 'Create Expense', description: 'Add new expense records' },
+      { id: 'update_expense', name: 'Update Expense', description: 'Modify existing expenses' },
+      { id: 'delete_expense', name: 'Delete Expense', description: 'Remove expense records' },
+    ],
+  },
 }
 
 export function AIAgentPermissions() {
