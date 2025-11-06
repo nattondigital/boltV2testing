@@ -40,10 +40,15 @@ const MCP_SERVER_DESCRIPTIONS = {
     name: 'Leads',
     description: 'sales lead tracking and qualification',
     tools: {
+      'get_pipelines': 'View all available pipelines in the system',
+      'get_pipeline_stages': 'Get valid stages for a specific pipeline (use before updating lead stage)',
       'get_leads': 'View and search leads with scoring and qualification data',
       'create_lead': 'Add new leads with source, interest level, and contact information',
-      'update_lead': 'Modify lead stage, score, and qualification status',
+      'update_lead': 'Modify lead stage, score, and qualification status (always check pipeline stages first)',
       'delete_lead': 'Remove leads from the pipeline',
+      'get_custom_fields': 'View custom fields available for a pipeline',
+      'get_lead_custom_values': 'Get custom field values for a specific lead',
+      'update_lead_custom_values': 'Update custom field values for a lead',
     }
   },
   'appointments-server': {
@@ -256,7 +261,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ error: error.message }),
       {
-        status: 500,
+      status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
