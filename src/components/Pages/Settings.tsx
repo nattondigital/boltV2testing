@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Save, User, Bell, Shield, Palette, Globe, Database, Pause, Key, Mail, Phone, MapPin, Building, CreditCard, Smartphone, Monitor, Moon, Sun, Volume2, VolumeX, Eye, EyeOff, Copy, RefreshCw, Trash2, Plus, CreditCard as Edit, Zap, Link, Settings as SettingsIcon, Lock, Unlock, Play, Check, X, AlertTriangle, Info, Download, Upload, Calendar, GitBranch, FolderOpen, Layers } from 'lucide-react'
+import { Save, User, Bell, Shield, Palette, Globe, Database, Pause, Key, Mail, Phone, MapPin, Building, CreditCard, Smartphone, Monitor, Moon, Sun, Volume2, VolumeX, Eye, EyeOff, Copy, RefreshCw, Trash2, Plus, CreditCard as Edit, Zap, Link, Settings as SettingsIcon, Lock, Unlock, Play, Check, X, AlertTriangle, Info, Download, Upload, Calendar, GitBranch, FolderOpen, Layers, Clock } from 'lucide-react'
 import { PageHeader } from '@/components/Common/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,6 +17,7 @@ import { CalendarSettings } from '@/components/Settings/CalendarSettings'
 import { PipelineSettings } from '@/components/Settings/PipelineSettings'
 import { MediaFoldersSettings } from '@/components/Settings/MediaFoldersSettings'
 import { CustomFieldsSettings } from '@/components/Settings/CustomFieldsSettings'
+import { WorkingHoursSettings } from '@/components/Settings/WorkingHoursSettings'
 import { useAuth } from '@/contexts/AuthContext'
 
 const mockIntegrations = [
@@ -91,7 +92,7 @@ const statusColors: Record<string, string> = {
 export function Settings() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { userProfile, refreshProfile } = useAuth()
-  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'integrations' | 'api' | 'system' | 'webhooks' | 'appearance' | 'calendar' | 'pipelines' | 'media-folders' | 'custom-fields'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'integrations' | 'api' | 'system' | 'webhooks' | 'appearance' | 'calendar' | 'pipelines' | 'media-folders' | 'custom-fields' | 'working-hours'>('profile')
   const [profileSubTab, setProfileSubTab] = useState<'personal' | 'business'>('personal')
   const [showApiKey, setShowApiKey] = useState<Record<string, boolean>>({})
   const [editingIntegration, setEditingIntegration] = useState<string | null>(null)
@@ -781,6 +782,7 @@ export function Settings() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'appearance', label: 'Appearance', icon: Palette },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
+    { id: 'working-hours', label: 'Working Hours', icon: Clock },
     { id: 'pipelines', label: 'Pipelines', icon: GitBranch },
     { id: 'media-folders', label: 'Media Folders', icon: FolderOpen },
     { id: 'custom-fields', label: 'Custom Fields', icon: Layers },
@@ -1349,6 +1351,16 @@ export function Settings() {
           animate={{ opacity: 1, y: 0 }}
         >
           <CustomFieldsSettings />
+        </motion.div>
+      )}
+
+      {/* Working Hours */}
+      {activeTab === 'working-hours' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <WorkingHoursSettings />
         </motion.div>
       )}
 
