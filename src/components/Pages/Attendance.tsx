@@ -59,7 +59,8 @@ export function Attendance() {
   const [isCameraActive, setIsCameraActive] = useState(false)
   const [location, setLocation] = useState<{ lat: number; lng: number; address: string } | null>(null)
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null)
-  const [editNotes, setEditNotes] = useState('')
+  const [editCheckInTime, setEditCheckInTime] = useState('')
+  const [editCheckOutTime, setEditCheckOutTime] = useState('')
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -593,28 +594,54 @@ export function Attendance() {
 
   const handleEditDetails = (record: AttendanceRecord) => {
     setSelectedRecord(record)
-    setEditNotes(record.notes || '')
+    setEditCheckInTime(format(new Date(record.check_in_time), 'HH:mm'))
+    setEditCheckOutTime(record.check_out_time ? format(new Date(record.check_out_time), 'HH:mm') : '')
     setView('edit')
   }
 
   const handleSaveEdit = async () => {
     if (!selectedRecord) return
 
+    if (!editCheckInTime) {
+      alert('Check-in time is required')
+      return
+    }
+
     try {
+      const recordDate = format(new Date(selectedRecord.date), 'yyyy-MM-dd')
+      const checkInDateTime = new Date(`${recordDate}T${editCheckInTime}:00`)
+
+      let checkOutDateTime = null
+      if (editCheckOutTime) {
+        checkOutDateTime = new Date(`${recordDate}T${editCheckOutTime}:00`)
+
+        if (checkOutDateTime <= checkInDateTime) {
+          alert('Check-out time must be after check-in time')
+          return
+        }
+      }
+
+      const updateData: any = {
+        check_in_time: checkInDateTime.toISOString()
+      }
+
+      if (checkOutDateTime) {
+        updateData.check_out_time = checkOutDateTime.toISOString()
+      }
+
       const { error } = await supabase
         .from('attendance')
-        .update({
-          notes: editNotes || null
-        })
+        .update(updateData)
         .eq('id', selectedRecord.id)
 
       if (error) throw error
 
-      alert('Attendance details updated successfully')
+      alert('Attendance times updated successfully')
       fetchAttendance()
       setView('list')
       setSelectedRecord(null)
-      setEditNotes('')
+      setEditCheckInTime('')
+      setEditCheckOutTime('')
     } catch (err: any) {
       console.error('Error updating attendance:', err)
       alert('Failed to update attendance: ' + (err.message || 'Unknown error'))
@@ -1283,8 +1310,8 @@ export function Attendance() {
                 Back to List
               </Button>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Edit Attendance Details</h1>
-                <p className="text-gray-500 mt-1">Update notes for {selectedRecord.admin_user?.full_name}</p>
+                <h1 className="text-3xl font-bold text-gray-900">Edit Attendance Times</h1>
+                <p className="text-gray-500 mt-1">Update check-in and check-out times for {selectedRecord.admin_user?.full_name}</p>
               </div>
             </div>
 
@@ -1316,20 +1343,46 @@ export function Attendance() {
             {/* Edit Form */}
             <Card>
               <CardHeader>
-                <CardTitle>Edit Details</CardTitle>
+                <CardTitle>Edit Attendance Times</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notes
-                  </label>
-                  <textarea
-                    value={editNotes}
-                    onChange={(e) => setEditNotes(e.target.value)}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
-                    placeholder="Add notes about this attendance record..."
-                  />
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> Update check-in and check-out times for cases where an employee forgot to mark attendance. This allows them to check in again for the current day.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Check In Time <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="time"
+                      value={editCheckInTime}
+                      onChange={(e) => setEditCheckInTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                      required
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Current: {format(new Date(selectedRecord.check_in_time), 'hh:mm a')}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Check Out Time
+                    </label>
+                    <input
+                      type="time"
+                      value={editCheckOutTime}
+                      onChange={(e) => setEditCheckOutTime(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {selectedRecord.check_out_time
+                        ? `Current: ${format(new Date(selectedRecord.check_out_time), 'hh:mm a')}`
+                        : 'Not checked out yet'}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 pt-4">
@@ -1338,7 +1391,7 @@ export function Attendance() {
                   </Button>
                   <Button onClick={handleSaveEdit} className="flex-1">
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Save Changes
+                    Update Times
                   </Button>
                 </div>
               </CardContent>
