@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { supabase } from '@/lib/supabase'
 import { format } from 'date-fns'
+import { CheckoutFormDesktop, CheckoutFormMobile } from './AttendanceCheckout'
+import { AttendanceDetails } from './AttendanceDetails'
 
 interface AttendanceRecord {
   id: string
@@ -18,6 +20,12 @@ interface AttendanceRecord {
   check_out_time: string | null
   check_in_selfie_url: string | null
   check_in_location: {
+    lat: number
+    lng: number
+    address: string
+  } | null
+  check_out_selfie_url: string | null
+  check_out_location: {
     lat: number
     lng: number
     address: string
@@ -39,11 +47,13 @@ const statusColors: Record<string, string> = {
 }
 
 export function Attendance() {
-  const [view, setView] = useState<'list' | 'add'>('list')
+  const [view, setView] = useState<'list' | 'add' | 'checkout' | 'details'>('list')
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
   const [teamMembers, setTeamMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showMarkModal, setShowMarkModal] = useState(false)
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedMember, setSelectedMember] = useState('')
   const [selfieDataUrl, setSelfieDataUrl] = useState<string | null>(null)
   const [isCameraActive, setIsCameraActive] = useState(false)
@@ -64,9 +74,9 @@ export function Attendance() {
     }
   }, [])
 
-  // Capture GPS location when view changes to 'add' or modal opens
+  // Capture GPS location when view changes to 'add', 'checkout' or modal opens
   useEffect(() => {
-    if (view === 'add' || showMarkModal) {
+    if (view === 'add' || view === 'checkout' || showMarkModal || showCheckoutModal) {
       const captureLocation = async () => {
         try {
           const currentLocation = await getCurrentLocation()
@@ -79,7 +89,7 @@ export function Attendance() {
       }
       captureLocation()
     }
-  }, [view, showMarkModal])
+  }, [view, showMarkModal, showCheckoutModal])
 
   const fetchAttendance = async () => {
     try {
@@ -370,21 +380,114 @@ export function Attendance() {
     stopCamera()
   }
 
-  const handleCheckOut = async (attendanceId: string) => {
-    if (!confirm('Mark check-out for this attendance record?')) return
+  const handleInitiateCheckout = (record: AttendanceRecord) => {
+    setSelectedRecord(record)
+    setSelectedMember(record.admin_user_id)
+    setSelfieDataUrl(null)
+    setLocation(null)
+    setView('checkout')
+    setShowCheckoutModal(true)
+  }
+
+  const handleCheckoutSubmit = async () => {
+    if (!selectedRecord) {
+      alert('No attendance record selected')
+      return
+    }
+
+    if (!selfieDataUrl) {
+      alert('Please capture a selfie')
+      return
+    }
+
+    if (!location) {
+      alert('Location not captured. Please try again.')
+      return
+    }
 
     try {
+      const currentLocation = location
+
+      let selfieUrl = selfieDataUrl
+
+      try {
+        const { data: integration, error: integrationError } = await supabase
+          .from('integrations')
+          .select('config')
+          .eq('integration_type', 'ghl_api')
+          .maybeSingle()
+
+        if (integration?.config?.accessToken) {
+          const accessToken = integration.config.accessToken
+          const locationId = integration.config.locationId || 'iDIRFjdZBWH7SqBzTowc'
+
+          const { data: folderAssignment } = await supabase
+            .from('media_folder_assignments')
+            .select('media_folder_id, media_folders!inner(ghl_folder_id, folder_name)')
+            .eq('trigger_event', 'ATTENDANCE_CHECKOUT')
+            .eq('module', 'Attendance')
+            .maybeSingle()
+
+          const ghlFolderId = folderAssignment?.media_folders?.ghl_folder_id
+
+          if (ghlFolderId) {
+            const blob = await fetch(selfieDataUrl).then(r => r.blob())
+            const timestamp = new Date().getTime()
+            const fileName = `attendance-checkout-${selectedMember}-${timestamp}.jpg`
+            const file = new File([blob], fileName, { type: 'image/jpeg' })
+
+            const formData = new FormData()
+            formData.append('file', file)
+            formData.append('name', fileName)
+            formData.append('parentId', ghlFolderId)
+
+            const uploadResponse = await fetch('https://services.leadconnectorhq.com/medias/upload-file', {
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json',
+                'Version': '2021-07-28',
+                'Authorization': `Bearer ${accessToken.trim()}`
+              },
+              body: formData
+            })
+
+            if (uploadResponse.ok) {
+              const ghlFile = await uploadResponse.json()
+              selfieUrl = ghlFile.url || ghlFile.fileUrl || selfieDataUrl
+
+              await supabase.from('media_files').insert({
+                file_name: fileName,
+                file_url: selfieUrl,
+                file_type: 'image/jpeg',
+                file_size: file.size,
+                ghl_file_id: ghlFile._id || ghlFile.id,
+                folder_id: folderAssignment?.media_folders?.id || null,
+                location_id: locationId,
+                thumbnail_url: ghlFile.thumbnailUrl || null,
+                uploaded_by: selectedMember
+              })
+            }
+          }
+        }
+      } catch (uploadErr) {
+        console.error('Error uploading checkout selfie to GHL:', uploadErr)
+      }
+
       const { error } = await supabase
         .from('attendance')
         .update({
-          check_out_time: new Date().toISOString()
+          check_out_time: new Date().toISOString(),
+          check_out_selfie_url: selfieUrl,
+          check_out_location: currentLocation
         })
-        .eq('id', attendanceId)
+        .eq('id', selectedRecord.id)
 
       if (error) throw error
 
       alert('Check-out marked successfully')
       fetchAttendance()
+      handleCloseModal()
+      setView('list')
     } catch (err) {
       console.error('Error marking check-out:', err)
       alert('Failed to mark check-out')
@@ -393,7 +496,10 @@ export function Attendance() {
 
   const handleCloseModal = () => {
     setShowMarkModal(false)
+    setShowCheckoutModal(false)
+    setShowDetailsModal(false)
     setSelectedMember('')
+    setSelectedRecord(null)
     setSelfieDataUrl(null)
     setLocation(null)
     stopCamera()
@@ -466,8 +572,8 @@ export function Attendance() {
                         <th className="text-left py-3 px-4 font-medium">Date</th>
                         <th className="text-left py-3 px-4 font-medium">Check In</th>
                         <th className="text-left py-3 px-4 font-medium">Check Out</th>
-                        <th className="text-left py-3 px-4 font-medium">Selfie</th>
-                        <th className="text-left py-3 px-4 font-medium">Location</th>
+                        <th className="text-left py-3 px-4 font-medium">Selfies</th>
+                        <th className="text-left py-3 px-4 font-medium">Locations</th>
                         <th className="text-left py-3 px-4 font-medium">Status</th>
                         <th className="text-left py-3 px-4 font-medium">Actions</th>
                       </tr>
@@ -524,28 +630,62 @@ export function Attendance() {
                               )}
                             </td>
                             <td className="py-3 px-4">
-                              {record.check_in_selfie_url ? (
-                                <img
-                                  src={record.check_in_selfie_url}
-                                  alt="Selfie"
-                                  className="w-12 h-12 rounded-full object-cover cursor-pointer"
-                                  onClick={() => window.open(record.check_in_selfie_url!, '_blank')}
-                                />
-                              ) : (
-                                <Camera className="w-8 h-8 text-gray-300" />
-                              )}
+                              <div className="flex items-center gap-2">
+                                {record.check_in_selfie_url ? (
+                                  <img
+                                    src={record.check_in_selfie_url}
+                                    alt="Check-in Selfie"
+                                    className="w-10 h-10 rounded-full object-cover cursor-pointer border-2 border-green-500"
+                                    onClick={() => window.open(record.check_in_selfie_url!, '_blank')}
+                                    title="Check-in selfie"
+                                  />
+                                ) : (
+                                  <Camera className="w-8 h-8 text-gray-300" />
+                                )}
+                                {record.check_out_selfie_url ? (
+                                  <img
+                                    src={record.check_out_selfie_url}
+                                    alt="Check-out Selfie"
+                                    className="w-10 h-10 rounded-full object-cover cursor-pointer border-2 border-red-500"
+                                    onClick={() => window.open(record.check_out_selfie_url!, '_blank')}
+                                    title="Check-out selfie"
+                                  />
+                                ) : record.check_out_time ? (
+                                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center" title="No checkout selfie">
+                                    <Camera className="w-5 h-5 text-gray-400" />
+                                  </div>
+                                ) : null}
+                              </div>
                             </td>
                             <td className="py-3 px-4">
-                              {record.check_in_location ? (
-                                <div className="flex items-center gap-2 max-w-xs">
-                                  <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                  <span className="text-sm truncate" title={record.check_in_location.address}>
-                                    {record.check_in_location.address}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-gray-400">N/A</span>
-                              )}
+                              <div className="flex items-center gap-3">
+                                {record.check_in_location ? (
+                                  <button
+                                    onClick={() => window.open(`https://www.google.com/maps?q=${record.check_in_location!.lat},${record.check_in_location!.lng}`, '_blank')}
+                                    className="p-2 bg-green-100 hover:bg-green-200 rounded-full transition-colors"
+                                    title={`Check-in: ${record.check_in_location.address}`}
+                                  >
+                                    <MapPin className="w-4 h-4 text-green-600" />
+                                  </button>
+                                ) : (
+                                  <div className="p-2 bg-gray-100 rounded-full">
+                                    <MapPin className="w-4 h-4 text-gray-300" />
+                                  </div>
+                                )}
+                                {record.check_out_location ? (
+                                  <button
+                                    onClick={() => window.open(`https://www.google.com/maps?q=${record.check_out_location!.lat},${record.check_out_location!.lng}`, '_blank')}
+                                    className="p-2 bg-red-100 hover:bg-red-200 rounded-full transition-colors"
+                                    title={`Check-out: ${record.check_out_location.address}`}
+                                  >
+                                    <MapPin className="w-4 h-4 text-red-600" />
+                                  </button>
+                                ) : record.check_out_time ? (
+                                  <div className="p-2 bg-gray-100 rounded-full" title="No checkout location">
+                                    <MapPin className="w-4 h-4 text-gray-300" />
+                                  </div>
+                                ) : null}
+                              </div>
                             </td>
                             <td className="py-3 px-4">
                               <Badge className={statusColors[record.status] || 'bg-gray-100 text-gray-800'}>
@@ -553,16 +693,28 @@ export function Attendance() {
                               </Badge>
                             </td>
                             <td className="py-3 px-4">
-                              {!record.check_out_time && (
+                              <div className="flex items-center gap-2">
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => handleCheckOut(record.id)}
+                                  onClick={() => {
+                                    setSelectedRecord(record)
+                                    setShowDetailsModal(true)
+                                  }}
                                 >
-                                  <LogOut className="w-4 h-4 mr-1" />
-                                  Check Out
+                                  View Details
                                 </Button>
-                              )}
+                                {!record.check_out_time && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleInitiateCheckout(record)}
+                                  >
+                                    <LogOut className="w-4 h-4 mr-1" />
+                                    Check Out
+                                  </Button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -726,6 +878,26 @@ export function Attendance() {
               </CardContent>
             </Card>
           </>
+        )}
+
+        {view === 'checkout' && selectedRecord && (
+          <CheckoutFormDesktop
+            selectedRecord={selectedRecord}
+            selfieDataUrl={selfieDataUrl}
+            location={location}
+            isCameraActive={isCameraActive}
+            videoRef={videoRef}
+            canvasRef={canvasRef}
+            onStartCamera={startCamera}
+            onStopCamera={stopCamera}
+            onCaptureSelfie={captureSelfie}
+            onRetake={() => {
+              setSelfieDataUrl(null)
+              startCamera()
+            }}
+            onSubmit={handleCheckoutSubmit}
+            onBack={handleBackToList}
+          />
         )}
       </div>
 
@@ -1166,6 +1338,37 @@ export function Attendance() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mobile Checkout Modal */}
+      <AnimatePresence>
+        {showCheckoutModal && selectedRecord && (
+          <CheckoutFormMobile
+            selectedRecord={selectedRecord}
+            selfieDataUrl={selfieDataUrl}
+            location={location}
+            isCameraActive={isCameraActive}
+            videoRef={videoRef}
+            canvasRef={canvasRef}
+            onStartCamera={startCamera}
+            onStopCamera={stopCamera}
+            onCaptureSelfie={captureSelfie}
+            onRetake={() => {
+              setSelfieDataUrl(null)
+              startCamera()
+            }}
+            onSubmit={handleCheckoutSubmit}
+            onBack={handleBackToList}
+            onClose={handleCloseModal}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Attendance Details Modal */}
+      <AttendanceDetails
+        record={selectedRecord}
+        show={showDetailsModal}
+        onClose={handleCloseModal}
+      />
     </>
   )
 }
