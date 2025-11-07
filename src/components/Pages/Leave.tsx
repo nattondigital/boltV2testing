@@ -183,6 +183,7 @@ export function Leave() {
       await fetchLeaveRequests()
       setShowApproveModal(false)
       setSelectedRequest(null)
+      setView('list')
     } catch (error) {
       console.error('Failed to approve request:', error)
       alert('Failed to approve request. Please try again.')
@@ -212,6 +213,7 @@ export function Leave() {
       setShowRejectModal(false)
       setSelectedRequest(null)
       setRejectionReason('')
+      setView('list')
     } catch (error) {
       console.error('Failed to reject request:', error)
       alert('Failed to reject request. Please try again.')
