@@ -39,6 +39,7 @@ const statusColors: Record<string, string> = {
 }
 
 export function Attendance() {
+  const [view, setView] = useState<'list' | 'add'>('list')
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([])
   const [teamMembers, setTeamMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -326,10 +327,26 @@ export function Attendance() {
       alert('Attendance marked successfully')
       fetchAttendance()
       handleCloseModal()
+      setView('list')
     } catch (err) {
       console.error('Error marking attendance:', err)
       alert('Failed to mark attendance')
     }
+  }
+
+  const handleAddAttendance = () => {
+    setView('add')
+    setSelectedMember('')
+    setSelfieDataUrl(null)
+    setLocation(null)
+  }
+
+  const handleBackToList = () => {
+    setView('list')
+    setSelectedMember('')
+    setSelfieDataUrl(null)
+    setLocation(null)
+    stopCamera()
   }
 
   const handleCheckOut = async (attendanceId: string) => {
@@ -373,161 +390,316 @@ export function Attendance() {
     <>
       {/* Desktop View */}
       <div className="hidden md:block p-8 space-y-8">
-        <PageHeader
-          title="Attendance Management"
-          subtitle="Track and manage team attendance"
-        />
+        {view === 'list' && (
+          <>
+            <PageHeader
+              title="Attendance Management"
+              subtitle="Track and manage team attendance"
+            />
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <KPICard
-            title="Present Today"
-            value={totalPresent.toString()}
-            icon={CheckCircle}
-            category="success"
-          />
-          <KPICard
-            title="Late Today"
-            value={totalLate.toString()}
-            icon={Clock}
-            category="warning"
-          />
-          <KPICard
-            title="Absent Today"
-            value={totalAbsent.toString()}
-            icon={User}
-            category="warning"
-          />
-          <KPICard
-            title="Total Staff"
-            value={teamMembers.length.toString()}
-            icon={User}
-            category="primary"
-          />
-        </div>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Attendance Records</CardTitle>
-            <Button onClick={() => setShowMarkModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Mark Attendance
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">Member</th>
-                    <th className="text-left py-3 px-4 font-medium">Date</th>
-                    <th className="text-left py-3 px-4 font-medium">Check In</th>
-                    <th className="text-left py-3 px-4 font-medium">Check Out</th>
-                    <th className="text-left py-3 px-4 font-medium">Selfie</th>
-                    <th className="text-left py-3 px-4 font-medium">Location</th>
-                    <th className="text-left py-3 px-4 font-medium">Status</th>
-                    <th className="text-left py-3 px-4 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-8 text-gray-500">
-                        Loading...
-                      </td>
-                    </tr>
-                  ) : attendance.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-8 text-gray-500">
-                        No attendance records found
-                      </td>
-                    </tr>
-                  ) : (
-                    attendance.map((record) => (
-                      <tr key={record.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <Avatar>
-                              <AvatarFallback>
-                                {record.admin_user?.full_name?.charAt(0) || '?'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium">{record.admin_user?.full_name || 'Unknown'}</div>
-                              <div className="text-sm text-gray-500">{record.admin_user?.email || 'No email'}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            {format(new Date(record.date), 'dd/MM/yyyy')}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            {format(new Date(record.check_in_time), 'HH:mm')}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          {record.check_out_time ? (
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-4 h-4 text-gray-400" />
-                              {format(new Date(record.check_out_time), 'HH:mm')}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">Not checked out</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          {record.check_in_selfie_url ? (
-                            <img
-                              src={record.check_in_selfie_url}
-                              alt="Selfie"
-                              className="w-12 h-12 rounded-full object-cover cursor-pointer"
-                              onClick={() => window.open(record.check_in_selfie_url!, '_blank')}
-                            />
-                          ) : (
-                            <Camera className="w-8 h-8 text-gray-300" />
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          {record.check_in_location ? (
-                            <div className="flex items-center gap-2 max-w-xs">
-                              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                              <span className="text-sm truncate" title={record.check_in_location.address}>
-                                {record.check_in_location.address}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">N/A</span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4">
-                          <Badge className={statusColors[record.status] || 'bg-gray-100 text-gray-800'}>
-                            {record.status}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4">
-                          {!record.check_out_time && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleCheckOut(record.id)}
-                            >
-                              <LogOut className="w-4 h-4 mr-1" />
-                              Check Out
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <KPICard
+                title="Present Today"
+                value={totalPresent.toString()}
+                icon={CheckCircle}
+                category="success"
+              />
+              <KPICard
+                title="Late Today"
+                value={totalLate.toString()}
+                icon={Clock}
+                category="warning"
+              />
+              <KPICard
+                title="Absent Today"
+                value={totalAbsent.toString()}
+                icon={User}
+                category="warning"
+              />
+              <KPICard
+                title="Total Staff"
+                value={teamMembers.length.toString()}
+                icon={User}
+                category="primary"
+              />
             </div>
-          </CardContent>
-        </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Attendance Records</CardTitle>
+                <Button onClick={handleAddAttendance}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Mark Attendance
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 font-medium">Member</th>
+                        <th className="text-left py-3 px-4 font-medium">Date</th>
+                        <th className="text-left py-3 px-4 font-medium">Check In</th>
+                        <th className="text-left py-3 px-4 font-medium">Check Out</th>
+                        <th className="text-left py-3 px-4 font-medium">Selfie</th>
+                        <th className="text-left py-3 px-4 font-medium">Location</th>
+                        <th className="text-left py-3 px-4 font-medium">Status</th>
+                        <th className="text-left py-3 px-4 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
+                        <tr>
+                          <td colSpan={8} className="text-center py-8 text-gray-500">
+                            Loading...
+                          </td>
+                        </tr>
+                      ) : attendance.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="text-center py-8 text-gray-500">
+                            No attendance records found
+                          </td>
+                        </tr>
+                      ) : (
+                        attendance.map((record) => (
+                          <tr key={record.id} className="border-b hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-3">
+                                <Avatar>
+                                  <AvatarFallback>
+                                    {record.admin_user?.full_name?.charAt(0) || '?'}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="font-medium">{record.admin_user?.full_name || 'Unknown'}</div>
+                                  <div className="text-sm text-gray-500">{record.admin_user?.email || 'No email'}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-gray-400" />
+                                {format(new Date(record.date), 'dd/MM/yyyy')}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-gray-400" />
+                                {format(new Date(record.check_in_time), 'HH:mm')}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              {record.check_out_time ? (
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-gray-400" />
+                                  {format(new Date(record.check_out_time), 'HH:mm')}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">Not checked out</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              {record.check_in_selfie_url ? (
+                                <img
+                                  src={record.check_in_selfie_url}
+                                  alt="Selfie"
+                                  className="w-12 h-12 rounded-full object-cover cursor-pointer"
+                                  onClick={() => window.open(record.check_in_selfie_url!, '_blank')}
+                                />
+                              ) : (
+                                <Camera className="w-8 h-8 text-gray-300" />
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              {record.check_in_location ? (
+                                <div className="flex items-center gap-2 max-w-xs">
+                                  <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                  <span className="text-sm truncate" title={record.check_in_location.address}>
+                                    {record.check_in_location.address}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400">N/A</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge className={statusColors[record.status] || 'bg-gray-100 text-gray-800'}>
+                                {record.status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4">
+                              {!record.check_out_time && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleCheckOut(record.id)}
+                                >
+                                  <LogOut className="w-4 h-4 mr-1" />
+                                  Check Out
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {view === 'add' && (
+          <>
+            <div className="flex items-center gap-4 mb-6">
+              <Button
+                variant="ghost"
+                onClick={handleBackToList}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to List
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Mark Attendance</h1>
+                <p className="text-gray-500 mt-1">Record employee attendance for today</p>
+              </div>
+            </div>
+
+            <Card className="max-w-3xl">
+              <CardContent className="p-6 space-y-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Employee Name *</label>
+                  <select
+                    value={selectedMember}
+                    onChange={(e) => setSelectedMember(e.target.value)}
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select employee</option>
+                    {teamMembers.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.full_name} - {member.role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Selfie Image <span className="text-red-500">*</span>
+                  </label>
+
+                  {!selfieDataUrl ? (
+                    <div className="space-y-4">
+                      <div
+                        className="relative bg-gray-900 rounded-lg overflow-hidden"
+                        style={{ aspectRatio: '4/3' }}
+                      >
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover"
+                        />
+                        {!isCameraActive && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                            <div className="text-center text-white">
+                              <Camera className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                              <p className="text-sm">Camera will appear here</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-3">
+                        <Button
+                          type="button"
+                          onClick={isCameraActive ? captureSelfie : startCamera}
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                          <Camera className="w-4 h-4 mr-2" />
+                          {isCameraActive ? 'Capture Photo' : 'Start Camera'}
+                        </Button>
+
+                        {isCameraActive && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={stopCamera}
+                            className="px-8"
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
+
+                      <canvas ref={canvasRef} className="hidden" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div
+                        className="relative bg-gray-100 rounded-lg overflow-hidden"
+                        style={{ aspectRatio: '4/3' }}
+                      >
+                        <img
+                          src={selfieDataUrl}
+                          alt="Captured selfie"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setSelfieDataUrl(null)
+                          startCamera()
+                        }}
+                        className="w-full"
+                      >
+                        <Camera className="w-4 h-4 mr-2" />
+                        Retake Photo
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Date</label>
+                  <div className="px-4 py-2 bg-gray-100 rounded-lg">
+                    {format(new Date(), 'MMMM dd, yyyy')}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Time</label>
+                  <div className="px-4 py-2 bg-gray-100 rounded-lg">
+                    {format(new Date(), 'hh:mm a')}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">GPS Location</label>
+                  <div className="px-4 py-2 bg-gray-100 rounded-lg flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-500" />
+                    <span className="text-sm">Will be captured when submitting</span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button onClick={handleBackToList} variant="outline" className="flex-1">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleMarkAttendance} className="flex-1">
+                    Mark Attendance
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Mobile View - App-like Experience */}
@@ -783,154 +955,6 @@ export function Attendance() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Desktop Mark Attendance Modal */}
-      {showMarkModal && (
-        <div className="hidden md:flex fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-          >
-            <div className="p-6 border-b flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Mark Attendance</h2>
-              <button onClick={handleCloseModal} className="text-gray-500 hover:text-gray-700">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <div>
-                <label className="block text-sm font-medium mb-2">Employee Name *</label>
-                <select
-                  value={selectedMember}
-                  onChange={(e) => setSelectedMember(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select employee</option>
-                  {teamMembers.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.full_name} - {member.role}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Selfie Image <span className="text-red-500">*</span>
-                </label>
-
-                {!selfieDataUrl ? (
-                  <div className="space-y-4">
-                    <div
-                      className="relative bg-gray-900 rounded-lg overflow-hidden"
-                      style={{ aspectRatio: '4/3' }}
-                    >
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="w-full h-full object-cover"
-                      />
-                      {!isCameraActive && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-                          <div className="text-center text-white">
-                            <Camera className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                            <p className="text-sm">Camera will appear here</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-3">
-                      <Button
-                        type="button"
-                        onClick={isCameraActive ? captureSelfie : startCamera}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                      >
-                        <Camera className="w-4 h-4 mr-2" />
-                        {isCameraActive ? 'Capture Photo' : 'Start Camera'}
-                      </Button>
-
-                      {isCameraActive && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={stopCamera}
-                          className="px-8"
-                        >
-                          Cancel
-                        </Button>
-                      )}
-                    </div>
-
-                    <canvas ref={canvasRef} className="hidden" />
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div
-                      className="relative bg-gray-100 rounded-lg overflow-hidden"
-                      style={{ aspectRatio: '4/3' }}
-                    >
-                      <img
-                        src={selfieDataUrl}
-                        alt="Captured selfie"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setSelfieDataUrl(null)
-                        startCamera()
-                      }}
-                      className="w-full"
-                    >
-                      <Camera className="w-4 h-4 mr-2" />
-                      Retake Photo
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Date</label>
-                <div className="px-4 py-2 bg-gray-100 rounded-lg">
-                  {format(new Date(), 'MMMM dd, yyyy')}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Time</label>
-                <div className="px-4 py-2 bg-gray-100 rounded-lg">
-                  {format(new Date(), 'hh:mm a')}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">GPS Location</label>
-                <div className="px-4 py-2 bg-gray-100 rounded-lg flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm">Will be captured when submitting</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 border-t flex gap-3">
-              <Button onClick={handleCloseModal} variant="outline" className="flex-1">
-                Cancel
-              </Button>
-              <Button onClick={handleMarkAttendance} className="flex-1">
-                Mark Attendance
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      )}
 
       {/* Mobile Mark Attendance Page */}
       <AnimatePresence>
