@@ -30,6 +30,7 @@ interface AttendanceRecord {
     address: string
   } | null
   status: string
+  actual_working_hours: number | null
   notes: string | null
   admin_user?: {
     id: string
@@ -39,10 +40,11 @@ interface AttendanceRecord {
 }
 
 const statusColors: Record<string, string> = {
-  present: 'bg-green-100 text-green-800',
-  absent: 'bg-red-100 text-red-800',
-  late: 'bg-yellow-100 text-yellow-800',
-  half_day: 'bg-blue-100 text-blue-800'
+  Present: 'bg-green-100 text-green-800',
+  Absent: 'bg-red-100 text-red-800',
+  'Full Day': 'bg-blue-100 text-blue-800',
+  'Half Day': 'bg-yellow-100 text-yellow-800',
+  Overtime: 'bg-orange-100 text-orange-800'
 }
 
 export function Attendance() {
@@ -631,6 +633,7 @@ export function Attendance() {
                         <th className="text-left py-3 px-4 font-medium">Date</th>
                         <th className="text-left py-3 px-4 font-medium">Check In</th>
                         <th className="text-left py-3 px-4 font-medium">Check Out</th>
+                        <th className="text-left py-3 px-4 font-medium">Hours</th>
                         <th className="text-left py-3 px-4 font-medium">Selfies</th>
                         <th className="text-left py-3 px-4 font-medium">Locations</th>
                         <th className="text-left py-3 px-4 font-medium">Status</th>
@@ -640,13 +643,13 @@ export function Attendance() {
                     <tbody>
                       {loading ? (
                         <tr>
-                          <td colSpan={8} className="text-center py-8 text-gray-500">
+                          <td colSpan={9} className="text-center py-8 text-gray-500">
                             Loading...
                           </td>
                         </tr>
                       ) : attendance.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="text-center py-8 text-gray-500">
+                          <td colSpan={9} className="text-center py-8 text-gray-500">
                             No attendance records found
                           </td>
                         </tr>
@@ -686,6 +689,15 @@ export function Attendance() {
                                 </div>
                               ) : (
                                 <span className="text-gray-400">Not checked out</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              {record.actual_working_hours !== null && record.actual_working_hours > 0 ? (
+                                <span className="font-medium">
+                                  {record.actual_working_hours.toFixed(1)} hrs
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
                               )}
                             </td>
                             <td className="py-3 px-4">
@@ -1132,11 +1144,21 @@ export function Attendance() {
             {/* Status & Notes */}
             <Card className="mt-6">
               <CardContent className="pt-6 space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-2">Status</p>
-                  <Badge className={statusColors[selectedRecord.status] || 'bg-gray-100 text-gray-800'}>
-                    {selectedRecord.status}
-                  </Badge>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 mb-2">Status</p>
+                    <Badge className={statusColors[selectedRecord.status] || 'bg-gray-100 text-gray-800'}>
+                      {selectedRecord.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 mb-2">Working Hours</p>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {selectedRecord.actual_working_hours !== null && selectedRecord.actual_working_hours > 0
+                        ? `${selectedRecord.actual_working_hours.toFixed(1)} hours`
+                        : 'Not calculated'}
+                    </p>
+                  </div>
                 </div>
 
                 {selectedRecord.notes && (
@@ -1477,12 +1499,24 @@ export function Attendance() {
                 )}
               </div>
 
-              {/* Status */}
+              {/* Status & Hours */}
               <div className="bg-white rounded-2xl shadow-lg p-6">
-                <p className="text-sm font-medium text-gray-600 mb-2">Status</p>
-                <Badge className={statusColors[selectedRecord.status] || 'bg-gray-100 text-gray-800'}>
-                  {selectedRecord.status}
-                </Badge>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 mb-2">Status</p>
+                    <Badge className={statusColors[selectedRecord.status] || 'bg-gray-100 text-gray-800'}>
+                      {selectedRecord.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 mb-2">Working Hours</p>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {selectedRecord.actual_working_hours !== null && selectedRecord.actual_working_hours > 0
+                        ? `${selectedRecord.actual_working_hours.toFixed(1)} hrs`
+                        : '-'}
+                    </p>
+                  </div>
+                </div>
                 {selectedRecord.notes && (
                   <>
                     <p className="text-sm font-medium text-gray-600 mb-2 mt-4">Notes</p>
