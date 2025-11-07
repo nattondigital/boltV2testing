@@ -1191,8 +1191,55 @@ export function Expenses() {
                       />
                     </div>
                   )}
+
+                  {selectedExpense.status === 'Rejected' && selectedExpense.rejection_reason && (
+                    <div className="py-3 border-t">
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <XCircle className="w-4 h-4 text-red-600" />
+                          <span className="text-sm font-semibold text-red-800">Rejection Reason</span>
+                        </div>
+                        <p className="text-sm text-red-700 leading-relaxed">
+                          {selectedExpense.rejection_reason}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Approve/Reject Buttons for Pending Expenses */}
+              {selectedExpense.status === 'Pending' && (
+                <div className="px-4 pb-4">
+                  <div className="bg-white rounded-2xl shadow-lg p-4">
+                    <p className="text-sm text-gray-600 mb-4 text-center font-medium">Review this expense</p>
+                    <div className="flex gap-3">
+                      <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          setShowViewModal(false)
+                          setShowApproveModal(true)
+                        }}
+                        className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl py-4 font-semibold shadow-lg flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle className="w-5 h-5" />
+                        Approve
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          setShowViewModal(false)
+                          setShowRejectModal(true)
+                        }}
+                        className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl py-4 font-semibold shadow-lg flex items-center justify-center gap-2"
+                      >
+                        <XCircle className="w-5 h-5" />
+                        Reject
+                      </motion.button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="px-4 pb-4 flex gap-3">
