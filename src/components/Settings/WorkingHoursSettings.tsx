@@ -130,13 +130,13 @@ export function WorkingHoursSettings() {
         is_working_day: hours.is_working_day,
         start_time: hours.start_time,
         end_time: hours.end_time,
-        full_day_hours: hours.full_day_hours,
-        half_day_hours: hours.half_day_hours,
-        overtime_hours: hours.overtime_hours
+        full_day_hours: parseFloat(hours.full_day_hours.toString()) || 0,
+        half_day_hours: parseFloat(hours.half_day_hours.toString()) || 0,
+        overtime_hours: parseFloat(hours.overtime_hours.toString()) || 0
       }))
 
       for (const update of updates) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('working_hours_settings')
           .update({
             is_working_day: update.is_working_day,
@@ -147,15 +147,21 @@ export function WorkingHoursSettings() {
             overtime_hours: update.overtime_hours
           })
           .eq('id', update.id)
+          .select()
 
-        if (error) throw error
+        if (error) {
+          console.error('Error updating day:', update.day, error)
+          throw error
+        }
+
+        console.log('Updated:', update.day, data)
       }
 
       alert('Working hours settings saved successfully!')
       await fetchWorkingHours()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving working hours:', error)
-      alert('Failed to save working hours settings')
+      alert(`Failed to save working hours settings: ${error.message || 'Unknown error'}`)
     } finally {
       setSaving(false)
     }
