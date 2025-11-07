@@ -31,6 +31,7 @@ interface LeaveRequest {
   request_id: string
   admin_user_id: string
   request_type: string
+  leave_category: string
   start_date: string
   end_date: string
   total_days: number
@@ -67,6 +68,7 @@ export function Leave() {
   const [formData, setFormData] = useState({
     admin_user_id: '',
     request_type: '',
+    leave_category: 'Casual',
     start_date: '',
     end_date: '',
     reason: '',
@@ -139,6 +141,7 @@ export function Leave() {
         .insert([{
           admin_user_id: formData.admin_user_id,
           request_type: formData.request_type,
+          leave_category: formData.leave_category,
           start_date: formData.start_date,
           end_date: formData.request_type === 'Half Day' ? formData.start_date : formData.end_date,
           reason: formData.reason,
@@ -253,6 +256,7 @@ export function Leave() {
     setFormData({
       admin_user_id: request.admin_user_id,
       request_type: request.request_type,
+      leave_category: request.leave_category,
       start_date: request.start_date,
       end_date: request.end_date,
       reason: request.reason,
@@ -270,6 +274,7 @@ export function Leave() {
         .update({
           admin_user_id: formData.admin_user_id,
           request_type: formData.request_type,
+          leave_category: formData.leave_category,
           start_date: formData.start_date,
           end_date: formData.request_type === 'Half Day' ? formData.start_date : formData.end_date,
           reason: formData.reason,
@@ -293,6 +298,7 @@ export function Leave() {
     setFormData({
       admin_user_id: '',
       request_type: '',
+      leave_category: 'Casual',
       start_date: '',
       end_date: '',
       reason: '',
@@ -619,6 +625,23 @@ export function Leave() {
                     </Select>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Leave Category *</label>
+                    <Select value={formData.leave_category} onValueChange={(value) => setFormData(prev => ({ ...prev, leave_category: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Casual">Casual</SelectItem>
+                        <SelectItem value="Vacation">Vacation</SelectItem>
+                        <SelectItem value="Sick Leave">Sick Leave</SelectItem>
+                        <SelectItem value="Personal">Personal</SelectItem>
+                        <SelectItem value="Emergency">Emergency</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
@@ -725,6 +748,23 @@ export function Leave() {
                     </Select>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Leave Category *</label>
+                    <Select value={formData.leave_category} onValueChange={(value) => setFormData(prev => ({ ...prev, leave_category: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Casual">Casual</SelectItem>
+                        <SelectItem value="Vacation">Vacation</SelectItem>
+                        <SelectItem value="Sick Leave">Sick Leave</SelectItem>
+                        <SelectItem value="Personal">Personal</SelectItem>
+                        <SelectItem value="Emergency">Emergency</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Start Date *</label>
@@ -823,11 +863,18 @@ export function Leave() {
                       </Badge>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-600 mb-1">Duration</label>
+                      <label className="block text-sm font-medium text-gray-600 mb-1">Leave Category</label>
                       <p className="text-base font-semibold text-gray-800">
-                        {selectedRequest.total_days} {selectedRequest.total_days === 1 ? 'day' : 'days'}
+                        {selectedRequest.leave_category}
                       </p>
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Duration</label>
+                    <p className="text-base font-semibold text-gray-800">
+                      {selectedRequest.total_days} {selectedRequest.total_days === 1 ? 'day' : 'days'}
+                    </p>
                   </div>
 
                   <div>
@@ -1316,6 +1363,26 @@ export function Leave() {
                 </select>
               </div>
 
+              {/* Leave Category */}
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Leave Category *
+                </label>
+                <select
+                  value={formData.leave_category}
+                  onChange={(e) => setFormData(prev => ({ ...prev, leave_category: e.target.value }))}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  <option value="Casual">Casual</option>
+                  <option value="Vacation">Vacation</option>
+                  <option value="Sick Leave">Sick Leave</option>
+                  <option value="Personal">Personal</option>
+                  <option value="Emergency">Emergency</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
               {/* Dates */}
               <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
                 <div>
@@ -1449,6 +1516,26 @@ export function Leave() {
                   <option value="Leave">Leave 🏖️</option>
                   <option value="Work From Home">Work From Home 🏠</option>
                   <option value="Half Day">Half Day ☀️</option>
+                </select>
+              </div>
+
+              {/* Leave Category */}
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  Leave Category *
+                </label>
+                <select
+                  value={formData.leave_category}
+                  onChange={(e) => setFormData(prev => ({ ...prev, leave_category: e.target.value }))}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  <option value="Casual">Casual</option>
+                  <option value="Vacation">Vacation</option>
+                  <option value="Sick Leave">Sick Leave</option>
+                  <option value="Personal">Personal</option>
+                  <option value="Emergency">Emergency</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
 
