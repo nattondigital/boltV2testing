@@ -60,6 +60,7 @@ interface Expense {
 }
 
 export function Expenses() {
+  const [view, setView] = useState<'list' | 'add' | 'edit' | 'view'>('list')
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -229,11 +230,22 @@ export function Expenses() {
 
       await fetchExpenses()
       setShowCreateModal(false)
+      setView('list')
       resetForm()
     } catch (error) {
       console.error('Failed to create expense:', error)
       alert('Failed to create expense. Please try again.')
     }
+  }
+
+  const handleAddExpense = () => {
+    setView('add')
+    resetForm()
+  }
+
+  const handleBackToList = () => {
+    setView('list')
+    resetForm()
   }
 
   const handleEditExpense = async () => {
@@ -347,6 +359,7 @@ export function Expenses() {
 
       await fetchExpenses()
       setShowEditModal(false)
+      setView('list')
       resetForm()
     } catch (error) {
       console.error('Failed to update expense:', error)
@@ -374,6 +387,7 @@ export function Expenses() {
 
   const handleViewExpense = (expense: Expense) => {
     setSelectedExpense(expense)
+    setView('view')
     setShowViewModal(true)
   }
 
@@ -387,6 +401,7 @@ export function Expenses() {
       payment_method: expense.payment_method,
       receipt_url: expense.receipt_url || ''
     })
+    setView('edit')
     setShowEditModal(true)
   }
 
@@ -423,18 +438,20 @@ export function Expenses() {
     <>
       {/* Desktop View */}
       <div className="hidden md:block ppt-slide p-6">
-        <PageHeader
-          title="Expense Management"
-          subtitle="Track, manage, and approve team expenses"
-          actions={[
-            {
-              label: 'Add Expense',
-              onClick: () => setShowCreateModal(true),
-              variant: 'default',
-              icon: Plus
-            }
-          ]}
-        />
+        {view === 'list' && (
+          <>
+            <PageHeader
+              title="Expense Management"
+              subtitle="Track, manage, and approve team expenses"
+              actions={[
+                {
+                  label: 'Add Expense',
+                  onClick: handleAddExpense,
+                  variant: 'default',
+                  icon: Plus
+                }
+              ]}
+            />
 
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
@@ -622,6 +639,252 @@ export function Expenses() {
             </CardContent>
           </Card>
         </motion.div>
+          </>
+        )}
+
+        {(view === 'add' || view === 'edit') && (
+          <>
+            <div className="flex items-center gap-4 mb-6">
+              <Button
+                variant="ghost"
+                onClick={handleBackToList}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to List
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {view === 'add' ? 'Add New Expense' : 'Edit Expense'}
+                </h1>
+                <p className="text-gray-500 mt-1">
+                  {view === 'add' ? 'Record a new expense for tracking' : 'Update expense details'}
+                </p>
+              </div>
+            </div>
+
+            <Card className="max-w-3xl">
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
+                    <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Travel">Travel</SelectItem>
+                        <SelectItem value="Food">Food</SelectItem>
+                        <SelectItem value="Office Supplies">Office Supplies</SelectItem>
+                        <SelectItem value="Software">Software</SelectItem>
+                        <SelectItem value="Marketing">Marketing</SelectItem>
+                        <SelectItem value="Training">Training</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.amount}
+                      onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Enter expense description"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Expense Date *</label>
+                    <Input
+                      type="date"
+                      value={formData.expense_date}
+                      onChange={(e) => setFormData(prev => ({ ...prev, expense_date: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method *</label>
+                    <Select value={formData.payment_method} onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select method" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Cash">Cash</SelectItem>
+                        <SelectItem value="Credit Card">Credit Card</SelectItem>
+                        <SelectItem value="Debit Card">Debit Card</SelectItem>
+                        <SelectItem value="UPI">UPI</SelectItem>
+                        <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Receipt Upload</label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <div className="space-y-3">
+                    {receiptPreview || formData.receipt_url ? (
+                      <div className="relative">
+                        <img
+                          src={receiptPreview || formData.receipt_url}
+                          alt="Receipt preview"
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReceiptFile(null)
+                            setReceiptPreview(null)
+                            setFormData(prev => ({ ...prev, receipt_url: '' }))
+                            if (fileInputRef.current) fileInputRef.current.value = ''
+                          }}
+                          className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-brand-primary transition-colors"
+                      >
+                        <Upload className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm text-gray-600">Click to upload receipt</p>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3 pt-4">
+                  <Button
+                    onClick={view === 'add' ? handleCreateExpense : handleEditExpense}
+                    disabled={!formData.category || !formData.amount || !formData.description || !formData.expense_date || !formData.payment_method}
+                    className="flex-1"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {view === 'add' ? 'Add Expense' : 'Save Changes'}
+                  </Button>
+                  <Button variant="outline" onClick={handleBackToList} className="flex-1">
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {view === 'view' && selectedExpense && (
+          <>
+            <div className="flex items-center gap-4 mb-6">
+              <Button
+                variant="ghost"
+                onClick={handleBackToList}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to List
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Expense Details</h1>
+                <p className="text-gray-500 mt-1">View complete expense information</p>
+              </div>
+            </div>
+
+            <Card className="max-w-3xl">
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Category</label>
+                    <p className="text-base font-semibold text-gray-800">{selectedExpense.category}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Status</label>
+                    <Badge className={statusColors[selectedExpense.status]}>
+                      {selectedExpense.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Amount</label>
+                    <p className="text-2xl font-bold text-orange-600">
+                      {selectedExpense.currency} {parseFloat(selectedExpense.amount.toString()).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">Date</label>
+                    <p className="text-base font-semibold text-gray-800">
+                      {format(new Date(selectedExpense.expense_date), 'MMM dd, yyyy')}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Payment Method</label>
+                  <p className="text-base font-semibold text-gray-800">{selectedExpense.payment_method}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">Description</label>
+                  <p className="text-base text-gray-700 leading-relaxed">{selectedExpense.description}</p>
+                </div>
+
+                {selectedExpense.receipt_url && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-2">Receipt</label>
+                    <img
+                      src={selectedExpense.receipt_url}
+                      alt="Receipt"
+                      className="w-full max-w-md rounded-lg shadow-md cursor-pointer"
+                      onClick={() => window.open(selectedExpense.receipt_url!, '_blank')}
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 pt-4">
+                  <Button
+                    onClick={() => handleEditClick(selectedExpense)}
+                    className="flex-1"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      handleDeleteExpense(selectedExpense.id, selectedExpense.expense_id)
+                      setView('list')
+                    }}
+                    className="flex-1 text-red-600 hover:text-red-700 hover:border-red-600"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Mobile View - App-like Experience */}
@@ -877,373 +1140,6 @@ export function Expenses() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Desktop View Modal */}
-      {showViewModal && selectedExpense && (
-        <div className="hidden md:flex fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-brand-text">Expense Details</h2>
-              <Button variant="ghost" size="sm" onClick={() => setShowViewModal(false)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Category</label>
-                  <p className="text-base font-semibold text-gray-800">{selectedExpense.category}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Status</label>
-                  <Badge className={statusColors[selectedExpense.status]}>
-                    {selectedExpense.status}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Amount</label>
-                  <p className="text-2xl font-bold text-orange-600">
-                    {selectedExpense.currency} {parseFloat(selectedExpense.amount.toString()).toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">Date</label>
-                  <p className="text-base font-semibold text-gray-800">
-                    {format(new Date(selectedExpense.expense_date), 'MMM dd, yyyy')}
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Payment Method</label>
-                <p className="text-base font-semibold text-gray-800">{selectedExpense.payment_method}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Description</label>
-                <p className="text-base text-gray-700 leading-relaxed">{selectedExpense.description}</p>
-              </div>
-
-              {selectedExpense.receipt_url && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-2">Receipt</label>
-                  <img
-                    src={selectedExpense.receipt_url}
-                    alt="Receipt"
-                    className="w-full max-w-md rounded-lg shadow-md cursor-pointer"
-                    onClick={() => window.open(selectedExpense.receipt_url!, '_blank')}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-3 mt-6">
-              <Button
-                onClick={() => {
-                  setShowViewModal(false)
-                  handleEditClick(selectedExpense)
-                }}
-                className="flex-1"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Edit
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowViewModal(false)
-                  handleDeleteExpense(selectedExpense.id, selectedExpense.expense_id)
-                }}
-                className="flex-1 text-red-600 hover:text-red-700 hover:border-red-600"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Desktop Create Modal */}
-      {showCreateModal && (
-        <div className="hidden md:flex fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-brand-text">Add New Expense</h2>
-              <Button variant="ghost" size="sm" onClick={() => { setShowCreateModal(false); resetForm(); }}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Travel">Travel</SelectItem>
-                      <SelectItem value="Food">Food</SelectItem>
-                      <SelectItem value="Office Supplies">Office Supplies</SelectItem>
-                      <SelectItem value="Software">Software</SelectItem>
-                      <SelectItem value="Marketing">Marketing</SelectItem>
-                      <SelectItem value="Training">Training</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.amount}
-                    onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                    placeholder="Enter amount"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Enter expense description"
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Expense Date *</label>
-                  <Input
-                    type="date"
-                    value={formData.expense_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, expense_date: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method *</label>
-                  <Select value={formData.payment_method} onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Cash">Cash</SelectItem>
-                      <SelectItem value="Credit Card">Credit Card</SelectItem>
-                      <SelectItem value="Debit Card">Debit Card</SelectItem>
-                      <SelectItem value="UPI">UPI</SelectItem>
-                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Receipt Upload</label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <div className="space-y-3">
-                  {receiptPreview ? (
-                    <div className="relative">
-                      <img
-                        src={receiptPreview}
-                        alt="Receipt preview"
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReceiptFile(null)
-                          setReceiptPreview(null)
-                          if (fileInputRef.current) fileInputRef.current.value = ''
-                        }}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-brand-primary transition-colors"
-                    >
-                      <Upload className="w-6 h-6 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm text-gray-600">Click to upload receipt</p>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3 mt-6">
-              <Button
-                onClick={handleCreateExpense}
-                disabled={!formData.category || !formData.amount || !formData.description || !formData.expense_date || !formData.payment_method}
-                className="flex-1"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Add Expense
-              </Button>
-              <Button variant="outline" onClick={() => { setShowCreateModal(false); resetForm(); }} className="flex-1">
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Desktop Edit Modal */}
-      {showEditModal && selectedExpense && (
-        <div className="hidden md:flex fixed inset-0 bg-black bg-opacity-50 items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-brand-text">Edit Expense</h2>
-              <Button variant="ghost" size="sm" onClick={() => { setShowEditModal(false); resetForm(); }}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Travel">Travel</SelectItem>
-                      <SelectItem value="Food">Food</SelectItem>
-                      <SelectItem value="Office Supplies">Office Supplies</SelectItem>
-                      <SelectItem value="Software">Software</SelectItem>
-                      <SelectItem value="Marketing">Marketing</SelectItem>
-                      <SelectItem value="Training">Training</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.amount}
-                    onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
-                    placeholder="Enter amount"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Enter expense description"
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Expense Date *</label>
-                  <Input
-                    type="date"
-                    value={formData.expense_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, expense_date: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method *</label>
-                  <Select value={formData.payment_method} onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select method" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Cash">Cash</SelectItem>
-                      <SelectItem value="Credit Card">Credit Card</SelectItem>
-                      <SelectItem value="Debit Card">Debit Card</SelectItem>
-                      <SelectItem value="UPI">UPI</SelectItem>
-                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Receipt Upload</label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <div className="space-y-3">
-                  {receiptPreview || formData.receipt_url ? (
-                    <div className="relative">
-                      <img
-                        src={receiptPreview || formData.receipt_url}
-                        alt="Receipt preview"
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setReceiptFile(null)
-                          setReceiptPreview(null)
-                          setFormData(prev => ({ ...prev, receipt_url: '' }))
-                          if (fileInputRef.current) fileInputRef.current.value = ''
-                        }}
-                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-brand-primary transition-colors"
-                    >
-                      <Upload className="w-6 h-6 mx-auto mb-2 text-gray-400" />
-                      <p className="text-sm text-gray-600">Click to upload receipt</p>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3 mt-6">
-              <Button
-                onClick={handleEditExpense}
-                disabled={!formData.category || !formData.amount || !formData.description || !formData.expense_date || !formData.payment_method}
-                className="flex-1"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Save Changes
-              </Button>
-              <Button variant="outline" onClick={() => { setShowEditModal(false); resetForm(); }} className="flex-1">
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Mobile Create Expense Page */}
       <AnimatePresence>
