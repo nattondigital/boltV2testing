@@ -206,9 +206,13 @@ export function Attendance() {
       return
     }
 
+    if (!location) {
+      alert('Location not captured. Please try again.')
+      return
+    }
+
     try {
-      const currentLocation = await getCurrentLocation()
-      setLocation(currentLocation)
+      const currentLocation = location
 
       let selfieUrl = selfieDataUrl
 
@@ -334,11 +338,20 @@ export function Attendance() {
     }
   }
 
-  const handleAddAttendance = () => {
+  const handleAddAttendance = async () => {
     setView('add')
     setSelectedMember('')
     setSelfieDataUrl(null)
     setLocation(null)
+
+    // Capture GPS location when the page opens
+    try {
+      const currentLocation = await getCurrentLocation()
+      setLocation(currentLocation)
+    } catch (error) {
+      console.error('Error getting location:', error)
+      alert('Unable to capture location. Please enable location services.')
+    }
   }
 
   const handleBackToList = () => {
@@ -775,7 +788,18 @@ export function Attendance() {
         <div className="px-4 mb-4">
           <motion.button
             whileTap={{ scale: 0.98 }}
-            onClick={() => setShowMarkModal(true)}
+            onClick={async () => {
+              setShowMarkModal(true)
+              setLocation(null)
+              // Capture GPS location when the modal opens
+              try {
+                const currentLocation = await getCurrentLocation()
+                setLocation(currentLocation)
+              } catch (error) {
+                console.error('Error getting location:', error)
+                alert('Unable to capture location. Please enable location services.')
+              }
+            }}
             className="w-full bg-gradient-to-r from-brand-primary to-blue-600 text-white rounded-2xl py-4 px-6 shadow-lg flex items-center justify-center gap-3 font-semibold"
           >
             <Plus className="w-5 h-5" />
