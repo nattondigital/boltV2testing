@@ -69,7 +69,7 @@ export function CheckoutFormDesktop({
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-full object-cover block"
+                    className="w-full h-full object-cover attendance-video"
                   />
                   {!isCameraActive && (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
@@ -220,7 +220,7 @@ export function CheckoutFormMobile({
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover block"
+                  className="w-full h-full object-cover attendance-video"
                 />
                 {!isCameraActive && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">

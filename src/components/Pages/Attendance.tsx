@@ -178,19 +178,25 @@ export function Attendance() {
         audio: false
       })
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        streamRef.current = stream
+      // Store stream reference
+      streamRef.current = stream
 
-        // Set state immediately
-        setIsCameraActive(true)
-
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(err => {
-            console.error('Error playing video:', err)
-          })
+      // Attach stream to ALL video elements with class 'attendance-video'
+      // This handles both desktop and mobile views simultaneously
+      const videoElements = document.querySelectorAll<HTMLVideoElement>('.attendance-video')
+      videoElements.forEach((videoElement) => {
+        if (videoElement) {
+          videoElement.srcObject = stream
+          videoElement.onloadedmetadata = () => {
+            videoElement.play().catch(err => {
+              console.error('Error playing video:', err)
+            })
+          }
         }
-      }
+      })
+
+      // Set state immediately
+      setIsCameraActive(true)
     } catch (err) {
       console.error('Error accessing camera:', err)
       alert('Failed to access camera. Please allow camera permissions.')
@@ -209,16 +215,29 @@ export function Attendance() {
   }
 
   const captureSelfie = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current
-      const canvas = canvasRef.current
+    // Find the first visible video element with the stream
+    const videoElements = document.querySelectorAll<HTMLVideoElement>('.attendance-video')
+    let activeVideo: HTMLVideoElement | null = null
 
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
+    // Find the video element that is currently visible and has a stream
+    videoElements.forEach((video) => {
+      if (video.srcObject && video.videoWidth > 0 && !activeVideo) {
+        // Check if element is visible (not hidden by CSS)
+        const style = window.getComputedStyle(video)
+        if (style.display !== 'none' && style.visibility !== 'hidden') {
+          activeVideo = video
+        }
+      }
+    })
+
+    if (activeVideo && canvasRef.current) {
+      const canvas = canvasRef.current
+      canvas.width = activeVideo.videoWidth
+      canvas.height = activeVideo.videoHeight
 
       const ctx = canvas.getContext('2d')
       if (ctx) {
-        ctx.drawImage(video, 0, 0)
+        ctx.drawImage(activeVideo, 0, 0)
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
         setSelfieDataUrl(dataUrl)
         stopCamera()
@@ -815,7 +834,7 @@ export function Attendance() {
                           autoPlay
                           playsInline
                           muted
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover attendance-video"
                         />
                         {!isCameraActive && (
                           <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
@@ -1536,7 +1555,7 @@ export function Attendance() {
                         autoPlay
                         playsInline
                         muted
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover attendance-video"
                       />
                       {!isCameraActive && (
                         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
