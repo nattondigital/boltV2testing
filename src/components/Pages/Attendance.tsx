@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { supabase } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { CheckoutFormDesktop, CheckoutFormMobile } from './AttendanceCheckout'
-import { AttendanceDetails } from './AttendanceDetails'
 
 interface AttendanceRecord {
   id: string
@@ -52,8 +51,6 @@ export function Attendance() {
   const [teamMembers, setTeamMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showMarkModal, setShowMarkModal] = useState(false)
-  const [showCheckoutModal, setShowCheckoutModal] = useState(false)
-  const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedMember, setSelectedMember] = useState('')
   const [selfieDataUrl, setSelfieDataUrl] = useState<string | null>(null)
   const [isCameraActive, setIsCameraActive] = useState(false)
@@ -76,7 +73,7 @@ export function Attendance() {
 
   // Capture GPS location when view changes to 'add', 'checkout' or modal opens
   useEffect(() => {
-    if (view === 'add' || view === 'checkout' || showMarkModal || showCheckoutModal) {
+    if (view === 'add' || view === 'checkout' || showMarkModal) {
       const captureLocation = async () => {
         try {
           const currentLocation = await getCurrentLocation()
@@ -89,7 +86,7 @@ export function Attendance() {
       }
       captureLocation()
     }
-  }, [view, showMarkModal, showCheckoutModal])
+  }, [view, showMarkModal])
 
   const fetchAttendance = async () => {
     try {
@@ -386,7 +383,6 @@ export function Attendance() {
     setSelfieDataUrl(null)
     setLocation(null)
     setView('checkout')
-    setShowCheckoutModal(true)
   }
 
   const handleCheckoutSubmit = async () => {
@@ -486,20 +482,26 @@ export function Attendance() {
 
       alert('Check-out marked successfully')
       fetchAttendance()
-      handleCloseModal()
       setView('list')
+      setSelectedRecord(null)
+      setSelectedMember('')
+      setSelfieDataUrl(null)
+      setLocation(null)
+      stopCamera()
     } catch (err) {
       console.error('Error marking check-out:', err)
       alert('Failed to mark check-out')
     }
   }
 
+  const handleViewDetails = (record: AttendanceRecord) => {
+    setSelectedRecord(record)
+    setView('details')
+  }
+
   const handleCloseModal = () => {
     setShowMarkModal(false)
-    setShowCheckoutModal(false)
-    setShowDetailsModal(false)
     setSelectedMember('')
-    setSelectedRecord(null)
     setSelfieDataUrl(null)
     setLocation(null)
     stopCamera()
@@ -697,10 +699,7 @@ export function Attendance() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => {
-                                    setSelectedRecord(record)
-                                    setShowDetailsModal(true)
-                                  }}
+                                  onClick={() => handleViewDetails(record)}
                                 >
                                   View Details
                                 </Button>
@@ -899,6 +898,202 @@ export function Attendance() {
             onBack={handleBackToList}
           />
         )}
+
+        {view === 'details' && selectedRecord && (
+          <>
+            <div className="flex items-center gap-4 mb-6">
+              <Button onClick={handleBackToList} variant="outline">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+              <h2 className="text-2xl font-bold">Attendance Details - {selectedRecord.admin_user?.full_name}</h2>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Check-In Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-green-600">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    Check-In Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-blue-100 p-2 rounded-lg">
+                        <Calendar className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium">Date</p>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {format(new Date(selectedRecord.date), 'MMMM dd, yyyy')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <Clock className="w-4 h-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium">Time</p>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {format(new Date(selectedRecord.check_in_time), 'hh:mm a')}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <div className="bg-purple-100 p-2 rounded-lg">
+                        <MapPin className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500 font-medium mb-1">Location</p>
+                        {selectedRecord.check_in_location ? (
+                          <>
+                            <p className="text-sm text-gray-800 mb-2">
+                              {selectedRecord.check_in_location.address}
+                            </p>
+                            <button
+                              onClick={() => window.open(`https://www.google.com/maps?q=${selectedRecord.check_in_location!.lat},${selectedRecord.check_in_location!.lng}`, '_blank')}
+                              className="text-xs text-blue-600 hover:text-blue-700 font-medium underline"
+                            >
+                              View on Map
+                            </button>
+                          </>
+                        ) : (
+                          <p className="text-sm text-gray-500">Not available</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium mb-2">Selfie</p>
+                      {selectedRecord.check_in_selfie_url ? (
+                        <img
+                          src={selectedRecord.check_in_selfie_url}
+                          alt="Check-in selfie"
+                          className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(selectedRecord.check_in_selfie_url!, '_blank')}
+                        />
+                      ) : (
+                        <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
+                          <Camera className="w-12 h-12 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Check-Out Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-600">
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    Check-Out Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {selectedRecord.check_out_time ? (
+                    <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="bg-blue-100 p-2 rounded-lg">
+                          <Calendar className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">Date</p>
+                          <p className="text-sm font-semibold text-gray-800">
+                            {format(new Date(selectedRecord.check_out_time), 'MMMM dd, yyyy')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="bg-red-100 p-2 rounded-lg">
+                          <Clock className="w-4 h-4 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">Time</p>
+                          <p className="text-sm font-semibold text-gray-800">
+                            {format(new Date(selectedRecord.check_out_time), 'hh:mm a')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="bg-purple-100 p-2 rounded-lg">
+                          <MapPin className="w-4 h-4 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs text-gray-500 font-medium mb-1">Location</p>
+                          {selectedRecord.check_out_location ? (
+                            <>
+                              <p className="text-sm text-gray-800 mb-2">
+                                {selectedRecord.check_out_location.address}
+                              </p>
+                              <button
+                                onClick={() => window.open(`https://www.google.com/maps?q=${selectedRecord.check_out_location!.lat},${selectedRecord.check_out_location!.lng}`, '_blank')}
+                                className="text-xs text-blue-600 hover:text-blue-700 font-medium underline"
+                              >
+                                View on Map
+                              </button>
+                            </>
+                          ) : (
+                            <p className="text-sm text-gray-500">Not available</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium mb-2">Selfie</p>
+                        {selectedRecord.check_out_selfie_url ? (
+                          <img
+                            src={selectedRecord.check_out_selfie_url}
+                            alt="Check-out selfie"
+                            className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(selectedRecord.check_out_selfie_url!, '_blank')}
+                          />
+                        ) : (
+                          <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <Camera className="w-12 h-12 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-xl p-8 text-center h-full flex flex-col items-center justify-center">
+                      <Clock className="w-16 h-16 text-gray-300 mb-3" />
+                      <p className="text-gray-500 font-medium">Not checked out yet</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Status & Notes */}
+            <Card className="mt-6">
+              <CardContent className="pt-6 space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 mb-2">Status</p>
+                  <Badge className={statusColors[selectedRecord.status] || 'bg-gray-100 text-gray-800'}>
+                    {selectedRecord.status}
+                  </Badge>
+                </div>
+
+                {selectedRecord.notes && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 mb-2">Notes</p>
+                    <p className="text-sm text-gray-800 bg-gray-50 rounded-lg p-3">
+                      {selectedRecord.notes}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Mobile View - App-like Experience */}
@@ -999,7 +1194,7 @@ export function Attendance() {
                 <motion.div
                   key={record.id}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setSelectedRecord(record)}
+                  onClick={() => handleViewDetails(record)}
                   className="bg-white rounded-2xl p-4 shadow-md active:shadow-lg transition-shadow"
                 >
                   <div className="flex items-center justify-between mb-3">
@@ -1045,9 +1240,9 @@ export function Attendance() {
         </div>
       </div>
 
-      {/* Detail Modal for Mobile */}
+      {/* Mobile Details View */}
       <AnimatePresence>
-        {selectedRecord && (
+        {view === 'details' && selectedRecord && (
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
@@ -1056,101 +1251,188 @@ export function Attendance() {
             className="md:hidden fixed inset-0 bg-white z-50 overflow-y-auto"
           >
             <div className="bg-gradient-to-r from-brand-primary to-blue-600 text-white px-4 py-6 sticky top-0 z-10">
-              <div className="flex items-center gap-3">
-                <button onClick={() => setSelectedRecord(null)}>
+              <div className="flex items-center gap-3 mb-2">
+                <button onClick={handleBackToList}>
                   <ArrowLeft className="w-6 h-6" />
                 </button>
                 <h2 className="text-xl font-bold">Attendance Details</h2>
               </div>
+              <p className="text-sm text-white/90 ml-9">{selectedRecord.admin_user?.full_name}</p>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-4 pb-24 space-y-4">
+              {/* Check-In Section */}
               <div className="bg-white rounded-2xl shadow-lg p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  {selectedRecord.check_in_selfie_url ? (
-                    <img
-                      src={selectedRecord.check_in_selfie_url}
-                      alt="Selfie"
-                      className="w-20 h-20 rounded-2xl object-cover"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center">
-                      <Camera className="w-8 h-8 text-gray-400" />
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-lg font-bold text-gray-800">{selectedRecord.admin_user?.full_name}</p>
-                    <p className="text-sm text-gray-500">{selectedRecord.admin_user?.email}</p>
-                  </div>
-                </div>
-
+                <h3 className="text-lg font-bold text-green-600 mb-4 flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  Check-In
+                </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between py-3 border-b">
+                  <div className="flex items-center justify-between py-2 border-b">
                     <div className="flex items-center gap-3">
                       <div className="bg-blue-100 p-2 rounded-xl">
                         <Calendar className="w-4 h-4 text-blue-600" />
                       </div>
                       <span className="text-sm text-gray-600">Date</span>
                     </div>
-                    <span className="font-semibold text-gray-800">
+                    <span className="font-semibold text-gray-800 text-sm">
                       {format(new Date(selectedRecord.date), 'MMM dd, yyyy')}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between py-3 border-b">
+                  <div className="flex items-center justify-between py-2 border-b">
                     <div className="flex items-center gap-3">
                       <div className="bg-green-100 p-2 rounded-xl">
                         <Clock className="w-4 h-4 text-green-600" />
                       </div>
-                      <span className="text-sm text-gray-600">Check In</span>
+                      <span className="text-sm text-gray-600">Time</span>
                     </div>
-                    <span className="font-semibold text-gray-800">
+                    <span className="font-semibold text-gray-800 text-sm">
                       {format(new Date(selectedRecord.check_in_time), 'hh:mm a')}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between py-3 border-b">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-orange-100 p-2 rounded-xl">
-                        <LogOut className="w-4 h-4 text-orange-600" />
-                      </div>
-                      <span className="text-sm text-gray-600">Check Out</span>
-                    </div>
-                    <span className="font-semibold text-gray-800">
-                      {selectedRecord.check_out_time
-                        ? format(new Date(selectedRecord.check_out_time), 'hh:mm a')
-                        : 'Not yet'
-                      }
-                    </span>
-                  </div>
-
                   {selectedRecord.check_in_location && (
-                    <div className="py-3">
+                    <div className="py-2 border-b">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="bg-purple-100 p-2 rounded-xl">
                           <MapPin className="w-4 h-4 text-purple-600" />
                         </div>
                         <span className="text-sm text-gray-600">Location</span>
                       </div>
-                      <p className="text-sm text-gray-700 ml-12 leading-relaxed">
+                      <p className="text-xs text-gray-700 ml-11 mb-2">
                         {selectedRecord.check_in_location.address}
                       </p>
+                      <button
+                        onClick={() => window.open(`https://www.google.com/maps?q=${selectedRecord.check_in_location!.lat},${selectedRecord.check_in_location!.lng}`, '_blank')}
+                        className="text-xs text-blue-600 font-medium underline ml-11"
+                      >
+                        View on Map
+                      </button>
                     </div>
                   )}
-                </div>
 
-                {!selectedRecord.check_out_time && (
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      handleCheckOut(selectedRecord.id)
-                      setSelectedRecord(null)
-                    }}
-                    className="mt-4 w-full bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl py-3 font-semibold flex items-center justify-center gap-2"
-                  >
-                    <LogOut className="w-5 h-5" />
-                    Check Out
-                  </motion.button>
+                  <div className="pt-2">
+                    <p className="text-xs text-gray-600 mb-2 flex items-center gap-2">
+                      <Camera className="w-4 h-4" />
+                      Selfie
+                    </p>
+                    {selectedRecord.check_in_selfie_url ? (
+                      <img
+                        src={selectedRecord.check_in_selfie_url}
+                        alt="Check-in selfie"
+                        className="w-full h-48 object-cover rounded-xl cursor-pointer"
+                        onClick={() => window.open(selectedRecord.check_in_selfie_url!, '_blank')}
+                      />
+                    ) : (
+                      <div className="w-full h-48 bg-gray-200 rounded-xl flex items-center justify-center">
+                        <Camera className="w-12 h-12 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Check-Out Section */}
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <h3 className="text-lg font-bold text-red-600 mb-4 flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  Check-Out
+                </h3>
+                {selectedRecord.check_out_time ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between py-2 border-b">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-blue-100 p-2 rounded-xl">
+                          <Calendar className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <span className="text-sm text-gray-600">Date</span>
+                      </div>
+                      <span className="font-semibold text-gray-800 text-sm">
+                        {format(new Date(selectedRecord.check_out_time), 'MMM dd, yyyy')}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between py-2 border-b">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-red-100 p-2 rounded-xl">
+                          <Clock className="w-4 h-4 text-red-600" />
+                        </div>
+                        <span className="text-sm text-gray-600">Time</span>
+                      </div>
+                      <span className="font-semibold text-gray-800 text-sm">
+                        {format(new Date(selectedRecord.check_out_time), 'hh:mm a')}
+                      </span>
+                    </div>
+
+                    {selectedRecord.check_out_location && (
+                      <div className="py-2 border-b">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="bg-purple-100 p-2 rounded-xl">
+                            <MapPin className="w-4 h-4 text-purple-600" />
+                          </div>
+                          <span className="text-sm text-gray-600">Location</span>
+                        </div>
+                        <p className="text-xs text-gray-700 ml-11 mb-2">
+                          {selectedRecord.check_out_location.address}
+                        </p>
+                        <button
+                          onClick={() => window.open(`https://www.google.com/maps?q=${selectedRecord.check_out_location!.lat},${selectedRecord.check_out_location!.lng}`, '_blank')}
+                          className="text-xs text-blue-600 font-medium underline ml-11"
+                        >
+                          View on Map
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="pt-2">
+                      <p className="text-xs text-gray-600 mb-2 flex items-center gap-2">
+                        <Camera className="w-4 h-4" />
+                        Selfie
+                      </p>
+                      {selectedRecord.check_out_selfie_url ? (
+                        <img
+                          src={selectedRecord.check_out_selfie_url}
+                          alt="Check-out selfie"
+                          className="w-full h-48 object-cover rounded-xl cursor-pointer"
+                          onClick={() => window.open(selectedRecord.check_out_selfie_url!, '_blank')}
+                        />
+                      ) : (
+                        <div className="w-full h-48 bg-gray-200 rounded-xl flex items-center justify-center">
+                          <Camera className="w-12 h-12 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Clock className="w-16 h-16 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 font-medium mb-4">Not checked out yet</p>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleInitiateCheckout(selectedRecord)}
+                      className="bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl py-3 px-6 font-semibold flex items-center justify-center gap-2 mx-auto"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      Mark Check Out
+                    </motion.button>
+                  </div>
+                )}
+              </div>
+
+              {/* Status */}
+              <div className="bg-white rounded-2xl shadow-lg p-6">
+                <p className="text-sm font-medium text-gray-600 mb-2">Status</p>
+                <Badge className={statusColors[selectedRecord.status] || 'bg-gray-100 text-gray-800'}>
+                  {selectedRecord.status}
+                </Badge>
+                {selectedRecord.notes && (
+                  <>
+                    <p className="text-sm font-medium text-gray-600 mb-2 mt-4">Notes</p>
+                    <p className="text-sm text-gray-800 bg-gray-50 rounded-lg p-3">
+                      {selectedRecord.notes}
+                    </p>
+                  </>
                 )}
               </div>
             </div>
@@ -1339,9 +1621,9 @@ export function Attendance() {
         )}
       </AnimatePresence>
 
-      {/* Mobile Checkout Modal */}
+      {/* Mobile Checkout View */}
       <AnimatePresence>
-        {showCheckoutModal && selectedRecord && (
+        {view === 'checkout' && selectedRecord && (
           <CheckoutFormMobile
             selectedRecord={selectedRecord}
             selfieDataUrl={selfieDataUrl}
@@ -1358,17 +1640,10 @@ export function Attendance() {
             }}
             onSubmit={handleCheckoutSubmit}
             onBack={handleBackToList}
-            onClose={handleCloseModal}
+            onClose={handleBackToList}
           />
         )}
       </AnimatePresence>
-
-      {/* Attendance Details Modal */}
-      <AttendanceDetails
-        record={selectedRecord}
-        show={showDetailsModal}
-        onClose={handleCloseModal}
-      />
     </>
   )
 }
