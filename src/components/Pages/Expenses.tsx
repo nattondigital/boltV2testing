@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Eye, Edit, Trash2, DollarSign, TrendingUp, Calendar, Receipt, X, Save, FileText, CreditCard, Banknote, MoreVertical, ChevronRight, ArrowLeft, Upload, Image } from 'lucide-react'
+import { Plus, Eye, Edit, Trash2, DollarSign, TrendingUp, Calendar, Receipt, X, Save, FileText, CreditCard, Banknote, MoreVertical, ChevronRight, ArrowLeft, Upload, Image, CheckCircle, XCircle } from 'lucide-react'
 import { PageHeader } from '@/components/Common/PageHeader'
 import { KPICard } from '@/components/Common/KPICard'
 import { Button } from '@/components/ui/button'
@@ -54,6 +54,7 @@ interface Expense {
   status: string
   approved_by: string | null
   approved_at: string | null
+  rejection_reason: string | null
   notes: string | null
   created_at: string
   updated_at: string
@@ -69,7 +70,10 @@ export function Expenses() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showApproveModal, setShowApproveModal] = useState(false)
+  const [showRejectModal, setShowRejectModal] = useState(false)
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
+  const [rejectionReason, setRejectionReason] = useState('')
   const [formData, setFormData] = useState({
     category: '',
     amount: '',
@@ -382,6 +386,59 @@ export function Expenses() {
         console.error('Failed to delete expense:', error)
         alert('Failed to delete expense. Please try again.')
       }
+    }
+  }
+
+  const handleApproveExpense = async () => {
+    if (!selectedExpense) return
+
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .update({
+          status: 'Approved',
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', selectedExpense.id)
+
+      if (error) throw error
+
+      await fetchExpenses()
+      setShowApproveModal(false)
+      setSelectedExpense(null)
+      setView('list')
+    } catch (error) {
+      console.error('Failed to approve expense:', error)
+      alert('Failed to approve expense. Please try again.')
+    }
+  }
+
+  const handleRejectExpense = async () => {
+    if (!selectedExpense || !rejectionReason.trim()) {
+      alert('Please provide a reason for rejection.')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .update({
+          status: 'Rejected',
+          approved_at: new Date().toISOString(),
+          rejection_reason: rejectionReason
+        })
+        .eq('id', selectedExpense.id)
+
+      if (error) throw error
+
+      await fetchExpenses()
+      setShowRejectModal(false)
+      setSelectedExpense(null)
+      setRejectionReason('')
+      setView('list')
+    } catch (error) {
+      console.error('Failed to reject expense:', error)
+      alert('Failed to reject expense. Please try again.')
     }
   }
 
@@ -858,6 +915,32 @@ export function Expenses() {
                       className="w-full max-w-md rounded-lg shadow-md cursor-pointer"
                       onClick={() => window.open(selectedExpense.receipt_url!, '_blank')}
                     />
+                  </div>
+                )}
+
+                {selectedExpense.status === 'Rejected' && selectedExpense.rejection_reason && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <label className="block text-sm font-medium text-red-800 mb-1">Rejection Reason</label>
+                    <p className="text-base text-red-700 leading-relaxed">{selectedExpense.rejection_reason}</p>
+                  </div>
+                )}
+
+                {selectedExpense.status === 'Pending' && (
+                  <div className="flex items-center gap-3 pt-4 border-t pt-6">
+                    <Button
+                      onClick={() => setShowApproveModal(true)}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Approve
+                    </Button>
+                    <Button
+                      onClick={() => setShowRejectModal(true)}
+                      className="flex-1 bg-red-600 hover:bg-red-700"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Reject
+                    </Button>
                   </div>
                 )}
 
@@ -1485,6 +1568,97 @@ export function Expenses() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Approve Modal */}
+      {showApproveModal && selectedExpense && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Approve Expense</h3>
+                <p className="text-sm text-gray-500">Expense ID: {selectedExpense.expense_id}</p>
+              </div>
+            </div>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to approve this expense of {selectedExpense.currency} {parseFloat(selectedExpense.amount.toString()).toLocaleString()}?
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={handleApproveExpense}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+              >
+                Approve
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowApproveModal(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {showRejectModal && selectedExpense && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <XCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Reject Expense</h3>
+                <p className="text-sm text-gray-500">Expense ID: {selectedExpense.expense_id}</p>
+              </div>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rejection Reason *
+              </label>
+              <Textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Please provide a reason for rejecting this expense..."
+                rows={4}
+                className="w-full"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={handleRejectExpense}
+                disabled={!rejectionReason.trim()}
+                className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50"
+              >
+                Reject
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRejectModal(false)
+                  setRejectionReason('')
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </>
   )
 }
