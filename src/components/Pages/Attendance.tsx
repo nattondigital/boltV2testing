@@ -71,7 +71,7 @@ export function Attendance() {
     }
   }, [])
 
-  // Capture GPS location when view changes to 'add', 'checkout' or modal opens
+  // Capture GPS location and start camera when view changes to 'add', 'checkout' or modal opens
   useEffect(() => {
     if (view === 'add' || view === 'checkout' || showMarkModal) {
       const captureLocation = async () => {
@@ -85,6 +85,11 @@ export function Attendance() {
         }
       }
       captureLocation()
+
+      // Auto-start camera when entering add or checkout view
+      if (!selfieDataUrl) {
+        startCamera()
+      }
     }
   }, [view, showMarkModal])
 
