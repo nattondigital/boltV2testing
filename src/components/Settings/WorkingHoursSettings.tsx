@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Clock, Save, RefreshCw } from 'lucide-react'
+import { Clock, Save, RefreshCw, Info } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -333,6 +333,84 @@ export function WorkingHoursSettings() {
                 </tr>
               </tbody>
             </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Info className="w-5 h-5" />
+            Payroll Policy
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-900 mb-3">Attendance Status Calculation Rules</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-green-100 text-green-700 font-bold flex items-center justify-center flex-shrink-0">
+                    1
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Full Day</p>
+                    <p className="text-gray-600">
+                      Employee Attendance Status will be marked as <span className="font-semibold text-green-700">"FULL DAY"</span> if Actual Working Hours <span className="font-semibold">≥</span> Full Day Hours
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-yellow-100 text-yellow-700 font-bold flex items-center justify-center flex-shrink-0">
+                    2
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Half Day</p>
+                    <p className="text-gray-600">
+                      Employee Attendance Status will be marked as <span className="font-semibold text-yellow-700">"HALF DAY"</span> if Actual Working Hours <span className="font-semibold">&lt;</span> Half Day Hours
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center flex-shrink-0">
+                    3
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Overtime</p>
+                    <p className="text-gray-600">
+                      Employee Attendance Status will be marked as <span className="font-semibold text-orange-700">"OVERTIME"</span> if Actual Working Hours <span className="font-semibold">≥</span> Overtime Hours
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                <Info className="w-4 h-4" />
+                How It Works
+              </h4>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-start gap-2">
+                  <span className="text-brand-primary font-bold">•</span>
+                  <span>Actual Working Hours are calculated from check-in and check-out times in the Attendance module</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-brand-primary font-bold">•</span>
+                  <span>The system automatically determines attendance status based on the policies above</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-brand-primary font-bold">•</span>
+                  <span>Overtime is calculated when working hours exceed the configured Overtime Hours threshold</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-brand-primary font-bold">•</span>
+                  <span>These policies apply to each working day based on the day-specific hour configurations above</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </CardContent>
       </Card>
