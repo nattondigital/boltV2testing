@@ -88,14 +88,37 @@ export function Attendance() {
       const initializeCamera = async () => {
         // Auto-start camera when entering add or checkout view
         if (!selfieDataUrl) {
-          await startCamera()
+          // Small delay to ensure DOM is ready
+          setTimeout(async () => {
+            await startCamera()
+          }, 100)
         }
       }
 
       captureLocation()
       initializeCamera()
     }
+
+    // Cleanup when leaving these views
+    return () => {
+      if (view !== 'add' && view !== 'checkout' && !showMarkModal) {
+        stopCamera()
+      }
+    }
   }, [view, showMarkModal])
+
+  // Ensure video stream is attached to video element when videoRef changes
+  useEffect(() => {
+    if (streamRef.current && videoRef.current && isCameraActive) {
+      // Reattach stream if video element changed
+      if (videoRef.current.srcObject !== streamRef.current) {
+        videoRef.current.srcObject = streamRef.current
+        videoRef.current.play().catch(err => {
+          console.error('Error playing video:', err)
+        })
+      }
+    }
+  }, [view, isCameraActive])
 
   const fetchAttendance = async () => {
     try {
@@ -141,6 +164,11 @@ export function Attendance() {
 
   const startCamera = async () => {
     try {
+      // Stop any existing camera stream first
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'user',
@@ -154,13 +182,14 @@ export function Attendance() {
         videoRef.current.srcObject = stream
         streamRef.current = stream
 
+        // Set state immediately
+        setIsCameraActive(true)
+
         videoRef.current.onloadedmetadata = () => {
           videoRef.current?.play().catch(err => {
             console.error('Error playing video:', err)
           })
         }
-
-        setIsCameraActive(true)
       }
     } catch (err) {
       console.error('Error accessing camera:', err)
