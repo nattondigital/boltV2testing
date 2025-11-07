@@ -395,6 +395,14 @@ export function Attendance() {
             <PageHeader
               title="Attendance Management"
               subtitle="Track and manage team attendance"
+              actions={[
+                {
+                  label: 'Mark Attendance',
+                  onClick: handleAddAttendance,
+                  variant: 'default',
+                  icon: Plus
+                }
+              ]}
             />
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -425,12 +433,8 @@ export function Attendance() {
             </div>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader>
                 <CardTitle>Attendance Records</CardTitle>
-                <Button onClick={handleAddAttendance}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Mark Attendance
-                </Button>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
