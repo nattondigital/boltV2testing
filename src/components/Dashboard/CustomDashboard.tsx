@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useSearchParams } from 'react-router-dom'
 import {
   Plus, Save, Layout, Grid, Settings, X, ChevronRight, Search,
   LayoutDashboard, RefreshCw
@@ -14,6 +15,9 @@ import { WIDGET_REGISTRY, getAllModules, getWidgetsByModule } from '@/lib/widget
 import { PageHeader } from '@/components/Common/PageHeader'
 
 export function CustomDashboard() {
+  const [searchParams] = useSearchParams()
+  const dashboardId = searchParams.get('id')
+
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [widgets, setWidgets] = useState<Widget[]>([])
   const [showWidgetSelector, setShowWidgetSelector] = useState(false)
@@ -25,16 +29,30 @@ export function CustomDashboard() {
 
   useEffect(() => {
     loadDashboard()
-  }, [])
+  }, [dashboardId])
 
   const loadDashboard = async () => {
     setLoading(true)
     try {
-      const { data: dashboardData, error } = await supabase
-        .from('custom_dashboards')
-        .select('*')
-        .eq('is_default', true)
-        .single()
+      let dashboardData = null
+
+      // If ID is provided, load that specific dashboard
+      if (dashboardId) {
+        const { data } = await supabase
+          .from('custom_dashboards')
+          .select('*')
+          .eq('id', dashboardId)
+          .single()
+        dashboardData = data
+      } else {
+        // Otherwise load the default dashboard
+        const { data } = await supabase
+          .from('custom_dashboards')
+          .select('*')
+          .eq('is_default', true)
+          .single()
+        dashboardData = data
+      }
 
       if (dashboardData) {
         setDashboard(dashboardData)

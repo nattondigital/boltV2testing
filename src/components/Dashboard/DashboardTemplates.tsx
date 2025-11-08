@@ -40,7 +40,7 @@ const templates: DashboardTemplate[] = [
     icon: DollarSign,
     color: 'text-green-600',
     bgColor: 'bg-green-50',
-    widgets_count: 10
+    widgets_count: 8
   },
   {
     id: 'hr',
@@ -60,7 +60,7 @@ const templates: DashboardTemplate[] = [
     icon: DollarSign,
     color: 'text-orange-600',
     bgColor: 'bg-orange-50',
-    widgets_count: 12
+    widgets_count: 6
   },
   {
     id: 'operations',
@@ -70,7 +70,7 @@ const templates: DashboardTemplate[] = [
     icon: Briefcase,
     color: 'text-teal-600',
     bgColor: 'bg-teal-50',
-    widgets_count: 11
+    widgets_count: 7
   },
   {
     id: 'custom',
@@ -92,23 +92,38 @@ export function DashboardTemplates() {
   const handleCreateFromTemplate = async (template: DashboardTemplate) => {
     setCreating(true)
     try {
+      // First, unset any existing default dashboard if creating a new default
+      if (template.category !== 'custom') {
+        await supabase
+          .from('custom_dashboards')
+          .update({ is_default: false })
+          .eq('is_default', true)
+      }
+
       const { data: newDashboard, error: dashboardError } = await supabase
         .from('custom_dashboards')
         .insert({
           name: template.name,
           description: template.description,
-          is_default: false,
+          is_default: template.category !== 'custom',
           layout_config: { cols: 12, rowHeight: 100 }
         })
         .select()
         .single()
 
+      if (dashboardError) {
+        console.error('Error creating dashboard:', dashboardError)
+        alert('Failed to create dashboard. Please try again.')
+        return
+      }
+
       if (newDashboard) {
         await createTemplateWidgets(newDashboard.id, template.category)
-        navigate('/reports/custom-dashboard')
+        navigate(`/dashboard-builder/custom?id=${newDashboard.id}`)
       }
     } catch (error) {
       console.error('Error creating dashboard:', error)
+      alert('Failed to create dashboard. Please try again.')
     } finally {
       setCreating(false)
     }
@@ -146,7 +161,8 @@ export function DashboardTemplates() {
           { widget_type: 'kpi_card', module: 'billing', title: 'Monthly Revenue', config: { metric: 'monthly_revenue', colorScheme: 'green' }, position: { x: 9, y: 0, w: 3, h: 2 } },
           { widget_type: 'funnel', module: 'leads', title: 'Sales Funnel', config: {}, position: { x: 0, y: 2, w: 8, h: 4 } },
           { widget_type: 'bar_chart', module: 'leads', title: 'Leads by Source', config: { metric: 'lead_sources' }, position: { x: 0, y: 6, w: 6, h: 4 } },
-          { widget_type: 'area_chart', module: 'billing', title: 'Revenue Trend', config: { metric: 'revenue_trend' }, position: { x: 6, y: 6, w: 6, h: 4 } }
+          { widget_type: 'area_chart', module: 'billing', title: 'Revenue Trend', config: { metric: 'revenue_trend' }, position: { x: 6, y: 6, w: 6, h: 4 } },
+          { widget_type: 'table', module: 'leads', title: 'Recent Leads', config: { limit: 10 }, position: { x: 0, y: 10, w: 12, h: 5 } }
         ]
 
       case 'hr':
@@ -164,7 +180,8 @@ export function DashboardTemplates() {
           { widget_type: 'kpi_card', module: 'billing', title: 'Paid Invoices', config: { metric: 'paid_invoices', colorScheme: 'blue' }, position: { x: 3, y: 0, w: 3, h: 2 } },
           { widget_type: 'kpi_card', module: 'billing', title: 'Pending Invoices', config: { metric: 'pending_invoices', colorScheme: 'orange' }, position: { x: 6, y: 0, w: 3, h: 2 } },
           { widget_type: 'kpi_card', module: 'expenses', title: 'Total Expenses', config: { metric: 'total_expenses', colorScheme: 'red' }, position: { x: 9, y: 0, w: 3, h: 2 } },
-          { widget_type: 'area_chart', module: 'billing', title: 'Revenue Trend', config: { metric: 'revenue_trend' }, position: { x: 0, y: 2, w: 12, h: 4 } }
+          { widget_type: 'area_chart', module: 'billing', title: 'Revenue Trend', config: { metric: 'revenue_trend' }, position: { x: 0, y: 2, w: 12, h: 4 } },
+          { widget_type: 'table', module: 'billing', title: 'Recent Invoices', config: { limit: 10 }, position: { x: 0, y: 6, w: 12, h: 5 } }
         ]
 
       case 'operations':
@@ -173,7 +190,9 @@ export function DashboardTemplates() {
           { widget_type: 'kpi_card', module: 'support', title: 'Open Tickets', config: { metric: 'open_tickets', colorScheme: 'orange' }, position: { x: 3, y: 0, w: 3, h: 2 } },
           { widget_type: 'kpi_card', module: 'automations', title: 'Active Automations', config: { metric: 'active_automations', colorScheme: 'purple' }, position: { x: 6, y: 0, w: 3, h: 2 } },
           { widget_type: 'activity_feed', module: 'leads', title: 'Recent Activity', config: { limit: 10 }, position: { x: 0, y: 2, w: 6, h: 6 } },
-          { widget_type: 'pie_chart', module: 'support', title: 'Tickets by Status', config: { metric: 'tickets_by_status' }, position: { x: 6, y: 2, w: 6, h: 4 } }
+          { widget_type: 'pie_chart', module: 'support', title: 'Tickets by Status', config: { metric: 'tickets_by_status' }, position: { x: 6, y: 2, w: 6, h: 4 } },
+          { widget_type: 'table', module: 'tasks', title: 'Active Tasks', config: { limit: 10 }, position: { x: 0, y: 8, w: 6, h: 5 } },
+          { widget_type: 'table', module: 'support', title: 'Recent Tickets', config: { limit: 10 }, position: { x: 6, y: 8, w: 6, h: 5 } }
         ]
 
       default:
