@@ -59,14 +59,14 @@ export function TableWidget({ widget, onRefresh, onRemove, onConfig }: TableWidg
   const getBillingTableData = async (limit: number) => {
     const { data: invoices } = await supabase
       .from('invoices')
-      .select('invoice_number, contact_id, amount, status, due_date, created_at')
+      .select('invoice_id, customer_name, total_amount, status, due_date, created_at')
       .order('created_at', { ascending: false })
       .limit(limit)
 
     const columns = [
-      { key: 'invoice_number', label: 'Invoice #' },
-      { key: 'contact_id', label: 'Contact' },
-      { key: 'amount', label: 'Amount', format: 'currency' },
+      { key: 'invoice_id', label: 'Invoice #' },
+      { key: 'customer_name', label: 'Customer' },
+      { key: 'total_amount', label: 'Amount', format: 'currency' },
       { key: 'status', label: 'Status', format: 'badge' },
       { key: 'due_date', label: 'Due Date', format: 'date' }
     ]

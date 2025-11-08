@@ -161,6 +161,71 @@ export const WIDGET_REGISTRY: WidgetDefinition[] = [
     }
   },
   {
+    type: 'table',
+    module: 'leads',
+    label: 'Leads Table',
+    description: 'Table showing leads details',
+    icon: 'FileText',
+    defaultSize: { x: 0, y: 0, w: 12, h: 5 },
+    defaultConfig: {
+      limit: 10,
+      sortBy: 'created_at',
+      sortOrder: 'desc'
+    }
+  },
+  {
+    type: 'table',
+    module: 'support',
+    label: 'Support Tickets Table',
+    description: 'Table showing support ticket details',
+    icon: 'FileText',
+    defaultSize: { x: 0, y: 0, w: 12, h: 5 },
+    defaultConfig: {
+      limit: 10,
+      sortBy: 'created_at',
+      sortOrder: 'desc'
+    }
+  },
+  {
+    type: 'table',
+    module: 'tasks',
+    label: 'Tasks Table',
+    description: 'Table showing task details',
+    icon: 'FileText',
+    defaultSize: { x: 0, y: 0, w: 12, h: 5 },
+    defaultConfig: {
+      limit: 10,
+      sortBy: 'created_at',
+      sortOrder: 'desc'
+    }
+  },
+  {
+    type: 'table',
+    module: 'expenses',
+    label: 'Expenses Table',
+    description: 'Table showing expense details',
+    icon: 'FileText',
+    defaultSize: { x: 0, y: 0, w: 12, h: 5 },
+    defaultConfig: {
+      limit: 10,
+      sortBy: 'expense_date',
+      sortOrder: 'desc'
+    }
+  },
+  {
+    type: 'table',
+    module: 'members',
+    label: 'Members Table',
+    description: 'Table showing enrolled members details',
+    icon: 'FileText',
+    defaultSize: { x: 0, y: 0, w: 12, h: 5 },
+    defaultConfig: {
+      limit: 10,
+      sortBy: 'enrollment_date',
+      sortOrder: 'desc'
+    }
+  },
+  {
     type: 'kpi_card',
     module: 'attendance',
     label: 'Attendance KPI Card',
