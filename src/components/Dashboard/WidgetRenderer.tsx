@@ -4,6 +4,7 @@ import { KPIWidget } from './Widgets/KPIWidget'
 import { ChartWidget } from './Widgets/ChartWidget'
 import { FunnelWidget } from './Widgets/FunnelWidget'
 import { ActivityFeedWidget } from './Widgets/ActivityFeedWidget'
+import { TableWidget } from './Widgets/TableWidget'
 
 interface WidgetRendererProps {
   widget: Widget
@@ -28,6 +29,9 @@ export function WidgetRenderer({ widget, onRefresh, onRemove, onConfig }: Widget
 
     case 'activity_feed':
       return <ActivityFeedWidget widget={widget} onRefresh={onRefresh} onRemove={onRemove} onConfig={onConfig} />
+
+    case 'table':
+      return <TableWidget widget={widget} onRefresh={onRefresh} onRemove={onRemove} onConfig={onConfig} />
 
     default:
       return (
