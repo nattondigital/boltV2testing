@@ -498,9 +498,6 @@ export function PayrollMIS() {
               <thead>
                 <tr className="border-b border-gray-200/60">
                   <th className="text-left py-4 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <input type="checkbox" className="rounded border-gray-300" />
-                  </th>
-                  <th className="text-left py-4 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Employee Name
                   </th>
                   <th className="text-left py-4 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -521,15 +518,12 @@ export function PayrollMIS() {
                   <th className="text-right py-4 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Earned
                   </th>
-                  <th className="text-center py-4 px-6 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
-                  </th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12 text-gray-500">
+                    <td colSpan={7} className="text-center py-12 text-gray-500">
                       <div className="flex items-center justify-center gap-2">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
                         <span className="text-sm">Loading...</span>
@@ -538,7 +532,7 @@ export function PayrollMIS() {
                   </tr>
                 ) : filteredPayrollData.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12 text-gray-500 text-sm">
+                    <td colSpan={7} className="text-center py-12 text-gray-500 text-sm">
                       No employees found
                     </td>
                   </tr>
@@ -551,9 +545,6 @@ export function PayrollMIS() {
                       transition={{ delay: 0.05 * index }}
                       className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors"
                     >
-                      <td className="py-4 px-6">
-                        <input type="checkbox" className="rounded border-gray-300" />
-                      </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
@@ -583,11 +574,6 @@ export function PayrollMIS() {
                         <span className="text-sm font-semibold text-gray-900">
                           ₹{employee.earnedSalary.toLocaleString()}
                         </span>
-                      </td>
-                      <td className="py-4 px-6 text-center">
-                        <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-                          <MoreVertical className="w-4 h-4 text-gray-400" />
-                        </button>
                       </td>
                     </motion.tr>
                   ))
