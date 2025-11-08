@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, BookOpen, FolderOpen, PlayCircle, FileText, Edit, Trash2, ArrowLeft, X, Clock, Users, Award, Star, Eye } from 'lucide-react'
+import { Plus, BookOpen, FolderOpen, PlayCircle, FileText, Edit, Trash2, ArrowLeft, X, Clock, Users, Award, Star, Eye, Download } from 'lucide-react'
 import { PageHeader } from '@/components/Common/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -12,6 +12,7 @@ import { CourseModal } from '@/components/LMS/CourseModal'
 import { CategoryModal } from '@/components/LMS/CategoryModal'
 import { LessonModal } from '@/components/LMS/LessonModal'
 import { formatCurrency } from '@/lib/utils'
+import { linkifyText } from '@/lib/linkify'
 
 interface Course {
   id: string
@@ -59,7 +60,7 @@ interface Attachment {
   created_at: string
 }
 
-type View = 'courses' | 'categories' | 'lessons'
+type View = 'courses' | 'categories' | 'lessons' | 'lesson-detail'
 
 export function LMS() {
   const [view, setView] = useState<View>('courses')
@@ -248,6 +249,37 @@ export function LMS() {
     setSelectedCategory(null)
     setSelectedLesson(null)
     setView('categories')
+  }
+
+  const handleViewLesson = async (lesson: Lesson) => {
+    setSelectedLesson(lesson)
+    await fetchAttachments(lesson.id)
+    setView('lesson-detail')
+  }
+
+  const getEmbedUrl = (url: string) => {
+    if (!url) return null
+
+    if (url.includes('youtube.com/watch?v=')) {
+      const videoId = url.split('v=')[1]?.split('&')[0]
+      return `https://www.youtube.com/embed/${videoId}`
+    }
+
+    if (url.includes('youtu.be/')) {
+      const videoId = url.split('youtu.be/')[1]?.split('?')[0]
+      return `https://www.youtube.com/embed/${videoId}`
+    }
+
+    if (url.includes('vimeo.com/')) {
+      const videoId = url.split('vimeo.com/')[1]?.split('?')[0]
+      return `https://player.vimeo.com/video/${videoId}`
+    }
+
+    if (url.match(/\.(mp4|webm|ogg)$/i)) {
+      return url
+    }
+
+    return null
   }
 
   const renderCourses = () => (
@@ -503,7 +535,8 @@ export function LMS() {
                       {category.lessons.map((lesson: Lesson) => (
                         <div
                           key={lesson.id}
-                          className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors group"
+                          onClick={() => handleViewLesson(lesson)}
+                          className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors group"
                         >
                           <div className="flex items-center space-x-3 flex-1">
                             <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border-2 border-gray-200 group-hover:border-blue-500 transition-colors">
@@ -527,7 +560,7 @@ export function LMS() {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -703,6 +736,134 @@ export function LMS() {
     </div>
   )
 
+  const renderLessonDetail = () => {
+    if (!selectedLesson) return null
+
+    const embedUrl = getEmbedUrl(selectedLesson.video_url || '')
+    const isDirectVideo = selectedLesson.video_url?.match(/\.(mp4|webm|ogg)$/i)
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" onClick={handleBackToCategories}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Course
+          </Button>
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold text-gray-900">{selectedLesson.title}</h2>
+            {selectedLesson.duration && (
+              <p className="text-gray-600 mt-1 flex items-center">
+                <Clock className="w-4 h-4 mr-1" />
+                {selectedLesson.duration}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {selectedLesson.thumbnail_url && !selectedLesson.video_url && (
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="aspect-video bg-gradient-to-br from-blue-100 to-green-100">
+                <img
+                  src={selectedLesson.thumbnail_url}
+                  alt={selectedLesson.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {selectedLesson.video_url && embedUrl && (
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="aspect-video bg-black">
+                {isDirectVideo ? (
+                  <video
+                    controls
+                    className="w-full h-full"
+                    src={embedUrl}
+                    poster={selectedLesson.thumbnail_url}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                ) : (
+                  <iframe
+                    src={embedUrl}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {selectedLesson.description && (
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                About this Lesson
+              </h3>
+              <div className="text-gray-700 whitespace-pre-wrap">
+                {linkifyText(selectedLesson.description)}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {attachments.length > 0 && (
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Course Materials
+              </h3>
+              <div className="space-y-3">
+                {attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3 flex-1">
+                      <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border-2 border-gray-200">
+                        <FileText className="w-5 h-5 text-gray-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">
+                          {attachment.file_name}
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-gray-500">
+                          {attachment.file_type && (
+                            <span>{attachment.file_type}</span>
+                          )}
+                          {attachment.file_size && (
+                            <>
+                              <span>•</span>
+                              <span>{attachment.file_size}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(attachment.file_url, '_blank')}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="p-6">
       <PageHeader
@@ -718,6 +879,7 @@ export function LMS() {
         {view === 'courses' && renderCourses()}
         {view === 'categories' && renderCategories()}
         {view === 'lessons' && renderLessons()}
+        {view === 'lesson-detail' && renderLessonDetail()}
       </motion.div>
 
       <CourseModal
