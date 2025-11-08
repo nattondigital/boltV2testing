@@ -1,13 +1,9 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  DollarSign, TrendingUp, BarChart3, FileText, Users, Calendar,
-  LayoutDashboard, Sparkles, Plus
-} from 'lucide-react'
+import { DollarSign, TrendingUp, BarChart3, FileText } from 'lucide-react'
 import { PageHeader } from '@/components/Common/PageHeader'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 
 interface ReportCard {
   id: string
@@ -18,32 +14,9 @@ interface ReportCard {
   bgColor: string
   route: string
   available: boolean
-  featured?: boolean
 }
 
 const reportCards: ReportCard[] = [
-  {
-    id: 'custom-dashboard',
-    title: 'Custom Dashboard Builder',
-    description: 'Build your own custom MIS dashboard with module-wise widgets tailored to your needs',
-    icon: LayoutDashboard,
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-50',
-    route: '/reports/custom-dashboard',
-    available: true,
-    featured: true
-  },
-  {
-    id: 'dashboard-templates',
-    title: 'Dashboard Templates',
-    description: 'Choose from pre-built dashboard templates for Executive, Sales, HR, Finance, and Operations',
-    icon: Sparkles,
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-50',
-    route: '/reports/templates',
-    available: true,
-    featured: true
-  },
   {
     id: 'payroll-mis',
     title: 'Payroll MIS',
@@ -95,77 +68,23 @@ export function Reports() {
     }
   }
 
-  const featuredReports = reportCards.filter(r => r.featured)
-  const standardReports = reportCards.filter(r => !r.featured)
-
   return (
     <div className="min-h-screen bg-gray-50">
       <PageHeader
-        title="MIS Reports & Dashboards"
-        description="Build custom dashboards or choose from pre-built reports"
+        title="MIS Reports"
+        description="Access comprehensive reports and analytics for business insights"
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Custom Dashboard Builder</h2>
-            <span className="text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
-              New Feature
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {featuredReports.map((report, index) => {
-              const Icon = report.icon
-              return (
-                <motion.div
-                  key={report.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ scale: 1.02, y: -4 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Card
-                    className="h-full cursor-pointer transition-all duration-200 hover:shadow-xl border-2 border-blue-200 hover:border-blue-500 bg-gradient-to-br from-white to-blue-50"
-                    onClick={() => handleCardClick(report)}
-                  >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className={`p-4 rounded-xl ${report.bgColor} ring-2 ring-blue-200`}>
-                          <Icon className={`h-10 w-10 ${report.color}`} />
-                        </div>
-                      </div>
-                      <CardTitle className="mt-4 text-xl">{report.title}</CardTitle>
-                      <CardDescription className="text-sm mt-2">
-                        {report.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Button className="w-full flex items-center justify-center gap-2">
-                        <Plus className="w-4 h-4" />
-                        Get Started
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Pre-Built Reports</h2>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {standardReports.map((report, index) => {
+          {reportCards.map((report, index) => {
             const Icon = report.icon
             return (
               <motion.div
                 key={report.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: (featuredReports.length * 0.1) + (index * 0.1) }}
+                transition={{ delay: index * 0.1 }}
                 whileHover={report.available ? { scale: 1.02, y: -4 } : {}}
                 whileTap={report.available ? { scale: 0.98 } : {}}
               >
@@ -223,20 +142,20 @@ export function Reports() {
           })}
         </div>
 
-        <div className="mt-12 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl shadow-sm border border-blue-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">About Custom Dashboards</h3>
+        <div className="mt-12 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">About MIS Reports</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <div className="text-3xl font-bold text-blue-600">50+</div>
-              <div className="text-sm text-gray-600 mt-1">Available Widgets</div>
+              <div className="text-3xl font-bold text-brand-primary">4+</div>
+              <div className="text-sm text-gray-600 mt-1">Total Reports</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-purple-600">6</div>
-              <div className="text-sm text-gray-600 mt-1">Dashboard Templates</div>
+              <div className="text-3xl font-bold text-green-600">1</div>
+              <div className="text-sm text-gray-600 mt-1">Active Reports</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-green-600">12</div>
-              <div className="text-sm text-gray-600 mt-1">Module Categories</div>
+              <div className="text-3xl font-bold text-orange-600">3</div>
+              <div className="text-sm text-gray-600 mt-1">Coming Soon</div>
             </div>
           </div>
         </div>

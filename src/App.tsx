@@ -36,6 +36,7 @@ import { AIAgentLogs } from '@/components/Pages/AIAgentLogs'
 import { Followups } from '@/components/Pages/Followups'
 import { Reports } from '@/components/Pages/Reports'
 import { PayrollMIS } from '@/components/Pages/PayrollMIS'
+import { DashboardBuilder } from '@/components/Pages/DashboardBuilder'
 import { CustomDashboard } from '@/components/Dashboard/CustomDashboard'
 import { DashboardTemplates } from '@/components/Dashboard/DashboardTemplates'
 
@@ -89,10 +90,11 @@ function ProtectedRoutes() {
         <Route path="ai-agents/chat/:id" element={<AIAgentChat />} />
         <Route path="ai-agents/logs" element={<AIAgentLogs />} />
         <Route path="followups" element={<Followups />} />
+        <Route path="dashboard-builder" element={<DashboardBuilder />} />
+        <Route path="dashboard-builder/custom" element={<CustomDashboard />} />
+        <Route path="dashboard-builder/templates" element={<DashboardTemplates />} />
         <Route path="reports" element={<Reports />} />
         <Route path="reports/payroll-mis" element={<PayrollMIS />} />
-        <Route path="reports/custom-dashboard" element={<CustomDashboard />} />
-        <Route path="reports/templates" element={<DashboardTemplates />} />
       </Route>
       <Route path="/ai-automation-mastery" element={<AIAutomationLanding />} />
       <Route path="/templates/landing-pages1" element={<AIAutomationMasteryLanding />} />
