@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, BookOpen, FolderOpen, PlayCircle, FileText, Edit, Trash2, ArrowLeft, X } from 'lucide-react'
+import { Plus, BookOpen, FolderOpen, PlayCircle, FileText, Edit, Trash2, ArrowLeft, X, Clock, Users, Award, Star, Eye } from 'lucide-react'
 import { PageHeader } from '@/components/Common/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase'
 import { CourseModal } from '@/components/LMS/CourseModal'
 import { CategoryModal } from '@/components/LMS/CategoryModal'
 import { LessonModal } from '@/components/LMS/LessonModal'
+import { formatCurrency } from '@/lib/utils'
 
 interface Course {
   id: string
@@ -267,45 +268,105 @@ export function LMS() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {courses.map((course) => (
-            <motion.div
-              key={course.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="p-0">
-                  <div className="aspect-video bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center">
+          {courses.map((course, index) => {
+            const statusColors = {
+              'Published': 'bg-green-100 text-green-800',
+              'Draft': 'bg-yellow-100 text-yellow-800',
+              'Archived': 'bg-gray-100 text-gray-800',
+              'Under Review': 'bg-blue-100 text-blue-800'
+            }
+
+            const levelColors = {
+              'Beginner': 'bg-green-100 text-green-800',
+              'Intermediate': 'bg-yellow-100 text-yellow-800',
+              'Advanced': 'bg-red-100 text-red-800'
+            }
+
+            const renderStars = (rating: number) => {
+              return Array.from({ length: 5 }, (_, i) => (
+                <Star
+                  key={i}
+                  className={`w-4 h-4 ${i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                />
+              ))
+            }
+
+            return (
+              <motion.div
+                key={course.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 * index }}
+                whileHover={{ scale: 1.02 }}
+                className="h-full"
+              >
+                <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 h-full flex flex-col">
+                  <div className="relative">
                     {course.thumbnail_url ? (
-                      <img src={course.thumbnail_url} alt={course.title} className="w-full h-full object-cover" />
+                      <img
+                        src={course.thumbnail_url}
+                        alt={course.title}
+                        className="w-full h-48 object-cover rounded-t-lg"
+                      />
                     ) : (
-                      <BookOpen className="w-16 h-16 text-gray-400" />
+                      <div className="w-full h-48 bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center rounded-t-lg">
+                        <BookOpen className="w-16 h-16 text-gray-400" />
+                      </div>
                     )}
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-bold text-lg">{course.title}</h3>
-                      <Badge className={
-                        course.status === 'Published' ? 'bg-green-100 text-green-800' :
-                        course.status === 'Draft' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }>
+                    <div className="absolute top-4 right-4">
+                      <Badge className={statusColors[course.status] || 'bg-gray-100 text-gray-800'}>
                         {course.status}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{course.description}</p>
-                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                      <span>{course.instructor}</span>
-                      <span>{course.level}</span>
+                    <div className="absolute top-4 left-4">
+                      <Badge className={levelColors[course.level] || 'bg-gray-100 text-gray-800'}>
+                        {course.level}
+                      </Badge>
                     </div>
-                    <div className="flex items-center space-x-2">
+                  </div>
+
+                  <CardContent className="p-6 flex-1 flex flex-col">
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-brand-text mb-2 line-clamp-2">
+                        {course.title}
+                      </h3>
+
+                      <p className="text-gray-600 mb-4 line-clamp-2">
+                        {course.description}
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+                        {course.duration && (
+                          <div className="flex items-center space-x-2">
+                            <Clock className="w-4 h-4 text-gray-400" />
+                            <span>{course.duration}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-2">
+                          <BookOpen className="w-4 h-4 text-gray-400" />
+                          <span>Course ID: {course.course_id}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="text-2xl font-bold text-brand-primary">
+                          {formatCurrency(course.price)}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          by {course.instructor}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2 pt-4 border-t">
                       <Button
                         size="sm"
-                        onClick={() => handleViewCourse(course)}
+                        variant="default"
                         className="flex-1"
+                        onClick={() => handleViewCourse(course)}
                       >
                         <FolderOpen className="w-4 h-4 mr-2" />
-                        View Categories
+                        <span>View</span>
                       </Button>
                       <Button
                         size="sm"
@@ -320,17 +381,17 @@ export function LMS() {
                       <Button
                         size="sm"
                         variant="outline"
+                        className="text-red-600 hover:text-red-700"
                         onClick={() => handleDeleteCourse(course.id)}
-                        className="text-red-600"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )
+          })}
         </div>
       )}
     </div>
