@@ -415,7 +415,7 @@ export function CustomDashboard() {
               return (
                 <div
                   key={widget.id}
-                  className={`col-span-${gridWidth > 12 ? 12 : gridWidth} row-span-${gridHeight}`}
+                  className="h-full"
                   style={{
                     gridColumn: `span ${gridWidth > 12 ? 12 : gridWidth}`,
                     gridRow: `span ${gridHeight}`

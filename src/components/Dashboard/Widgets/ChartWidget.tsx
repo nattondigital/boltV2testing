@@ -496,7 +496,7 @@ export function ChartWidget({ widget, onRefresh, onRemove, onConfig }: ChartWidg
       isLoading={loading}
       colorScheme={widget.config.colorScheme}
     >
-      <div className="h-full min-h-[200px]">
+      <div className="w-full h-full">
         {renderChart()}
       </div>
     </BaseWidget>
