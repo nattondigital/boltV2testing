@@ -84,20 +84,45 @@ interface DailyLeadTrend {
   won_leads: number
 }
 
-const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
-const STAGE_COLORS: Record<string, string> = {
-  'New': '#3b82f6',
-  'Contacted': '#f59e0b',
-  'Demo Booked': '#8b5cf6',
-  'No Show': '#ef4444',
-  'Won': '#22c55e',
-  'Lost': '#94a3b8'
+interface Pipeline {
+  id: string
+  pipeline_id: string
+  name: string
+  entity_type: string
+  is_default: boolean
 }
+
+interface PipelineStage {
+  id: string
+  name: string
+  color: string
+  display_order: number
+}
+
+const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
 const INTEREST_COLORS: Record<string, string> = {
   'Hot': '#ef4444',
   'Warm': '#f59e0b',
   'Cold': '#3b82f6'
+}
+
+const getColorFromBgClass = (bgColorClass: string): string => {
+  const colorMap: Record<string, string> = {
+    'bg-blue-100': '#3b82f6',
+    'bg-yellow-100': '#f59e0b',
+    'bg-orange-100': '#f97316',
+    'bg-purple-100': '#8b5cf6',
+    'bg-red-100': '#ef4444',
+    'bg-green-100': '#22c55e',
+    'bg-gray-100': '#94a3b8',
+    'bg-pink-100': '#ec4899',
+    'bg-indigo-100': '#6366f1',
+    'bg-teal-100': '#14b8a6',
+    'bg-cyan-100': '#06b6d4',
+    'bg-lime-100': '#84cc16'
+  }
+  return colorMap[bgColorClass] || '#3b82f6'
 }
 
 export function LeadsMIS() {
@@ -118,12 +143,21 @@ export function LeadsMIS() {
   const [leadsByInterest, setLeadsByInterest] = useState<LeadByInterest[]>([])
   const [ownerPerformance, setOwnerPerformance] = useState<OwnerPerformance[]>([])
   const [dailyTrends, setDailyTrends] = useState<DailyLeadTrend[]>([])
+  const [pipelines, setPipelines] = useState<Pipeline[]>([])
+  const [pipelineFilter, setPipelineFilter] = useState<string>('')
+  const [pipelineStages, setPipelineStages] = useState<Record<string, PipelineStage[]>>({})
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState('thisMonth')
 
   useEffect(() => {
-    fetchLeadsData()
-  }, [dateRange])
+    fetchPipelines()
+  }, [])
+
+  useEffect(() => {
+    if (pipelineFilter) {
+      fetchLeadsData()
+    }
+  }, [dateRange, pipelineFilter])
 
   const getDateRange = () => {
     const now = new Date()
@@ -186,6 +220,43 @@ export function LeadsMIS() {
     }
   }
 
+  const fetchPipelines = async () => {
+    try {
+      const { data: pipelinesData, error: pipelinesError } = await supabase
+        .from('pipelines')
+        .select('id, pipeline_id, name, entity_type, is_default')
+        .eq('entity_type', 'lead')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true })
+
+      if (pipelinesError) throw pipelinesError
+
+      setPipelines(pipelinesData || [])
+
+      const stagesMap: Record<string, PipelineStage[]> = {}
+      for (const pipeline of (pipelinesData || [])) {
+        const { data: stagesData } = await supabase
+          .from('pipeline_stages')
+          .select('id, name, color, display_order')
+          .eq('pipeline_id', pipeline.id)
+          .eq('is_active', true)
+          .order('display_order', { ascending: true })
+
+        if (stagesData) {
+          stagesMap[pipeline.id] = stagesData
+        }
+      }
+      setPipelineStages(stagesMap)
+
+      const defaultPipeline = pipelinesData?.find(p => p.is_default) || pipelinesData?.[0]
+      if (defaultPipeline) {
+        setPipelineFilter(defaultPipeline.id)
+      }
+    } catch (error) {
+      console.error('Error fetching pipelines:', error)
+    }
+  }
+
   const fetchLeadsData = async () => {
     try {
       setLoading(true)
@@ -195,12 +266,14 @@ export function LeadsMIS() {
         supabase
           .from('leads')
           .select('*')
+          .eq('pipeline_id', pipelineFilter)
           .gte('created_at', start)
           .lte('created_at', end),
 
         supabase
           .from('leads')
           .select('stage')
+          .eq('pipeline_id', pipelineFilter)
           .gte('created_at', previousStart)
           .lte('created_at', previousEnd)
       ])
@@ -244,14 +317,18 @@ export function LeadsMIS() {
         return acc
       }, {} as Record<string, { count: number; value: number }>)
 
-      const stageOrder = ['New', 'Contacted', 'Demo Booked', 'No Show', 'Won', 'Lost']
+      const currentPipelineStages = pipelineStages[pipelineFilter] || []
+      const orderedStages = currentPipelineStages
+        .sort((a, b) => a.display_order - b.display_order)
+        .map(s => s.name)
+
       setLeadsByStage(
-        stageOrder
+        orderedStages
           .filter(stage => stageCounts[stage])
           .map(stage => ({
             stage,
-            count: stageCounts[stage].count,
-            value: stageCounts[stage].value
+            count: stageCounts[stage]?.count || 0,
+            value: stageCounts[stage]?.value || 0
           }))
       )
 
@@ -365,8 +442,12 @@ export function LeadsMIS() {
   }
 
   const exportToExcel = () => {
+    const currentPipeline = pipelines.find(p => p.id === pipelineFilter)
+    const pipelineName = currentPipeline?.name || 'All Pipelines'
+
     const summaryData = [
       ['Leads MIS Report'],
+      ['Pipeline', pipelineName],
       ['Date Range', dateRange],
       [''],
       ['Key Metrics'],
@@ -424,6 +505,43 @@ export function LeadsMIS() {
     )
   }
 
+  if (!pipelineFilter) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <PageHeader
+          title="Leads MIS Report"
+          description="Comprehensive lead analytics and sales pipeline performance insights"
+        />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-gray-500" />
+              <select
+                value={pipelineFilter}
+                onChange={(e) => setPipelineFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary min-w-[200px]"
+              >
+                <option value="">Select Pipeline</option>
+                {pipelines.map((pipeline) => (
+                  <option key={pipeline.id} value={pipeline.id}>
+                    {pipeline.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Target className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Pipeline</h3>
+              <p className="text-gray-600">Please select a pipeline from the dropdown above to view analytics.</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <PageHeader
@@ -434,6 +552,21 @@ export function LeadsMIS() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-gray-500" />
+              <select
+                value={pipelineFilter}
+                onChange={(e) => setPipelineFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary min-w-[200px]"
+              >
+                <option value="">Select Pipeline</option>
+                {pipelines.map((pipeline) => (
+                  <option key={pipeline.id} value={pipeline.id}>
+                    {pipeline.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-gray-500" />
               <select
@@ -632,9 +765,12 @@ export function LeadsMIS() {
                   <YAxis dataKey="stage" type="category" width={100} />
                   <Tooltip />
                   <Bar dataKey="count" fill="#3b82f6">
-                    {leadsByStage.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={STAGE_COLORS[entry.stage] || COLORS[index % COLORS.length]} />
-                    ))}
+                    {leadsByStage.map((entry, index) => {
+                      const stageColor = pipelineStages[pipelineFilter]?.find(s => s.name === entry.stage)?.color
+                      return (
+                        <Cell key={`cell-${index}`} fill={stageColor ? getColorFromBgClass(stageColor) : COLORS[index % COLORS.length]} />
+                      )
+                    })}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -821,15 +957,19 @@ export function LeadsMIS() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {leadsByStage.map((stage, idx) => (
-                  <div key={idx} className="p-4 bg-gray-50 rounded-lg border-l-4" style={{ borderLeftColor: STAGE_COLORS[stage.stage] || '#94a3b8' }}>
-                    <div className="text-sm text-gray-600 mb-1">{stage.stage}</div>
-                    <div className="text-2xl font-bold text-gray-900">{stage.count}</div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      {metrics.totalLeads > 0 ? ((stage.count / metrics.totalLeads) * 100).toFixed(1) : 0}% of total
+                {leadsByStage.map((stage, idx) => {
+                  const stageColor = pipelineStages[pipelineFilter]?.find(s => s.name === stage.stage)?.color
+                  const borderColor = stageColor ? getColorFromBgClass(stageColor) : '#94a3b8'
+                  return (
+                    <div key={idx} className="p-4 bg-gray-50 rounded-lg border-l-4" style={{ borderLeftColor: borderColor }}>
+                      <div className="text-sm text-gray-600 mb-1">{stage.stage}</div>
+                      <div className="text-2xl font-bold text-gray-900">{stage.count}</div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {metrics.totalLeads > 0 ? ((stage.count / metrics.totalLeads) * 100).toFixed(1) : 0}% of total
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
