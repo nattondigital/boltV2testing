@@ -48,6 +48,8 @@ export function ChartWidget({ widget, onRefresh, onRemove, onConfig }: ChartWidg
         return await getMembersChartData(metric, chartType)
       case 'support':
         return await getSupportChartData(metric, chartType)
+      case 'payroll':
+        return await getPayrollChartData(metric, chartType)
       default:
         return []
     }
@@ -120,6 +122,107 @@ export function ChartWidget({ widget, onRefresh, onRemove, onConfig }: ChartWidg
         { name: 'Closed', value: 12 }
       ]
     }
+    return []
+  }
+
+  const getPayrollChartData = async (metric: string, chartType: string) => {
+    const today = new Date()
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+
+    if (metric === 'attendance_stats') {
+      const { data: attendance } = await supabase
+        .from('attendance')
+        .select('date, status')
+        .gte('date', startOfMonth)
+        .lte('date', endOfMonth)
+        .order('date')
+
+      const weeklyData = [
+        { date: 'Week 1', present: 0, absent: 0 },
+        { date: 'Week 2', present: 0, absent: 0 },
+        { date: 'Week 3', present: 0, absent: 0 },
+        { date: 'Week 4', present: 0, absent: 0 }
+      ]
+
+      attendance?.forEach(record => {
+        const day = new Date(record.date).getDate()
+        const weekIndex = Math.min(Math.floor((day - 1) / 7), 3)
+
+        if (['Present', 'Full Day', 'Half Day', 'Overtime'].includes(record.status)) {
+          weeklyData[weekIndex].present++
+        } else if (record.status === 'Absent') {
+          weeklyData[weekIndex].absent++
+        }
+      })
+
+      return weeklyData
+    }
+
+    if (metric === 'salary_overview') {
+      const { data: teamMembers } = await supabase.from('admin_users').select('id, full_name, salary').limit(7)
+      const { data: attendance } = await supabase
+        .from('attendance')
+        .select('admin_user_id, status')
+        .gte('date', startOfMonth)
+        .lte('date', endOfMonth)
+
+      const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+
+      return teamMembers?.map(member => {
+        const memberAttendance = attendance?.filter(a => a.admin_user_id === member.id) || []
+        const fullDays = memberAttendance.filter(a => a.status === 'Full Day').length
+        const halfDays = memberAttendance.filter(a => a.status === 'Half Day').length
+        const overtime = memberAttendance.filter(a => a.status === 'Overtime').length
+        const present = memberAttendance.filter(a => a.status === 'Present').length
+
+        const salary = member.salary || 0
+        const perDaySalary = salary / daysInMonth
+        const earnedDays = fullDays + (halfDays * 0.5) + (overtime * 1.5) + present
+        const earned = Math.round(earnedDays * perDaySalary)
+
+        return {
+          name: member.full_name?.split(' ')[0] || 'Employee',
+          earned: Math.round(earned / 1000),
+          budget: Math.round(salary / 1000)
+        }
+      }) || []
+    }
+
+    if (metric === 'salary_by_employee') {
+      const { data: teamMembers } = await supabase
+        .from('admin_users')
+        .select('id, full_name, salary')
+        .limit(widget.config.limit || 10)
+
+      const { data: attendance } = await supabase
+        .from('attendance')
+        .select('admin_user_id, status')
+        .gte('date', startOfMonth)
+        .lte('date', endOfMonth)
+
+      const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+
+      return teamMembers?.map(member => {
+        const memberAttendance = attendance?.filter(a => a.admin_user_id === member.id) || []
+        const fullDays = memberAttendance.filter(a => a.status === 'Full Day').length
+        const halfDays = memberAttendance.filter(a => a.status === 'Half Day').length
+        const overtime = memberAttendance.filter(a => a.status === 'Overtime').length
+        const present = memberAttendance.filter(a => a.status === 'Present').length
+
+        const salary = member.salary || 0
+        const perDaySalary = salary / daysInMonth
+        const earnedDays = fullDays + (halfDays * 0.5) + (overtime * 1.5) + present
+        const earned = Math.round(earnedDays * perDaySalary)
+
+        return {
+          name: member.full_name?.split(' ')[0] || 'Employee',
+          earned,
+          budget: salary
+        }
+      }) || []
+    }
+
     return []
   }
 

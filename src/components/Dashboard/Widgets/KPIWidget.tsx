@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import {
   TrendingUp, TrendingDown, ArrowUp, ArrowDown,
   Users, DollarSign, Calendar, BookOpen, Link,
-  HelpCircle, CheckCircle, Receipt, Zap, X, RefreshCw
+  HelpCircle, CheckCircle, Receipt, Zap, X, RefreshCw, Clock
 } from 'lucide-react'
 import { Widget } from '@/types/dashboard'
 import { supabase } from '@/lib/supabase'
@@ -63,6 +63,8 @@ export function KPIWidget({ widget, onRefresh, onRemove, onConfig }: KPIWidgetPr
         return await getTasksMetric(metric)
       case 'expenses':
         return await getExpensesMetric(metric)
+      case 'payroll':
+        return await getPayrollMetric(metric)
       default:
         return { value: 0 }
     }
@@ -293,6 +295,110 @@ export function KPIWidget({ widget, onRefresh, onRemove, onConfig }: KPIWidgetPr
     }
   }
 
+  const getPayrollMetric = async (metric: string) => {
+    const today = new Date()
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+
+    switch (metric) {
+      case 'earned_salary': {
+        const { data: teamMembers } = await supabase.from('admin_users').select('id, salary')
+        const { data: attendance } = await supabase
+          .from('attendance')
+          .select('admin_user_id, status, actual_working_hours')
+          .gte('date', startOfMonth)
+          .lte('date', endOfMonth)
+
+        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+        let totalEarned = 0
+
+        teamMembers?.forEach(member => {
+          const memberAttendance = attendance?.filter(a => a.admin_user_id === member.id) || []
+          const fullDays = memberAttendance.filter(a => a.status === 'Full Day').length
+          const halfDays = memberAttendance.filter(a => a.status === 'Half Day').length
+          const overtime = memberAttendance.filter(a => a.status === 'Overtime').length
+          const present = memberAttendance.filter(a => a.status === 'Present').length
+
+          const salary = member.salary || 0
+          const perDaySalary = salary / daysInMonth
+          const earnedDays = fullDays + (halfDays * 0.5) + (overtime * 1.5) + present
+          totalEarned += Math.round(earnedDays * perDaySalary)
+        })
+
+        return { value: formatCurrency(totalEarned), change: 15, trend: 'up' as const }
+      }
+      case 'total_salary_budget': {
+        const { data: teamMembers } = await supabase.from('admin_users').select('salary')
+        const total = teamMembers?.reduce((sum, member) => sum + (member.salary || 0), 0) || 0
+        return { value: formatCurrency(total), change: 5, trend: 'up' as const }
+      }
+      case 'salary_variance': {
+        const { data: teamMembers } = await supabase.from('admin_users').select('id, salary')
+        const { data: attendance } = await supabase
+          .from('attendance')
+          .select('admin_user_id, status')
+          .gte('date', startOfMonth)
+          .lte('date', endOfMonth)
+
+        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+        let totalBudget = 0
+        let totalEarned = 0
+
+        teamMembers?.forEach(member => {
+          const memberAttendance = attendance?.filter(a => a.admin_user_id === member.id) || []
+          const fullDays = memberAttendance.filter(a => a.status === 'Full Day').length
+          const halfDays = memberAttendance.filter(a => a.status === 'Half Day').length
+          const overtime = memberAttendance.filter(a => a.status === 'Overtime').length
+          const present = memberAttendance.filter(a => a.status === 'Present').length
+
+          const salary = member.salary || 0
+          totalBudget += salary
+          const perDaySalary = salary / daysInMonth
+          const earnedDays = fullDays + (halfDays * 0.5) + (overtime * 1.5) + present
+          totalEarned += Math.round(earnedDays * perDaySalary)
+        })
+
+        const variance = totalBudget - totalEarned
+        return { value: formatCurrency(variance), change: -10, trend: 'down' as const }
+      }
+      case 'total_attendance_days': {
+        const { data: attendance } = await supabase
+          .from('attendance')
+          .select('status')
+          .gte('date', startOfMonth)
+          .lte('date', endOfMonth)
+          .in('status', ['Present', 'Full Day', 'Half Day', 'Overtime'])
+        return { value: attendance?.length || 0, change: 8, trend: 'up' as const }
+      }
+      case 'avg_hours_employee': {
+        const { data: attendance } = await supabase
+          .from('attendance')
+          .select('admin_user_id, actual_working_hours')
+          .gte('date', startOfMonth)
+          .lte('date', endOfMonth)
+
+        const { count: totalEmployees } = await supabase
+          .from('admin_users')
+          .select('*', { count: 'exact', head: true })
+
+        const totalHours = attendance?.reduce((sum, a) => sum + (a.actual_working_hours || 0), 0) || 0
+        const avgHours = totalEmployees && totalEmployees > 0 ? (totalHours / totalEmployees).toFixed(1) : '0.0'
+        return { value: `${avgHours}h`, change: -3, trend: 'down' as const }
+      }
+      case 'total_overtime': {
+        const { count } = await supabase
+          .from('attendance')
+          .select('*', { count: 'exact', head: true })
+          .gte('date', startOfMonth)
+          .lte('date', endOfMonth)
+          .eq('status', 'Overtime')
+        return { value: count || 0, change: 12, trend: 'up' as const }
+      }
+      default:
+        return { value: 0 }
+    }
+  }
+
   const handleRefresh = () => {
     fetchData()
     onRefresh?.()
@@ -310,6 +416,7 @@ export function KPIWidget({ widget, onRefresh, onRemove, onConfig }: KPIWidgetPr
       case 'tasks': return CheckCircle
       case 'expenses': return Receipt
       case 'automations': return Zap
+      case 'payroll': return Clock
       default: return DollarSign
     }
   }

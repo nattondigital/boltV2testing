@@ -51,6 +51,8 @@ export function TableWidget({ widget, onRefresh, onRemove, onConfig }: TableWidg
         return await getExpensesTableData(limit)
       case 'members':
         return await getMembersTableData(limit)
+      case 'payroll':
+        return await getPayrollTableData(limit)
       default:
         return { rows: [], columns: [] }
     }
@@ -166,6 +168,66 @@ export function TableWidget({ widget, onRefresh, onRemove, onConfig }: TableWidg
     ]
 
     return { rows: members || [], columns }
+  }
+
+  const getPayrollTableData = async (limit: number) => {
+    const today = new Date()
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+
+    const { data: teamMembers } = await supabase
+      .from('admin_users')
+      .select('id, full_name, role, salary')
+      .order('full_name')
+      .limit(limit)
+
+    const { data: attendance } = await supabase
+      .from('attendance')
+      .select('admin_user_id, status, actual_working_hours')
+      .gte('date', startOfMonth)
+      .lte('date', endOfMonth)
+
+    const rows = teamMembers?.map(member => {
+      const memberAttendance = attendance?.filter(a => a.admin_user_id === member.id) || []
+      const fullDays = memberAttendance.filter(a => a.status === 'Full Day').length
+      const halfDays = memberAttendance.filter(a => a.status === 'Half Day').length
+      const overtime = memberAttendance.filter(a => a.status === 'Overtime').length
+      const present = memberAttendance.filter(a => a.status === 'Present').length
+      const absent = daysInMonth - (fullDays + halfDays + present + overtime)
+      const totalHours = memberAttendance.reduce((sum, a) => sum + (a.actual_working_hours || 0), 0)
+
+      const salary = member.salary || 0
+      const perDaySalary = salary / daysInMonth
+      const earnedDays = fullDays + (halfDays * 0.5) + (overtime * 1.5) + present
+      const earnedSalary = Math.round(earnedDays * perDaySalary)
+
+      return {
+        name: member.full_name,
+        role: member.role,
+        full_days: fullDays,
+        half_days: halfDays,
+        absent,
+        overtime,
+        total_hours: Math.round(totalHours * 10) / 10,
+        salary,
+        earned_salary: earnedSalary
+      }
+    }) || []
+
+    const columns = [
+      { key: 'name', label: 'Employee' },
+      { key: 'role', label: 'Role' },
+      { key: 'full_days', label: 'Full Days' },
+      { key: 'half_days', label: 'Half Days' },
+      { key: 'absent', label: 'Absent' },
+      { key: 'overtime', label: 'Overtime' },
+      { key: 'total_hours', label: 'Hours' },
+      { key: 'salary', label: 'Budget', format: 'currency' },
+      { key: 'earned_salary', label: 'Earned', format: 'currency' }
+    ]
+
+    return { rows, columns }
   }
 
   const formatCellValue = (value: any, format?: string) => {
