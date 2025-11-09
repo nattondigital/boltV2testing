@@ -35,8 +35,6 @@ export function CustomDashboard() {
   const loadDashboard = async () => {
     setLoading(true)
     try {
-      let dashboardData = null
-
       // If ID is provided, load that specific dashboard
       if (dashboardId) {
         const { data } = await supabase
@@ -44,38 +42,32 @@ export function CustomDashboard() {
           .select('*')
           .eq('id', dashboardId)
           .single()
-        dashboardData = data
-      } else {
-        // Otherwise load the default dashboard
-        const { data } = await supabase
-          .from('custom_dashboards')
-          .select('*')
-          .eq('is_default', true)
-          .single()
-        dashboardData = data
-      }
 
-      if (dashboardData) {
-        setDashboard(dashboardData)
-        setDashboardName(dashboardData.name)
-        await loadWidgets(dashboardData.id)
+        if (data) {
+          setDashboard(data)
+          setDashboardName(data.name)
+          await loadWidgets(data.id)
+        }
       } else {
-        await createDefaultDashboard()
+        // Create a new blank dashboard when no ID is provided
+        await createBlankDashboard()
       }
     } catch (error) {
       console.error('Error loading dashboard:', error)
+      // If there's an error, create a blank dashboard
+      await createBlankDashboard()
     } finally {
       setLoading(false)
     }
   }
 
-  const createDefaultDashboard = async () => {
+  const createBlankDashboard = async () => {
     const { data: newDashboard, error } = await supabase
       .from('custom_dashboards')
       .insert({
         name: 'My Dashboard',
         description: 'Custom MIS Dashboard',
-        is_default: true,
+        is_default: false,
         layout_config: { cols: 12, rowHeight: 100 }
       })
       .select()
@@ -84,6 +76,7 @@ export function CustomDashboard() {
     if (newDashboard) {
       setDashboard(newDashboard)
       setDashboardName(newDashboard.name)
+      setWidgets([]) // Start with no widgets - blank dashboard
     }
   }
 
