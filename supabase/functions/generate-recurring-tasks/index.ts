@@ -37,11 +37,15 @@ Deno.serve(async (req: Request) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
+    // Get current time in Asia/Kolkata timezone (UTC+5:30)
     const now = new Date()
-    const currentDayOfWeek = now.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase()
-    const currentDayOfMonth = now.getDate()
+    const kolkataTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
 
-    console.log('Running task generation at:', now.toISOString())
+    const currentDayOfWeek = kolkataTime.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'Asia/Kolkata' }).toLowerCase()
+    const currentDayOfMonth = kolkataTime.getDate()
+
+    console.log('Running task generation at (UTC):', now.toISOString())
+    console.log('Running task generation at (Kolkata):', kolkataTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }))
     console.log('Current day of week:', currentDayOfWeek)
     console.log('Current day of month:', currentDayOfMonth)
 
@@ -69,21 +73,21 @@ Deno.serve(async (req: Request) => {
           const [startHour, startMinute] = task.start_time.split(':').map(Number)
           const [dueHour, dueMinute] = task.due_time.split(':').map(Number)
 
-          startDateTime = new Date(now)
+          startDateTime = new Date(kolkataTime)
           startDateTime.setHours(startHour, startMinute, 0, 0)
 
-          dueDateTime = new Date(now)
+          dueDateTime = new Date(kolkataTime)
           dueDateTime.setHours(dueHour, dueMinute, 0, 0)
 
           // Only create task if current time has reached or passed the start time
-          const currentTime = now.getHours() * 60 + now.getMinutes()
+          const currentTime = kolkataTime.getHours() * 60 + kolkataTime.getMinutes()
           const startTime = startHour * 60 + startMinute
 
           if (currentTime >= startTime) {
             shouldCreateTask = true
-            console.log(`Daily task "${task.title}": should create (current time ${now.getHours()}:${now.getMinutes()} >= start time ${startHour}:${startMinute})`)
+            console.log(`Daily task "${task.title}": should create (current time ${kolkataTime.getHours()}:${kolkataTime.getMinutes()} >= start time ${startHour}:${startMinute})`)
           } else {
-            console.log(`Daily task "${task.title}": skip (current time ${now.getHours()}:${now.getMinutes()} < start time ${startHour}:${startMinute})`)
+            console.log(`Daily task "${task.title}": skip (current time ${kolkataTime.getHours()}:${kolkataTime.getMinutes()} < start time ${startHour}:${startMinute})`)
           }
         } else if (task.recurrence_type === 'weekly') {
           const startDays = task.start_days || []
@@ -92,7 +96,7 @@ Deno.serve(async (req: Request) => {
             const [startHour, startMinute] = task.start_time.split(':').map(Number)
             const [dueHour, dueMinute] = task.due_time.split(':').map(Number)
 
-            startDateTime = new Date(now)
+            startDateTime = new Date(kolkataTime)
             startDateTime.setHours(startHour, startMinute, 0, 0)
 
             const dueDays = task.due_days || []
@@ -109,19 +113,19 @@ Deno.serve(async (req: Request) => {
               }
             }
 
-            dueDateTime = new Date(now)
+            dueDateTime = new Date(kolkataTime)
             dueDateTime.setDate(dueDateTime.getDate() + daysToAdd)
             dueDateTime.setHours(dueHour, dueMinute, 0, 0)
 
             // Only create task if current time has reached or passed the start time
-            const currentTime = now.getHours() * 60 + now.getMinutes()
+            const currentTime = kolkataTime.getHours() * 60 + kolkataTime.getMinutes()
             const startTime = startHour * 60 + startMinute
 
             if (currentTime >= startTime) {
               shouldCreateTask = true
-              console.log(`Weekly task "${task.title}": should create (today is ${currentDayOfWeek}, current time ${now.getHours()}:${now.getMinutes()} >= start time ${startHour}:${startMinute})`)
+              console.log(`Weekly task "${task.title}": should create (today is ${currentDayOfWeek}, current time ${kolkataTime.getHours()}:${kolkataTime.getMinutes()} >= start time ${startHour}:${startMinute})`)
             } else {
-              console.log(`Weekly task "${task.title}": skip (today is ${currentDayOfWeek}, current time ${now.getHours()}:${now.getMinutes()} < start time ${startHour}:${startMinute})`)
+              console.log(`Weekly task "${task.title}": skip (today is ${currentDayOfWeek}, current time ${kolkataTime.getHours()}:${kolkataTime.getMinutes()} < start time ${startHour}:${startMinute})`)
             }
           } else {
             console.log(`Weekly task "${task.title}": skip (today is ${currentDayOfWeek}, start days: ${startDays.join(',')})`)
@@ -130,7 +134,7 @@ Deno.serve(async (req: Request) => {
           let startDay = task.start_day_of_month
 
           if (startDay === 0) {
-            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+            const lastDay = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth() + 1, 0).getDate()
             startDay = lastDay
           }
 
@@ -138,14 +142,14 @@ Deno.serve(async (req: Request) => {
             const [startHour, startMinute] = task.start_time.split(':').map(Number)
             const [dueHour, dueMinute] = task.due_time.split(':').map(Number)
 
-            startDateTime = new Date(now)
+            startDateTime = new Date(kolkataTime)
             startDateTime.setHours(startHour, startMinute, 0, 0)
 
             let dueDay = task.due_day_of_month
-            dueDateTime = new Date(now)
+            dueDateTime = new Date(kolkataTime)
 
             if (dueDay === 0) {
-              const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+              const lastDay = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth() + 1, 0).getDate()
               dueDay = lastDay
             }
 
@@ -157,14 +161,14 @@ Deno.serve(async (req: Request) => {
             }
 
             // Only create task if current time has reached or passed the start time
-            const currentTime = now.getHours() * 60 + now.getMinutes()
+            const currentTime = kolkataTime.getHours() * 60 + kolkataTime.getMinutes()
             const startTime = startHour * 60 + startMinute
 
             if (currentTime >= startTime) {
               shouldCreateTask = true
-              console.log(`Monthly task "${task.title}": should create (today is day ${currentDayOfMonth}, current time ${now.getHours()}:${now.getMinutes()} >= start time ${startHour}:${startMinute})`)
+              console.log(`Monthly task "${task.title}": should create (today is day ${currentDayOfMonth}, current time ${kolkataTime.getHours()}:${kolkataTime.getMinutes()} >= start time ${startHour}:${startMinute})`)
             } else {
-              console.log(`Monthly task "${task.title}": skip (today is day ${currentDayOfMonth}, current time ${now.getHours()}:${now.getMinutes()} < start time ${startHour}:${startMinute})`)
+              console.log(`Monthly task "${task.title}": skip (today is day ${currentDayOfMonth}, current time ${kolkataTime.getHours()}:${kolkataTime.getMinutes()} < start time ${startHour}:${startMinute})`)
             }
           } else {
             console.log(`Monthly task "${task.title}": skip (today is day ${currentDayOfMonth}, start day: ${startDay})`)
@@ -172,9 +176,9 @@ Deno.serve(async (req: Request) => {
         }
 
         if (shouldCreateTask && startDateTime && dueDateTime) {
-          const startOfDay = new Date(now)
+          const startOfDay = new Date(kolkataTime)
           startOfDay.setHours(0, 0, 0, 0)
-          const endOfDay = new Date(now)
+          const endOfDay = new Date(kolkataTime)
           endOfDay.setHours(23, 59, 59, 999)
 
           const { data: existingTasks } = await supabase
