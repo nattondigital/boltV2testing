@@ -319,7 +319,7 @@ export function KPIWidget({ widget, onRefresh, onRemove, onConfig }: KPIWidgetPr
           const overtime = memberAttendance.filter(a => a.status === 'Overtime').length
           const present = memberAttendance.filter(a => a.status === 'Present').length
 
-          const salary = member.salary || 0
+          const salary = typeof member.salary === 'string' ? parseFloat(member.salary) : (member.salary || 0)
           const perDaySalary = salary / daysInMonth
           const earnedDays = fullDays + (halfDays * 0.5) + (overtime * 1.5) + present
           totalEarned += Math.round(earnedDays * perDaySalary)
@@ -329,7 +329,10 @@ export function KPIWidget({ widget, onRefresh, onRemove, onConfig }: KPIWidgetPr
       }
       case 'total_salary_budget': {
         const { data: teamMembers } = await supabase.from('admin_users').select('salary')
-        const total = teamMembers?.reduce((sum, member) => sum + (member.salary || 0), 0) || 0
+        const total = teamMembers?.reduce((sum, member) => {
+          const salary = typeof member.salary === 'string' ? parseFloat(member.salary) : (member.salary || 0)
+          return sum + salary
+        }, 0) || 0
         return { value: formatCurrency(total), change: 5, trend: 'up' as const }
       }
       case 'salary_variance': {
@@ -351,7 +354,7 @@ export function KPIWidget({ widget, onRefresh, onRemove, onConfig }: KPIWidgetPr
           const overtime = memberAttendance.filter(a => a.status === 'Overtime').length
           const present = memberAttendance.filter(a => a.status === 'Present').length
 
-          const salary = member.salary || 0
+          const salary = typeof member.salary === 'string' ? parseFloat(member.salary) : (member.salary || 0)
           totalBudget += salary
           const perDaySalary = salary / daysInMonth
           const earnedDays = fullDays + (halfDays * 0.5) + (overtime * 1.5) + present

@@ -176,7 +176,7 @@ export function ChartWidget({ widget, onRefresh, onRemove, onConfig }: ChartWidg
         const overtime = memberAttendance.filter(a => a.status === 'Overtime').length
         const present = memberAttendance.filter(a => a.status === 'Present').length
 
-        const salary = member.salary || 0
+        const salary = typeof member.salary === 'string' ? parseFloat(member.salary) : (member.salary || 0)
         const perDaySalary = salary / daysInMonth
         const earnedDays = fullDays + (halfDays * 0.5) + (overtime * 1.5) + present
         const earned = Math.round(earnedDays * perDaySalary)
@@ -210,7 +210,7 @@ export function ChartWidget({ widget, onRefresh, onRemove, onConfig }: ChartWidg
         const overtime = memberAttendance.filter(a => a.status === 'Overtime').length
         const present = memberAttendance.filter(a => a.status === 'Present').length
 
-        const salary = member.salary || 0
+        const salary = typeof member.salary === 'string' ? parseFloat(member.salary) : (member.salary || 0)
         const perDaySalary = salary / daysInMonth
         const earnedDays = fullDays + (halfDays * 0.5) + (overtime * 1.5) + present
         const earned = Math.round(earnedDays * perDaySalary)

@@ -176,11 +176,16 @@ export function TableWidget({ widget, onRefresh, onRemove, onConfig }: TableWidg
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
     const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
 
-    const { data: teamMembers } = await supabase
+    const { data: teamMembers, error: teamError } = await supabase
       .from('admin_users')
       .select('id, full_name, role, salary')
       .order('full_name')
       .limit(limit)
+
+    if (teamError) {
+      console.error('Error fetching team members:', teamError)
+      return { rows: [], columns: [] }
+    }
 
     const { data: attendance } = await supabase
       .from('attendance')
@@ -197,14 +202,15 @@ export function TableWidget({ widget, onRefresh, onRemove, onConfig }: TableWidg
       const absent = daysInMonth - (fullDays + halfDays + present + overtime)
       const totalHours = memberAttendance.reduce((sum, a) => sum + (a.actual_working_hours || 0), 0)
 
-      const salary = member.salary || 0
+      // Convert salary to number (it might be returned as string)
+      const salary = typeof member.salary === 'string' ? parseFloat(member.salary) : (member.salary || 0)
       const perDaySalary = salary / daysInMonth
       const earnedDays = fullDays + (halfDays * 0.5) + (overtime * 1.5) + present
       const earnedSalary = Math.round(earnedDays * perDaySalary)
 
       return {
-        name: member.full_name,
-        role: member.role,
+        name: member.full_name || 'N/A',
+        role: member.role || 'N/A',
         full_days: fullDays,
         half_days: halfDays,
         absent,
