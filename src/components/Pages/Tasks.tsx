@@ -791,7 +791,7 @@ export const Tasks: React.FC = () => {
               ]}
             />
 
-            <div className="flex gap-2 mb-6">
+            <div className="flex gap-2 mb-6 items-center">
               <Button
                 variant={activeTab === 'active' ? 'default' : 'outline'}
                 onClick={() => setActiveTab('active')}
@@ -808,6 +808,40 @@ export const Tasks: React.FC = () => {
                 <Repeat className="w-4 h-4" />
                 Recurring Tasks
               </Button>
+
+              {activeTab === 'recurring' && (
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(
+                        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-recurring-tasks`,
+                        {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                            'Content-Type': 'application/json',
+                          },
+                        }
+                      )
+                      const result = await response.json()
+                      if (result.success) {
+                        alert(`Successfully created ${result.tasksCreated} task(s) from recurring templates!`)
+                        fetchTasks()
+                      } else {
+                        alert('Error generating tasks: ' + result.error)
+                      }
+                    } catch (error) {
+                      console.error('Error:', error)
+                      alert('Failed to generate tasks')
+                    }
+                  }}
+                  className="flex items-center gap-2 ml-auto"
+                >
+                  <Target className="w-4 h-4" />
+                  Generate Tasks Now
+                </Button>
+              )}
             </div>
           </>
         )}
