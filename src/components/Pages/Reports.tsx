@@ -35,7 +35,7 @@ const reportCards: ReportCard[] = [
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
     route: '/reports/sales',
-    available: false
+    available: true
   },
   {
     id: 'analytics',
@@ -150,11 +150,11 @@ export function Reports() {
               <div className="text-sm text-gray-600 mt-1">Total Reports</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-green-600">1</div>
+              <div className="text-3xl font-bold text-green-600">2</div>
               <div className="text-sm text-gray-600 mt-1">Active Reports</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-orange-600">3</div>
+              <div className="text-3xl font-bold text-orange-600">2</div>
               <div className="text-sm text-gray-600 mt-1">Coming Soon</div>
             </div>
           </div>
