@@ -3,7 +3,7 @@ import { BaseWidget } from '../BaseWidget'
 import { Widget } from '@/types/dashboard'
 import { supabase } from '@/lib/supabase'
 import { formatCurrency } from '@/lib/utils'
-import { format } from 'date-fns'
+import { format as formatDate } from 'date-fns'
 import { ArrowUpDown, ExternalLink } from 'lucide-react'
 
 interface TableWidgetProps {
@@ -238,7 +238,7 @@ export function TableWidget({ widget, onRefresh, onRemove, onConfig }: TableWidg
         return formatCurrency(value)
       case 'date':
         try {
-          return format(new Date(value), 'MMM dd, yyyy')
+          return formatDate(new Date(value), 'MMM dd, yyyy')
         } catch {
           return value
         }

@@ -227,8 +227,55 @@ export function ChartWidget({ widget, onRefresh, onRemove, onConfig }: ChartWidg
   }
 
   const renderChart = () => {
+    const metric = widget.config.metric || ''
+
     switch (widget.widget_type) {
       case 'bar_chart':
+        // Handle payroll attendance stats differently
+        if (metric === 'attendance_stats') {
+          return (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '12px'
+                  }}
+                />
+                <Bar dataKey="present" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="absent" fill="#f87171" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )
+        }
+        // Handle payroll salary by employee
+        if (metric === 'salary_by_employee') {
+          return (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '12px'
+                  }}
+                />
+                <Bar dataKey="earned" fill="#3b82f6" radius={[8, 8, 0, 0]} name="Earned" />
+                <Bar dataKey="budget" fill="#10b981" radius={[8, 8, 0, 0]} name="Budget" />
+              </BarChart>
+            </ResponsiveContainer>
+          )
+        }
+        // Default bar chart
         return (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>
@@ -249,6 +296,55 @@ export function ChartWidget({ widget, onRefresh, onRemove, onConfig }: ChartWidg
         )
 
       case 'line_chart':
+        // Handle payroll salary overview with area chart
+        if (metric === 'salary_overview' && widget.config.chartType === 'area') {
+          return (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data}>
+                <defs>
+                  <linearGradient id="colorEarnedPayroll" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorBudgetPayroll" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '12px'
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="earned"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorEarnedPayroll)"
+                  name="Earned"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="budget"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorBudgetPayroll)"
+                  name="Budget"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )
+        }
+        // Default line chart
         return (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data}>
@@ -269,6 +365,55 @@ export function ChartWidget({ widget, onRefresh, onRemove, onConfig }: ChartWidg
         )
 
       case 'area_chart':
+        // Handle payroll salary overview
+        if (metric === 'salary_overview') {
+          return (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data}>
+                <defs>
+                  <linearGradient id="colorEarned" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorBudget" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <XAxis dataKey="name" stroke="#9ca3af" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '12px'
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="earned"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorEarned)"
+                  name="Earned"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="budget"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorBudget)"
+                  name="Budget"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )
+        }
+        // Default area chart
         return (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
