@@ -412,14 +412,23 @@ export function CustomDashboard() {
             {widgets.map((widget) => {
               const gridWidth = widget.position.w
               const gridHeight = widget.position.h
+              const gridX = widget.position.x
+              const gridY = widget.position.y
+
+              // Calculate grid row start and end positions
+              // Grid rows are 1-indexed in CSS
+              const rowStart = Math.floor(gridY) + 1
+              const rowEnd = Math.ceil(gridY + gridHeight) + 1
+              const colStart = gridX + 1
+              const colEnd = gridX + gridWidth + 1
 
               return (
                 <div
                   key={widget.id}
                   className="h-full"
                   style={{
-                    gridColumn: `span ${gridWidth > 12 ? 12 : gridWidth}`,
-                    gridRow: `span ${gridHeight}`
+                    gridColumn: `${colStart} / ${colEnd}`,
+                    gridRow: `${rowStart} / ${rowEnd}`
                   }}
                 >
                   <WidgetRenderer
