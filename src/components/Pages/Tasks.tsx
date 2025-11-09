@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CheckSquare, Eye, Edit, Trash2, Plus, X, Save, ArrowLeft, ChevronRight, Users, Calendar, Clock, AlertCircle, TrendingUp, ListTodo, Target, Flag, MoreVertical, FileText, RefreshCw, Bell, BellPlus } from 'lucide-react'
+import { CheckSquare, Eye, Edit, Trash2, Plus, X, Save, ArrowLeft, ChevronRight, Users, Calendar, Clock, AlertCircle, TrendingUp, ListTodo, Target, Flag, MoreVertical, FileText, RefreshCw, Bell, BellPlus, Repeat } from 'lucide-react'
 import { PageHeader } from '@/components/Common/PageHeader'
 import { KPICard } from '@/components/Common/KPICard'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { RecurringTaskModal } from '@/components/Tasks/RecurringTaskModal'
 import { supabase } from '@/lib/supabase'
 import { formatDate, formatDateTime, convertISTToUTC, convertUTCToISTForInput } from '@/lib/utils'
 
@@ -78,8 +79,11 @@ const statusColors: Record<string, string> = {
 
 const priorityColors: Record<string, string> = {
   'Low': 'bg-gray-100 text-gray-800',
+  'low': 'bg-gray-100 text-gray-800',
   'Medium': 'bg-blue-100 text-blue-800',
+  'medium': 'bg-blue-100 text-blue-800',
   'High': 'bg-orange-100 text-orange-800',
+  'high': 'bg-orange-100 text-orange-800',
   'Urgent': 'bg-red-100 text-red-800'
 }
 
@@ -100,8 +104,12 @@ const categoryOptions = ['Development', 'Design', 'Marketing', 'Sales', 'Support
 export const Tasks: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const [activeTab, setActiveTab] = useState<'active' | 'recurring'>('active')
   const [view, setView] = useState<'list' | 'add' | 'edit' | 'view'>('list')
   const [tasks, setTasks] = useState<Task[]>([])
+  const [recurringTasks, setRecurringTasks] = useState<any[]>([])
+  const [showRecurringModal, setShowRecurringModal] = useState(false)
+  const [selectedRecurringTask, setSelectedRecurringTask] = useState<any | null>(null)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -147,6 +155,7 @@ export const Tasks: React.FC = () => {
     fetchTasks()
     fetchTeamMembers()
     fetchContacts()
+    fetchRecurringTasks()
   }, [])
 
   useEffect(() => {
@@ -235,6 +244,25 @@ export const Tasks: React.FC = () => {
       setTeamMembers(members)
     } catch (error) {
       console.error('Error fetching team members:', error)
+    }
+  }
+
+  const fetchRecurringTasks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('recurring_tasks')
+        .select(`
+          *,
+          contact:contacts_master(id, full_name, phone),
+          assignee:admin_users!recurring_tasks_assigned_to_fkey(id, full_name)
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setRecurringTasks(data || [])
+    } catch (error) {
+      console.error('Error fetching recurring tasks:', error)
     }
   }
 
@@ -743,24 +771,45 @@ export const Tasks: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="hidden md:block ppt-slide p-6">
         {view === 'list' && (
-          <PageHeader
-            title="Tasks Management"
-            subtitle="Create and manage team tasks efficiently"
-            actions={[
-              {
-                label: 'Add Task',
-                onClick: () => setView('add'),
-                variant: 'default',
-                icon: Plus
-              },
-              {
-                label: 'Refresh',
-                onClick: fetchTasks,
-                variant: 'outline',
-                icon: RefreshCw
-              }
-            ]}
-          />
+          <>
+            <PageHeader
+              title="Tasks Management"
+              subtitle="Create and manage team tasks efficiently"
+              actions={[
+                {
+                  label: activeTab === 'active' ? 'Add Task' : 'Add Recurring Task',
+                  onClick: () => activeTab === 'active' ? setView('add') : setShowRecurringModal(true),
+                  variant: 'default',
+                  icon: Plus
+                },
+                {
+                  label: 'Refresh',
+                  onClick: () => activeTab === 'active' ? fetchTasks() : fetchRecurringTasks(),
+                  variant: 'outline',
+                  icon: RefreshCw
+                }
+              ]}
+            />
+
+            <div className="flex gap-2 mb-6">
+              <Button
+                variant={activeTab === 'active' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('active')}
+                className="flex items-center gap-2"
+              >
+                <ListTodo className="w-4 h-4" />
+                Active Tasks
+              </Button>
+              <Button
+                variant={activeTab === 'recurring' ? 'default' : 'outline'}
+                onClick={() => setActiveTab('recurring')}
+                className="flex items-center gap-2"
+              >
+                <Repeat className="w-4 h-4" />
+                Recurring Tasks
+              </Button>
+            </div>
+          </>
         )}
 
         {view === 'list' && (
@@ -875,18 +924,19 @@ export const Tasks: React.FC = () => {
                   </select>
                 </motion.div>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="mb-8"
-                >
-                  <Card className="shadow-xl">
-                    <CardHeader>
-                      <CardTitle>All Tasks</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {filteredTasks.length === 0 ? (
+                {activeTab === 'active' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="mb-8"
+                  >
+                    <Card className="shadow-xl">
+                      <CardHeader>
+                        <CardTitle>All Tasks</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {filteredTasks.length === 0 ? (
                         <div className="text-center py-12">
                           <CheckSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                           <p className="text-gray-500">No tasks found</p>
@@ -1004,10 +1054,156 @@ export const Tasks: React.FC = () => {
                     </CardContent>
                   </Card>
                 </motion.div>
+                )}
+
+                {activeTab === 'recurring' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="mb-8"
+                  >
+                    <Card className="shadow-xl">
+                      <CardHeader>
+                        <CardTitle>Recurring Tasks</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {recurringTasks.length === 0 ? (
+                          <div className="text-center py-12">
+                            <Repeat className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                            <p className="text-gray-500">No recurring tasks found</p>
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead>
+                                <tr className="border-b border-gray-200">
+                                  <th className="text-left py-3 px-4 font-semibold text-brand-text">Title</th>
+                                  <th className="text-left py-3 px-4 font-semibold text-brand-text">Type</th>
+                                  <th className="text-left py-3 px-4 font-semibold text-brand-text">Schedule</th>
+                                  <th className="text-left py-3 px-4 font-semibold text-brand-text">Time</th>
+                                  <th className="text-left py-3 px-4 font-semibold text-brand-text">Priority</th>
+                                  <th className="text-left py-3 px-4 font-semibold text-brand-text">Assigned To</th>
+                                  <th className="text-left py-3 px-4 font-semibold text-brand-text">Status</th>
+                                  <th className="text-left py-3 px-4 font-semibold text-brand-text">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {recurringTasks.map((task, index) => {
+                                  let scheduleText = ''
+                                  if (task.recurrence_type === 'daily') {
+                                    scheduleText = 'Every Day'
+                                  } else if (task.recurrence_type === 'weekly') {
+                                    const days = task.recurrence_days?.map((d: string) => d.toUpperCase()).join(', ')
+                                    scheduleText = days || 'Weekly'
+                                  } else if (task.recurrence_type === 'monthly') {
+                                    scheduleText = task.recurrence_day_of_month === 0 ? 'Last Day' : `Day ${task.recurrence_day_of_month}`
+                                  }
+
+                                  return (
+                                    <motion.tr
+                                      key={task.id}
+                                      initial={{ opacity: 0, y: 10 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{ delay: 0.05 * index }}
+                                      className="border-b border-gray-100 hover:bg-gray-50"
+                                    >
+                                      <td className="py-3 px-4">
+                                        <div>
+                                          <p className="font-medium text-gray-900">{task.title}</p>
+                                          {task.contact && (
+                                            <p className="text-sm text-gray-500">{task.contact.full_name}</p>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td className="py-3 px-4">
+                                        <Badge className="capitalize">{task.recurrence_type}</Badge>
+                                      </td>
+                                      <td className="py-3 px-4">
+                                        <span className="text-sm text-gray-600">{scheduleText}</span>
+                                      </td>
+                                      <td className="py-3 px-4">
+                                        <span className="text-sm text-gray-600">{task.recurrence_time}</span>
+                                      </td>
+                                      <td className="py-3 px-4">
+                                        <Badge className={`capitalize ${priorityColors[task.priority] || 'bg-gray-100 text-gray-800'}`}>
+                                          {task.priority}
+                                        </Badge>
+                                      </td>
+                                      <td className="py-3 px-4">
+                                        <span className="text-sm text-gray-600">
+                                          {task.assignee?.full_name || 'Unassigned'}
+                                        </span>
+                                      </td>
+                                      <td className="py-3 px-4">
+                                        <Badge className={task.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                                          {task.is_active ? 'Active' : 'Inactive'}
+                                        </Badge>
+                                      </td>
+                                      <td className="py-3 px-4">
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            onClick={() => {
+                                              setSelectedRecurringTask(task)
+                                              setShowRecurringModal(true)
+                                            }}
+                                            className="text-blue-600 hover:text-blue-800"
+                                            title="Edit"
+                                          >
+                                            <Edit className="w-4 h-4" />
+                                          </button>
+                                          <button
+                                            onClick={async () => {
+                                              if (confirm('Are you sure you want to delete this recurring task?')) {
+                                                try {
+                                                  const { error } = await supabase
+                                                    .from('recurring_tasks')
+                                                    .delete()
+                                                    .eq('id', task.id)
+                                                  if (error) throw error
+                                                  fetchRecurringTasks()
+                                                } catch (error) {
+                                                  console.error('Error deleting recurring task:', error)
+                                                  alert('Failed to delete recurring task')
+                                                }
+                                              }
+                                            }}
+                                            className="text-red-600 hover:text-red-800"
+                                            title="Delete"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </motion.tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
               </>
             )}
           </>
         )}
+
+        <RecurringTaskModal
+          isOpen={showRecurringModal}
+          onClose={() => {
+            setShowRecurringModal(false)
+            setSelectedRecurringTask(null)
+          }}
+          onSave={() => {
+            fetchRecurringTasks()
+          }}
+          task={selectedRecurringTask}
+          teamMembers={teamMembers}
+          contacts={contacts}
+        />
 
         {/* Desktop Add/Edit Form */}
           {(view === 'add' || view === 'edit') && (
