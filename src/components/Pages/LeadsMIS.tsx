@@ -231,6 +231,7 @@ export function LeadsMIS() {
 
       if (pipelinesError) throw pipelinesError
 
+      console.log('Fetched pipelines:', pipelinesData)
       setPipelines(pipelinesData || [])
 
       const stagesMap: Record<string, PipelineStage[]> = {}
@@ -244,12 +245,14 @@ export function LeadsMIS() {
 
         if (stagesData) {
           stagesMap[pipeline.id] = stagesData
+          console.log(`Stages for pipeline ${pipeline.name}:`, stagesData)
         }
       }
       setPipelineStages(stagesMap)
 
       const defaultPipeline = pipelinesData?.find(p => p.is_default) || pipelinesData?.[0]
       if (defaultPipeline) {
+        console.log('Setting default pipeline:', defaultPipeline.name, defaultPipeline.id)
         setPipelineFilter(defaultPipeline.id)
       }
     } catch (error) {
@@ -261,6 +264,9 @@ export function LeadsMIS() {
     try {
       setLoading(true)
       const { start, end, previousStart, previousEnd } = getDateRange()
+
+      console.log('Fetching leads for pipeline:', pipelineFilter)
+      console.log('Date range:', { start, end })
 
       const [leadsRes, previousLeadsRes] = await Promise.all([
         supabase
@@ -278,18 +284,29 @@ export function LeadsMIS() {
           .lte('created_at', previousEnd)
       ])
 
-      if (leadsRes.error) throw leadsRes.error
+      console.log('Leads response:', leadsRes)
+      console.log('Leads count:', leadsRes.data?.length)
+
+      if (leadsRes.error) {
+        console.error('Error fetching leads:', leadsRes.error)
+        throw leadsRes.error
+      }
 
       const allLeads = leadsRes.data || []
       const previousLeads = previousLeadsRes.data || []
 
-      const newLeads = allLeads.filter(l => l.stage === 'New')
-      const contactedLeads = allLeads.filter(l =>
-        ['Contacted', 'Demo Booked', 'No Show', 'Won', 'Lost'].includes(l.stage)
-      )
-      const wonLeads = allLeads.filter(l => l.stage === 'Won')
-      const lostLeads = allLeads.filter(l => l.stage === 'Lost')
-      const previousWonLeads = previousLeads.filter(l => l.stage === 'Won')
+      console.log('Processing', allLeads.length, 'leads')
+
+      // Get the first stage name from pipeline stages (typically "New")
+      const firstStageName = pipelineStages[pipelineFilter]?.[0]?.name || 'New'
+      const wonStageName = pipelineStages[pipelineFilter]?.find(s => s.name.toLowerCase().includes('won'))?.name || 'Won'
+      const lostStageName = pipelineStages[pipelineFilter]?.find(s => s.name.toLowerCase().includes('lost'))?.name || 'Lost'
+
+      const newLeads = allLeads.filter(l => l.stage === firstStageName)
+      const contactedLeads = allLeads.filter(l => l.stage !== firstStageName)
+      const wonLeads = allLeads.filter(l => l.stage === wonStageName)
+      const lostLeads = allLeads.filter(l => l.stage === lostStageName)
+      const previousWonLeads = previousLeads.filter(l => l.stage === wonStageName)
 
       const totalLeadScore = allLeads.reduce((sum, l) => sum + (Number(l.lead_score) || 0), 0)
       const avgLeadScore = allLeads.length > 0 ? totalLeadScore / allLeads.length : 0
@@ -318,19 +335,23 @@ export function LeadsMIS() {
       }, {} as Record<string, { count: number; value: number }>)
 
       const currentPipelineStages = pipelineStages[pipelineFilter] || []
+      console.log('Current pipeline stages:', currentPipelineStages)
       const orderedStages = currentPipelineStages
         .sort((a, b) => a.display_order - b.display_order)
         .map(s => s.name)
 
-      setLeadsByStage(
-        orderedStages
-          .filter(stage => stageCounts[stage])
-          .map(stage => ({
-            stage,
-            count: stageCounts[stage]?.count || 0,
-            value: stageCounts[stage]?.value || 0
-          }))
-      )
+      console.log('Ordered stage names:', orderedStages)
+      console.log('Stage counts:', stageCounts)
+
+      // Show all stages, even if count is 0
+      const stageData = orderedStages.map(stage => ({
+        stage,
+        count: stageCounts[stage]?.count || 0,
+        value: stageCounts[stage]?.value || 0
+      }))
+
+      console.log('Setting leadsByStage:', stageData)
+      setLeadsByStage(stageData)
 
       const sourceCounts = allLeads.reduce((acc, lead) => {
         const source = lead.source || 'Unknown'
@@ -338,7 +359,7 @@ export function LeadsMIS() {
           acc[source] = { count: 0, converted: 0 }
         }
         acc[source].count += 1
-        if (lead.stage === 'Won') {
+        if (lead.stage === wonStageName) {
           acc[source].converted += 1
         }
         return acc
@@ -381,13 +402,13 @@ export function LeadsMIS() {
         }
         acc[owner].total += 1
         acc[owner].totalScore += Number(lead.lead_score) || 0
-        if (['Contacted', 'Demo Booked', 'No Show', 'Won', 'Lost'].includes(lead.stage)) {
+        if (lead.stage !== firstStageName) {
           acc[owner].contacted += 1
         }
-        if (lead.stage === 'Won') {
+        if (lead.stage === wonStageName) {
           acc[owner].won += 1
         }
-        if (lead.stage === 'Lost') {
+        if (lead.stage === lostStageName) {
           acc[owner].lost += 1
         }
         return acc
@@ -413,7 +434,7 @@ export function LeadsMIS() {
           acc[createdDate] = { new_leads: 0, won_leads: 0 }
         }
         acc[createdDate].new_leads += 1
-        if (lead.stage === 'Won') {
+        if (lead.stage === wonStageName) {
           acc[createdDate].won_leads += 1
         }
         return acc
