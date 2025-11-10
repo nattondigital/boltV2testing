@@ -27,10 +27,34 @@ export function OTPLogin({ onAuthenticated }: OTPLoginProps) {
     setIsLoading(true)
     setError('')
 
-    const generatedOTP = Math.floor(1000 + Math.random() * 9000).toString()
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
-
     try {
+      const { data: adminUser, error: userCheckError } = await supabase
+        .from('admin_users')
+        .select('id, is_active')
+        .eq('phone', mobile)
+        .maybeSingle()
+
+      if (userCheckError) {
+        console.error('Error checking user:', userCheckError)
+        setError('Failed to verify user. Please try again.')
+        setIsLoading(false)
+        return
+      }
+
+      if (!adminUser) {
+        setError('This phone number is not registered in the system.')
+        setIsLoading(false)
+        return
+      }
+
+      if (!adminUser.is_active) {
+        setError('Your account is inactive. Please contact administrator.')
+        setIsLoading(false)
+        return
+      }
+
+      const generatedOTP = Math.floor(1000 + Math.random() * 9000).toString()
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString()
       const { error: dbError } = await supabase
         .from('otp_verifications')
         .insert({

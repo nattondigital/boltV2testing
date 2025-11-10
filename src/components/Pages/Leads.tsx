@@ -17,6 +17,8 @@ import { formatDate, formatTime } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
 import { format } from 'date-fns'
 import * as XLSX from 'xlsx'
+import { useAuth } from '@/contexts/AuthContext'
+import { PermissionGuard } from '@/components/Common/PermissionGuard'
 
 interface StageColumn {
   id: string
@@ -154,6 +156,7 @@ interface ImportResult {
 export function Leads() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { canCreate, canUpdate, canDelete, canRead } = useAuth()
   const [view, setView] = useState<ViewType>('list')
   const [displayMode, setDisplayMode] = useState<DisplayMode>('kanban')
   const [detailTab, setDetailTab] = useState<TabType>('lead-details')
@@ -2092,22 +2095,26 @@ export function Leads() {
               </div>
 
               <div className="flex items-center space-x-3 pt-4">
-                <Button onClick={handleUpdateLead} disabled={!formData.name || !formData.phone}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Update Lead
-                </Button>
+                <PermissionGuard module="leads" action="update">
+                  <Button onClick={handleUpdateLead} disabled={!formData.name || !formData.phone}>
+                    <Save className="w-4 h-4 mr-2" />
+                    Update Lead
+                  </Button>
+                </PermissionGuard>
                 <Button variant="outline" onClick={handleBackToList}>
                   Cancel
                 </Button>
                 {selectedLead && (
-                  <Button
-                    variant="outline"
-                    onClick={() => handleDeleteLead(selectedLead.id)}
-                    className="text-red-600 hover:text-red-700 ml-auto"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Lead
-                  </Button>
+                  <PermissionGuard module="leads" action="delete">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleDeleteLead(selectedLead.id)}
+                      className="text-red-600 hover:text-red-700 ml-auto"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Lead
+                    </Button>
+                  </PermissionGuard>
                 )}
               </div>
             </div>
@@ -3085,30 +3092,51 @@ export function Leads() {
     )
   }
 
+  const headerActions = []
+
+  if (canRead('leads')) {
+    headerActions.push({
+      label: 'Export All Data',
+      onClick: handleExportData,
+      icon: Download,
+      variant: 'outline' as const
+    })
+  }
+
+  if (canCreate('leads')) {
+    headerActions.push({
+      label: 'Bulk Import',
+      onClick: handleBulkImportClick,
+      icon: Upload,
+      variant: 'outline' as const
+    })
+    headerActions.push({
+      label: 'Add New Lead',
+      onClick: handleAddClick,
+      icon: Plus
+    })
+  }
+
+  if (!canRead('leads')) {
+    return (
+      <div className="p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
+            <p className="text-gray-600">You don't have permission to view leads.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6">
       <PageHeader
         title="Leads Management"
         subtitle="Track and manage your sales pipeline"
-        actions={[
-          {
-            label: 'Bulk Import',
-            onClick: handleBulkImportClick,
-            icon: Upload,
-            variant: 'outline'
-          },
-          {
-            label: 'Export All Data',
-            onClick: handleExportData,
-            icon: Download,
-            variant: 'outline'
-          },
-          {
-            label: 'Add New Lead',
-            onClick: handleAddClick,
-            icon: Plus
-          }
-        ]}
+        actions={headerActions}
       />
 
       {loading ? (

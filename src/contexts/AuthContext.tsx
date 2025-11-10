@@ -1,5 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import {
+  hasPermission,
+  canRead,
+  canCreate,
+  canUpdate,
+  canDelete,
+  canPerformAction,
+  getModulePermissions,
+  hasAnyPermission,
+  type ModuleName,
+  type PermissionAction,
+  type UserPermissions,
+} from '@/lib/permissions'
 
 interface UserProfile {
   id: string
@@ -14,6 +27,7 @@ interface UserProfile {
   last_login: string | null
   created_at: string
   updated_at: string
+  permissions: UserPermissions
 }
 
 interface AuthContextType {
@@ -24,6 +38,13 @@ interface AuthContextType {
   logout: () => Promise<void>
   isLoading: boolean
   refreshProfile: () => Promise<void>
+  hasPermission: (module: ModuleName, action: PermissionAction) => boolean
+  canRead: (module: ModuleName) => boolean
+  canCreate: (module: ModuleName) => boolean
+  canUpdate: (module: ModuleName) => boolean
+  canDelete: (module: ModuleName) => boolean
+  canPerformAction: (module: ModuleName, action: string) => boolean
+  hasAnyPermission: (module: ModuleName) => boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -139,6 +160,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const checkPermission = (module: ModuleName, action: PermissionAction): boolean => {
+    return hasPermission(userProfile?.permissions || null, module, action)
+  }
+
+  const checkCanRead = (module: ModuleName): boolean => {
+    return canRead(userProfile?.permissions || null, module)
+  }
+
+  const checkCanCreate = (module: ModuleName): boolean => {
+    return canCreate(userProfile?.permissions || null, module)
+  }
+
+  const checkCanUpdate = (module: ModuleName): boolean => {
+    return canUpdate(userProfile?.permissions || null, module)
+  }
+
+  const checkCanDelete = (module: ModuleName): boolean => {
+    return canDelete(userProfile?.permissions || null, module)
+  }
+
+  const checkCanPerformAction = (module: ModuleName, action: string): boolean => {
+    return canPerformAction(userProfile?.permissions || null, module, action as any)
+  }
+
+  const checkHasAnyPermission = (module: ModuleName): boolean => {
+    return hasAnyPermission(userProfile?.permissions || null, module)
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -148,7 +197,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         isLoading,
-        refreshProfile
+        refreshProfile,
+        hasPermission: checkPermission,
+        canRead: checkCanRead,
+        canCreate: checkCanCreate,
+        canUpdate: checkCanUpdate,
+        canDelete: checkCanDelete,
+        canPerformAction: checkCanPerformAction,
+        hasAnyPermission: checkHasAnyPermission,
       }}
     >
       {children}

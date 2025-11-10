@@ -7,52 +7,54 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Sidebar as SidebarContainer } from '@/components/ui/sidebar'
+import { useAuth } from '@/contexts/AuthContext'
+import { ModuleName } from '@/lib/permissions'
 
 const navigation = [
   { icon: BarChart, label: 'Dashboard', to: '/dashboard' },
 ]
 
 const otherModulesNavigation = [
-  { icon: FolderOpen, label: 'Media Storage', to: '/media-storage' },
+  { icon: FolderOpen, label: 'Media Storage', to: '/media-storage', module: 'media' as ModuleName },
   { icon: FileText, label: 'Templates', to: '/templates' },
-  { icon: Zap, label: 'Automations', to: '/automations' },
+  { icon: Zap, label: 'Automations', to: '/automations', module: 'automations' as ModuleName },
 ]
 
 const settingsNavigation = [
-  { icon: Settings, label: 'Settings', to: '/settings' },
+  { icon: Settings, label: 'Settings', to: '/settings', module: 'settings' as ModuleName },
 ]
 
 const salesManagementNavigation = [
-  { icon: Users, label: 'Leads CRM', to: '/leads' },
-  { icon: Calendar, label: 'Appointments', to: '/appointments' },
-  { icon: MessageSquare, label: 'Followups', to: '/followups' },
+  { icon: Users, label: 'Leads CRM', to: '/leads', module: 'leads' as ModuleName },
+  { icon: Calendar, label: 'Appointments', to: '/appointments', module: 'appointments' as ModuleName },
+  { icon: MessageSquare, label: 'Followups', to: '/followups', module: 'leads' as ModuleName },
 ]
 
 const mastersNavigation = [
-  { icon: Package, label: 'Products', to: '/products' },
-  { icon: Contact, label: 'Contacts', to: '/contacts' },
-  { icon: LinkIcon, label: 'Affiliates', to: '/affiliates' },
-  { icon: Shield, label: 'Team', to: '/team' },
-  { icon: GraduationCap, label: 'LMS', to: '/lms' },
+  { icon: Package, label: 'Products', to: '/products', module: 'products' as ModuleName },
+  { icon: Contact, label: 'Contacts', to: '/contacts', module: 'contacts' as ModuleName },
+  { icon: LinkIcon, label: 'Affiliates', to: '/affiliates', module: 'affiliates' as ModuleName },
+  { icon: Shield, label: 'Team', to: '/team', module: 'team' as ModuleName },
+  { icon: GraduationCap, label: 'LMS', to: '/lms', module: 'lms' as ModuleName },
 ]
 
 const membersManagementNavigation = [
-  { icon: UserCheck, label: 'Enrolled Members', to: '/members' },
-  { icon: Wrench, label: 'Tools Access', to: '/tools-access' },
-  { icon: CreditCard, label: 'Billing', to: '/billing' },
-  { icon: HelpCircle, label: 'Support', to: '/support' }
+  { icon: UserCheck, label: 'Enrolled Members', to: '/members', module: 'enrolled_members' as ModuleName },
+  { icon: Wrench, label: 'Tools Access', to: '/tools-access', module: 'enrolled_members' as ModuleName },
+  { icon: CreditCard, label: 'Billing', to: '/billing', module: 'billing' as ModuleName },
+  { icon: HelpCircle, label: 'Support', to: '/support', module: 'support' as ModuleName }
 ]
 
 const teamManagementNavigation = [
-  { icon: Clock, label: 'Attendance', to: '/attendance' },
-  { icon: Receipt, label: 'Expenses', to: '/expenses' },
-  { icon: CalendarOff, label: 'Leave', to: '/leave' },
-  { icon: CheckSquare, label: 'Tasks', to: '/tasks' }
+  { icon: Clock, label: 'Attendance', to: '/attendance', module: 'attendance' as ModuleName },
+  { icon: Receipt, label: 'Expenses', to: '/expenses', module: 'expenses' as ModuleName },
+  { icon: CalendarOff, label: 'Leave', to: '/leave', module: 'leave' as ModuleName },
+  { icon: CheckSquare, label: 'Tasks', to: '/tasks', module: 'tasks' as ModuleName }
 ]
 
 const aiAgentsNavigation = [
-  { icon: Bot, label: 'Agents List', to: '/ai-agents' },
-  { icon: Zap, label: 'Activity Logs', to: '/ai-agents/logs' }
+  { icon: Bot, label: 'Agents List', to: '/ai-agents', module: 'ai_agents' as ModuleName },
+  { icon: Zap, label: 'Activity Logs', to: '/ai-agents/logs', module: 'ai_agents' as ModuleName }
 ]
 
 const misReportingNavigation = [
@@ -67,6 +69,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
   const location = useLocation()
+  const { hasAnyPermission } = useAuth()
   const [salesExpanded, setSalesExpanded] = useState(true)
   const [mastersExpanded, setMastersExpanded] = useState(false)
   const [membersExpanded, setMembersExpanded] = useState(false)
@@ -74,6 +77,21 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
   const [aiAgentsExpanded, setAiAgentsExpanded] = useState(true)
   const [misReportingExpanded, setMisReportingExpanded] = useState(false)
   const [otherModulesExpanded, setOtherModulesExpanded] = useState(false)
+
+  const filterNavByPermission = (navItems: any[]) => {
+    return navItems.filter(item => {
+      if (!item.module) return true
+      return hasAnyPermission(item.module)
+    })
+  }
+
+  const visibleSalesNav = filterNavByPermission(salesManagementNavigation)
+  const visibleMastersNav = filterNavByPermission(mastersNavigation)
+  const visibleMembersNav = filterNavByPermission(membersManagementNavigation)
+  const visibleTeamNav = filterNavByPermission(teamManagementNavigation)
+  const visibleAiAgentsNav = filterNavByPermission(aiAgentsNavigation)
+  const visibleOtherModulesNav = filterNavByPermission(otherModulesNavigation)
+  const visibleSettingsNav = filterNavByPermission(settingsNavigation)
 
   return (
     <SidebarContainer collapsed={collapsed}>
@@ -141,7 +159,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         })}
 
         {/* Sales Management Section */}
-        {!collapsed && (
+        {!collapsed && visibleSalesNav.length > 0 && (
           <div className="pt-4">
             <button
               onClick={() => setSalesExpanded(!salesExpanded)}
@@ -159,7 +177,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         )}
 
         <AnimatePresence>
-          {salesExpanded && salesManagementNavigation.map((item) => {
+          {salesExpanded && visibleSalesNav.map((item) => {
             const isActive = location.pathname === item.to
             const Icon = item.icon
 
@@ -203,7 +221,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         </AnimatePresence>
 
         {/* Masters Section */}
-        {!collapsed && (
+        {!collapsed && visibleMastersNav.length > 0 && (
           <div className="pt-4">
             <button
               onClick={() => setMastersExpanded(!mastersExpanded)}
@@ -221,7 +239,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         )}
 
         <AnimatePresence>
-          {mastersExpanded && mastersNavigation.map((item) => {
+          {mastersExpanded && visibleMastersNav.map((item) => {
             const isActive = location.pathname === item.to
             const Icon = item.icon
 
@@ -265,7 +283,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         </AnimatePresence>
 
         {/* Members Management Section */}
-        {!collapsed && (
+        {!collapsed && visibleMembersNav.length > 0 && (
           <div className="pt-4">
             <button
               onClick={() => setMembersExpanded(!membersExpanded)}
@@ -283,7 +301,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         )}
 
         <AnimatePresence>
-          {membersExpanded && membersManagementNavigation.map((item) => {
+          {membersExpanded && visibleMembersNav.map((item) => {
             const isActive = location.pathname === item.to
             const Icon = item.icon
 
@@ -327,7 +345,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         </AnimatePresence>
 
         {/* Team Management Section */}
-        {!collapsed && (
+        {!collapsed && visibleTeamNav.length > 0 && (
           <div className="pt-4">
             <button
               onClick={() => setTeamExpanded(!teamExpanded)}
@@ -345,7 +363,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         )}
 
         <AnimatePresence>
-          {teamExpanded && teamManagementNavigation.map((item) => {
+          {teamExpanded && visibleTeamNav.map((item) => {
             const isActive = location.pathname === item.to
             const Icon = item.icon
 
@@ -389,7 +407,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         </AnimatePresence>
 
         {/* AI Agents Section */}
-        {!collapsed && (
+        {!collapsed && visibleAiAgentsNav.length > 0 && (
           <div className="pt-4">
             <button
               onClick={() => setAiAgentsExpanded(!aiAgentsExpanded)}
@@ -407,7 +425,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         )}
 
         <AnimatePresence>
-          {aiAgentsExpanded && aiAgentsNavigation.map((item) => {
+          {aiAgentsExpanded && visibleAiAgentsNav.map((item) => {
             const isActive = location.pathname === item.to
             const Icon = item.icon
 
@@ -513,7 +531,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         </AnimatePresence>
 
         {/* Other Modules Section */}
-        {!collapsed && (
+        {!collapsed && visibleOtherModulesNav.length > 0 && (
           <div className="pt-4">
             <button
               onClick={() => setOtherModulesExpanded(!otherModulesExpanded)}
@@ -531,7 +549,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         )}
 
         <AnimatePresence>
-          {otherModulesExpanded && otherModulesNavigation.map((item) => {
+          {otherModulesExpanded && visibleOtherModulesNav.map((item) => {
             const isActive = location.pathname === item.to
             const Icon = item.icon
 
@@ -576,7 +594,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
 
         {/* Settings Section */}
         <div className="pt-4">
-          {settingsNavigation.map((item) => {
+          {visibleSettingsNav.map((item) => {
             const isActive = location.pathname === item.to
             const Icon = item.icon
 
