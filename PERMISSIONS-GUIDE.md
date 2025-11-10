@@ -10,8 +10,9 @@ The system implements role-based access control (RBAC) using module-level permis
 2. **Active Status Check**: Users must have `is_active = true` to authenticate
 3. **Module-Level Permissions**: Each module can have separate CRUD permissions
 4. **Action Mapping**: Special actions (approve, reject, convert, etc.) are mapped to Update permission
-5. **UI Restrictions**: Sidebar items and action buttons are hidden based on permissions
-6. **Access Denied Pages**: Users without read permission see an access restricted message
+5. **Route-Level Protection**: URLs are protected - users cannot bypass by typing URL directly
+6. **UI Restrictions**: Sidebar items and action buttons are hidden based on permissions
+7. **Access Denied Pages**: Users without module access see an access denied message
 
 ## Database Structure
 
@@ -113,7 +114,42 @@ if (!adminUser.is_active) {
 }
 ```
 
-### 2. Using Permissions in Components
+### 2. Route-Level Protection
+
+All routes are protected using the `ProtectedRoute` component. This prevents users from accessing modules via direct URL entry.
+
+```typescript
+// In App.tsx
+import { ProtectedRoute } from '@/components/Common/ProtectedRoute'
+
+<Routes>
+  <Route path="/" element={<Layout />}>
+    {/* Protected routes - require module permission */}
+    <Route path="attendance" element={
+      <ProtectedRoute module="attendance">
+        <Attendance />
+      </ProtectedRoute>
+    } />
+
+    <Route path="leads" element={
+      <ProtectedRoute module="leads">
+        <Leads />
+      </ProtectedRoute>
+    } />
+
+    {/* Unprotected routes - accessible to all authenticated users */}
+    <Route path="dashboard" element={<Dashboard />} />
+  </Route>
+</Routes>
+```
+
+**Key Points:**
+- Users without any permission for a module see an "Access Denied" page
+- Direct URL access is blocked (e.g., typing `/attendance` in the browser)
+- Users are shown a friendly message with option to go back
+- Authentication is still required for all protected routes
+
+### 3. Using Permissions in Components
 
 #### Check Permissions with useAuth Hook
 
@@ -183,7 +219,7 @@ if (canCreate('leads')) {
 <PageHeader title="Leads" actions={headerActions} />
 ```
 
-### 3. Sidebar Navigation
+### 4. Sidebar Navigation
 
 The sidebar automatically filters navigation items based on permissions:
 
@@ -208,7 +244,7 @@ const visibleSalesNav = salesManagementNavigation.filter(item => {
 )}
 ```
 
-### 4. Access Denied Page
+### 5. Access Denied Page
 
 Show access denied message for users without read permission:
 
@@ -228,7 +264,7 @@ if (!canRead('leads')) {
 }
 ```
 
-### 5. Available Permission Utilities
+### 6. Available Permission Utilities
 
 ```typescript
 // From @/lib/permissions
@@ -411,3 +447,9 @@ WHERE phone = '1234567890';
 - Check permission object structure in database
 - Verify module name matches exactly (case-sensitive)
 - Confirm at least read permission is enabled for the module
+
+### User can access page via direct URL
+- This issue is now fixed with route-level protection
+- All routes in App.tsx are wrapped with ProtectedRoute component
+- Users will see "Access Denied" page if they try to access a module without permission
+- If this still occurs, verify the route has `<ProtectedRoute module="...">` wrapper in App.tsx

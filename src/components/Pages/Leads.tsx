@@ -3094,14 +3094,12 @@ export function Leads() {
 
   const headerActions = []
 
-  if (canRead('leads')) {
-    headerActions.push({
-      label: 'Export All Data',
-      onClick: handleExportData,
-      icon: Download,
-      variant: 'outline' as const
-    })
-  }
+  headerActions.push({
+    label: 'Export All Data',
+    onClick: handleExportData,
+    icon: Download,
+    variant: 'outline' as const
+  })
 
   if (canCreate('leads')) {
     headerActions.push({
@@ -3115,20 +3113,6 @@ export function Leads() {
       onClick: handleAddClick,
       icon: Plus
     })
-  }
-
-  if (!canRead('leads')) {
-    return (
-      <div className="p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Access Restricted</h3>
-            <p className="text-gray-600">You don't have permission to view leads.</p>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (

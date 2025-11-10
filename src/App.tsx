@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { AppearanceProvider } from '@/contexts/AppearanceContext'
 import { OTPLogin } from '@/components/Auth/OTPLogin'
 import { Layout } from '@/components/Layout/Layout'
+import { ProtectedRoute } from '@/components/Common/ProtectedRoute'
 import { Dashboard } from '@/components/Pages/Dashboard'
 import { Leads } from '@/components/Pages/Leads'
 import { Affiliates } from '@/components/Pages/Affiliates'
@@ -65,32 +66,32 @@ function ProtectedRoutes() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
-        <Route path="leads" element={<Leads />} />
-        <Route path="affiliates" element={<Affiliates />} />
-        <Route path="team" element={<Team />} />
-        <Route path="members" element={<Members />} />
-        <Route path="lms" element={<LMS />} />
+        <Route path="leads" element={<ProtectedRoute module="leads"><Leads /></ProtectedRoute>} />
+        <Route path="affiliates" element={<ProtectedRoute module="affiliates"><Affiliates /></ProtectedRoute>} />
+        <Route path="team" element={<ProtectedRoute module="team"><Team /></ProtectedRoute>} />
+        <Route path="members" element={<ProtectedRoute module="enrolled_members"><Members /></ProtectedRoute>} />
+        <Route path="lms" element={<ProtectedRoute module="lms"><LMS /></ProtectedRoute>} />
         <Route path="templates" element={<Templates />} />
-        <Route path="tools-access" element={<ToolsAccess />} />
-        <Route path="billing" element={<Billing />} />
-        <Route path="support" element={<Support />} />
-        <Route path="automations" element={<Automations />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="attendance" element={<Attendance />} />
-        <Route path="expenses" element={<Expenses />} />
-        <Route path="products" element={<Products />} />
-        <Route path="leave" element={<Leave />} />
-        <Route path="contacts" element={<Contacts />} />
-        <Route path="media-storage" element={<MediaStorage />} />
-        <Route path="appointments" element={<Appointments />} />
-        <Route path="tasks" element={<Tasks />} />
-        <Route path="ai-agents" element={<AIAgents />} />
-        <Route path="ai-agents/add" element={<AIAgentForm />} />
-        <Route path="ai-agents/edit/:id" element={<AIAgentForm />} />
-        <Route path="ai-agents/permissions/:id" element={<AIAgentPermissions />} />
-        <Route path="ai-agents/chat/:id" element={<AIAgentChat />} />
-        <Route path="ai-agents/logs" element={<AIAgentLogs />} />
-        <Route path="followups" element={<Followups />} />
+        <Route path="tools-access" element={<ProtectedRoute module="enrolled_members"><ToolsAccess /></ProtectedRoute>} />
+        <Route path="billing" element={<ProtectedRoute module="billing"><Billing /></ProtectedRoute>} />
+        <Route path="support" element={<ProtectedRoute module="support"><Support /></ProtectedRoute>} />
+        <Route path="automations" element={<ProtectedRoute module="automations"><Automations /></ProtectedRoute>} />
+        <Route path="settings" element={<ProtectedRoute module="settings"><Settings /></ProtectedRoute>} />
+        <Route path="attendance" element={<ProtectedRoute module="attendance"><Attendance /></ProtectedRoute>} />
+        <Route path="expenses" element={<ProtectedRoute module="expenses"><Expenses /></ProtectedRoute>} />
+        <Route path="products" element={<ProtectedRoute module="products"><Products /></ProtectedRoute>} />
+        <Route path="leave" element={<ProtectedRoute module="leave"><Leave /></ProtectedRoute>} />
+        <Route path="contacts" element={<ProtectedRoute module="contacts"><Contacts /></ProtectedRoute>} />
+        <Route path="media-storage" element={<ProtectedRoute module="media"><MediaStorage /></ProtectedRoute>} />
+        <Route path="appointments" element={<ProtectedRoute module="appointments"><Appointments /></ProtectedRoute>} />
+        <Route path="tasks" element={<ProtectedRoute module="tasks"><Tasks /></ProtectedRoute>} />
+        <Route path="ai-agents" element={<ProtectedRoute module="ai_agents"><AIAgents /></ProtectedRoute>} />
+        <Route path="ai-agents/add" element={<ProtectedRoute module="ai_agents"><AIAgentForm /></ProtectedRoute>} />
+        <Route path="ai-agents/edit/:id" element={<ProtectedRoute module="ai_agents"><AIAgentForm /></ProtectedRoute>} />
+        <Route path="ai-agents/permissions/:id" element={<ProtectedRoute module="ai_agents"><AIAgentPermissions /></ProtectedRoute>} />
+        <Route path="ai-agents/chat/:id" element={<ProtectedRoute module="ai_agents"><AIAgentChat /></ProtectedRoute>} />
+        <Route path="ai-agents/logs" element={<ProtectedRoute module="ai_agents"><AIAgentLogs /></ProtectedRoute>} />
+        <Route path="followups" element={<ProtectedRoute module="leads"><Followups /></ProtectedRoute>} />
         <Route path="dashboard-builder" element={<DashboardBuilder />} />
         <Route path="dashboard-builder/custom" element={<CustomDashboard />} />
         <Route path="dashboard-builder/templates" element={<DashboardTemplates />} />
