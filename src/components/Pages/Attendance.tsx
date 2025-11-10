@@ -325,73 +325,77 @@ export function Attendance() {
           if (!ghlFolderId) {
             console.log('No GHL folder configured for attendance check-ins, using data URL')
           } else {
-            let { data: attendanceFolder } = await supabase
-              .from('media_folders')
-              .select('id')
-              .eq('ghl_folder_id', ghlFolderId)
-              .maybeSingle()
-
-            if (!attendanceFolder) {
-              const { data: newFolder, error: folderError } = await supabase
+            try {
+              let { data: attendanceFolder } = await supabase
                 .from('media_folders')
-                .insert({
-                  folder_name: folderAssignment?.media_folders?.folder_name || 'Attendance',
-                  ghl_folder_id: ghlFolderId,
-                  parent_id: null,
-                  location_id: locationId
-                })
                 .select('id')
-                .single()
+                .eq('ghl_folder_id', ghlFolderId)
+                .maybeSingle()
 
-              if (!folderError && newFolder) {
-                attendanceFolder = newFolder
+              if (!attendanceFolder) {
+                const { data: newFolder, error: folderError } = await supabase
+                  .from('media_folders')
+                  .insert({
+                    folder_name: folderAssignment?.media_folders?.folder_name || 'Attendance',
+                    ghl_folder_id: ghlFolderId,
+                    parent_id: null,
+                    location_id: locationId
+                  })
+                  .select('id')
+                  .single()
+
+                if (!folderError && newFolder) {
+                  attendanceFolder = newFolder
+                }
               }
-            }
 
-            const response = await fetch(selfieDataUrl)
-            const blob = await response.blob()
+              const response = await fetch(selfieDataUrl)
+              const blob = await response.blob()
 
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-            const fileName = `attendance-${selectedMember}-${timestamp}.jpg`
-            const file = new File([blob], fileName, { type: 'image/jpeg' })
+              const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+              const fileName = `attendance-${selectedMember}-${timestamp}.jpg`
+              const file = new File([blob], fileName, { type: 'image/jpeg' })
 
-            const formData = new FormData()
-            formData.append('file', file)
-            formData.append('name', fileName)
-            formData.append('parentId', ghlFolderId)
+              const formData = new FormData()
+              formData.append('file', file)
+              formData.append('name', fileName)
+              formData.append('parentId', ghlFolderId)
 
-            const uploadResponse = await fetch('https://services.leadconnectorhq.com/medias/upload-file', {
-              method: 'POST',
-              headers: {
-                'Accept': 'application/json',
-                'Version': '2021-07-28',
-                'Authorization': `Bearer ${accessToken.trim()}`
-              },
-              body: formData
-            })
-
-            if (uploadResponse.ok) {
-              const ghlFile = await uploadResponse.json()
-              selfieUrl = ghlFile.url || ghlFile.fileUrl || selfieDataUrl
-
-              await supabase.from('media_files').insert({
-                file_name: fileName,
-                file_url: selfieUrl,
-                file_type: 'image/jpeg',
-                file_size: file.size,
-                ghl_file_id: ghlFile._id || ghlFile.id,
-                folder_id: attendanceFolder?.id || null,
-                location_id: locationId,
-                thumbnail_url: ghlFile.thumbnailUrl || null,
-                uploaded_by: selectedMember
+              const uploadResponse = await fetch('https://services.leadconnectorhq.com/medias/upload-file', {
+                method: 'POST',
+                headers: {
+                  'Accept': 'application/json',
+                  'Version': '2021-07-28',
+                  'Authorization': `Bearer ${accessToken.trim()}`
+                },
+                body: formData
               })
-            } else {
-              console.error('Failed to upload to GHL, using data URL')
+
+              if (uploadResponse.ok) {
+                const ghlFile = await uploadResponse.json()
+                selfieUrl = ghlFile.url || ghlFile.fileUrl || selfieDataUrl
+
+                await supabase.from('media_files').insert({
+                  file_name: fileName,
+                  file_url: selfieUrl,
+                  file_type: 'image/jpeg',
+                  file_size: file.size,
+                  ghl_file_id: ghlFile._id || ghlFile.id,
+                  folder_id: attendanceFolder?.id || null,
+                  location_id: locationId,
+                  thumbnail_url: ghlFile.thumbnailUrl || null,
+                  uploaded_by: selectedMember
+                })
+              } else {
+                console.warn('GHL upload failed with status:', uploadResponse.status)
+              }
+            } catch (ghlErr) {
+              console.warn('Failed to upload to GHL (will continue with check-in):', ghlErr)
             }
           }
         }
       } catch (uploadErr) {
-        console.error('Error uploading selfie to GHL:', uploadErr)
+        console.error('Error preparing GHL upload (will continue with check-in):', uploadErr)
       }
 
       const { error } = await supabase
@@ -500,46 +504,52 @@ export function Attendance() {
           const ghlFolderId = folderAssignment?.media_folders?.ghl_folder_id
 
           if (ghlFolderId) {
-            const blob = await fetch(selfieDataUrl).then(r => r.blob())
-            const timestamp = new Date().getTime()
-            const fileName = `attendance-checkout-${selectedMember}-${timestamp}.jpg`
-            const file = new File([blob], fileName, { type: 'image/jpeg' })
+            try {
+              const blob = await fetch(selfieDataUrl).then(r => r.blob())
+              const timestamp = new Date().getTime()
+              const fileName = `attendance-checkout-${selectedMember}-${timestamp}.jpg`
+              const file = new File([blob], fileName, { type: 'image/jpeg' })
 
-            const formData = new FormData()
-            formData.append('file', file)
-            formData.append('name', fileName)
-            formData.append('parentId', ghlFolderId)
+              const formData = new FormData()
+              formData.append('file', file)
+              formData.append('name', fileName)
+              formData.append('parentId', ghlFolderId)
 
-            const uploadResponse = await fetch('https://services.leadconnectorhq.com/medias/upload-file', {
-              method: 'POST',
-              headers: {
-                'Accept': 'application/json',
-                'Version': '2021-07-28',
-                'Authorization': `Bearer ${accessToken.trim()}`
-              },
-              body: formData
-            })
-
-            if (uploadResponse.ok) {
-              const ghlFile = await uploadResponse.json()
-              selfieUrl = ghlFile.url || ghlFile.fileUrl || selfieDataUrl
-
-              await supabase.from('media_files').insert({
-                file_name: fileName,
-                file_url: selfieUrl,
-                file_type: 'image/jpeg',
-                file_size: file.size,
-                ghl_file_id: ghlFile._id || ghlFile.id,
-                folder_id: folderAssignment?.media_folders?.id || null,
-                location_id: locationId,
-                thumbnail_url: ghlFile.thumbnailUrl || null,
-                uploaded_by: selectedMember
+              const uploadResponse = await fetch('https://services.leadconnectorhq.com/medias/upload-file', {
+                method: 'POST',
+                headers: {
+                  'Accept': 'application/json',
+                  'Version': '2021-07-28',
+                  'Authorization': `Bearer ${accessToken.trim()}`
+                },
+                body: formData
               })
+
+              if (uploadResponse.ok) {
+                const ghlFile = await uploadResponse.json()
+                selfieUrl = ghlFile.url || ghlFile.fileUrl || selfieDataUrl
+
+                await supabase.from('media_files').insert({
+                  file_name: fileName,
+                  file_url: selfieUrl,
+                  file_type: 'image/jpeg',
+                  file_size: file.size,
+                  ghl_file_id: ghlFile._id || ghlFile.id,
+                  folder_id: folderAssignment?.media_folders?.id || null,
+                  location_id: locationId,
+                  thumbnail_url: ghlFile.thumbnailUrl || null,
+                  uploaded_by: selectedMember
+                })
+              } else {
+                console.warn('GHL upload failed with status:', uploadResponse.status)
+              }
+            } catch (ghlErr) {
+              console.warn('Failed to upload to GHL (will continue with checkout):', ghlErr)
             }
           }
         }
       } catch (uploadErr) {
-        console.error('Error uploading checkout selfie to GHL:', uploadErr)
+        console.error('Error preparing GHL upload (will continue with checkout):', uploadErr)
       }
 
       const { error } = await supabase
