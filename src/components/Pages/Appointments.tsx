@@ -722,13 +722,7 @@ export function Appointments() {
                 onClick: () => setView('add'),
                 variant: 'default' as const,
                 icon: Plus
-              }] : []),
-              {
-                label: 'Refresh',
-                onClick: fetchAppointments,
-                variant: 'outline' as const,
-                icon: RefreshCw
-              }
+              }] : [])
             ]}
           />
         )}
