@@ -654,12 +654,16 @@ export function Attendance() {
     }
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('attendance')
         .delete()
         .eq('id', record.id)
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('Delete error:', error)
+        throw error
+      }
 
       alert('Attendance record deleted successfully')
       fetchAttendance()
