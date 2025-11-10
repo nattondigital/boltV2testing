@@ -678,10 +678,10 @@ export function Attendance() {
   }
 
   const totalPresent = attendance.filter(a =>
-    a.date === format(new Date(), 'yyyy-MM-dd') && a.status === 'present'
+    a.date === format(new Date(), 'yyyy-MM-dd') && a.status?.toLowerCase() === 'present'
   ).length
   const totalLate = attendance.filter(a =>
-    a.date === format(new Date(), 'yyyy-MM-dd') && a.status === 'late'
+    a.date === format(new Date(), 'yyyy-MM-dd') && a.status?.toLowerCase() === 'late'
   ).length
   const totalAbsent = teamMembers.length - totalPresent - totalLate
 
