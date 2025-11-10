@@ -295,7 +295,7 @@ export function Leads() {
         .order('created_at', { ascending: false })
 
       if (shouldFilterByUser() && userProfile?.id) {
-        query = query.eq('owner', userProfile.id)
+        query = query.eq('assigned_to', userProfile.id)
       }
 
       const { data, error } = await query
