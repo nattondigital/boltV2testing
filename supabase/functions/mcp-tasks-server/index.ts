@@ -98,6 +98,18 @@ async function handleMCPRequest(
               description: 'Aggregated statistics about tasks',
               mimeType: 'application/json',
             },
+            {
+              uri: 'tasks://recurring',
+              name: 'Recurring Tasks',
+              description: 'All recurring task templates',
+              mimeType: 'application/json',
+            },
+            {
+              uri: 'tasks://recurring-active',
+              name: 'Active Recurring Tasks',
+              description: 'Active recurring task templates',
+              mimeType: 'application/json',
+            },
           ],
         }
         break
@@ -110,7 +122,27 @@ async function handleMCPRequest(
           throw new Error('URI is required')
         }
 
-        if (uri === 'tasks://statistics') {
+        if (uri === 'tasks://recurring' || uri === 'tasks://recurring-active') {
+          let query = supabase.from('recurring_tasks').select('*')
+
+          if (uri === 'tasks://recurring-active') {
+            query = query.eq('is_active', true)
+          }
+
+          const { data, error } = await query.order('created_at', { ascending: false })
+
+          if (error) throw error
+
+          response.result = {
+            contents: [
+              {
+                uri,
+                mimeType: 'application/json',
+                text: JSON.stringify(data, null, 2),
+              },
+            ],
+          }
+        } else if (uri === 'tasks://statistics') {
           const { data: allTasks, error: allError } = await supabase.from('tasks').select('*')
           if (allError) throw allError
 
@@ -346,6 +378,181 @@ async function handleMCPRequest(
                   },
                 },
                 required: ['task_id'],
+              },
+            },
+            {
+              name: 'get_recurring_tasks',
+              description: 'Retrieve recurring tasks with filtering. Use recurrence_task_id to get a specific recurring task.',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  agent_id: {
+                    type: 'string',
+                    description: 'AI Agent ID for permission checking',
+                  },
+                  phone_number: {
+                    type: 'string',
+                    description: 'User phone number for logging',
+                  },
+                  recurrence_task_id: {
+                    type: 'string',
+                    description: 'Get a specific recurring task by its ID (e.g., RETASK-0001)',
+                  },
+                  is_active: {
+                    type: 'boolean',
+                    description: 'Filter by active status',
+                  },
+                  recurrence_type: {
+                    type: 'string',
+                    enum: ['daily', 'weekly', 'monthly'],
+                    description: 'Filter by recurrence type',
+                  },
+                  limit: {
+                    type: 'number',
+                    description: 'Maximum number of recurring tasks to return (default: 100)',
+                  },
+                },
+              },
+            },
+            {
+              name: 'create_recurring_task',
+              description: 'Create a new recurring task template',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  agent_id: {
+                    type: 'string',
+                    description: 'AI Agent ID for permission checking',
+                  },
+                  phone_number: {
+                    type: 'string',
+                    description: 'User phone number for logging',
+                  },
+                  title: {
+                    type: 'string',
+                    description: 'Task title',
+                  },
+                  description: {
+                    type: 'string',
+                    description: 'Task description',
+                  },
+                  priority: {
+                    type: 'string',
+                    enum: ['Low', 'Medium', 'High', 'Urgent'],
+                    description: 'Task priority (default: Medium)',
+                  },
+                  assigned_to: {
+                    type: 'string',
+                    description: 'UUID of assigned team member',
+                  },
+                  contact_id: {
+                    type: 'string',
+                    description: 'UUID of related contact',
+                  },
+                  recurrence_type: {
+                    type: 'string',
+                    enum: ['daily', 'weekly', 'monthly'],
+                    description: 'Recurrence pattern type',
+                  },
+                  start_time: {
+                    type: 'string',
+                    description: 'Start time (HH:MM format, 24-hour)',
+                  },
+                  start_days: {
+                    type: 'array',
+                    items: { type: 'integer', minimum: 0, maximum: 6 },
+                    description: 'Days of week for start (0=Sunday, 6=Saturday). Required for weekly tasks.',
+                  },
+                  start_day_of_month: {
+                    type: 'integer',
+                    minimum: 1,
+                    maximum: 31,
+                    description: 'Day of month for start (1-31). Required for monthly tasks.',
+                  },
+                  due_time: {
+                    type: 'string',
+                    description: 'Due time (HH:MM format, 24-hour)',
+                  },
+                  due_days: {
+                    type: 'array',
+                    items: { type: 'integer', minimum: 0, maximum: 6 },
+                    description: 'Days of week for due (0=Sunday, 6=Saturday). Required for weekly tasks.',
+                  },
+                  due_day_of_month: {
+                    type: 'integer',
+                    minimum: 1,
+                    maximum: 31,
+                    description: 'Day of month for due (1-31). Required for monthly tasks.',
+                  },
+                  supporting_docs: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Array of document URLs',
+                  },
+                },
+                required: ['title', 'recurrence_type', 'start_time', 'due_time'],
+              },
+            },
+            {
+              name: 'update_recurring_task',
+              description: 'Update an existing recurring task template',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  agent_id: {
+                    type: 'string',
+                    description: 'AI Agent ID for permission checking',
+                  },
+                  phone_number: {
+                    type: 'string',
+                    description: 'User phone number for logging',
+                  },
+                  recurrence_task_id: {
+                    type: 'string',
+                    description: 'Recurring task ID to update',
+                  },
+                  title: { type: 'string' },
+                  description: { type: 'string' },
+                  priority: {
+                    type: 'string',
+                    enum: ['Low', 'Medium', 'High', 'Urgent'],
+                  },
+                  assigned_to: { type: 'string' },
+                  is_active: { type: 'boolean' },
+                  start_time: { type: 'string', description: 'HH:MM format' },
+                  due_time: { type: 'string', description: 'HH:MM format' },
+                  start_days: {
+                    type: 'array',
+                    items: { type: 'integer' },
+                  },
+                  due_days: {
+                    type: 'array',
+                    items: { type: 'integer' },
+                  },
+                },
+                required: ['recurrence_task_id'],
+              },
+            },
+            {
+              name: 'delete_recurring_task',
+              description: 'Delete a recurring task template by recurrence_task_id',
+              inputSchema: {
+                type: 'object',
+                properties: {
+                  agent_id: {
+                    type: 'string',
+                    description: 'AI Agent ID for permission checking',
+                  },
+                  phone_number: {
+                    type: 'string',
+                    description: 'User phone number for logging',
+                  },
+                  recurrence_task_id: {
+                    type: 'string',
+                    description: 'Recurring task ID to delete',
+                  },
+                },
+                required: ['recurrence_task_id'],
               },
             },
           ],
@@ -668,6 +875,263 @@ async function handleMCPRequest(
                 {
                   type: 'text',
                   text: JSON.stringify({ success: true, message: 'Task deleted successfully', task_id: args.task_id }, null, 2),
+                },
+              ],
+            }
+            break
+          }
+
+          case 'get_recurring_tasks': {
+            if (!enabledTools.includes('get_recurring_tasks')) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Tasks',
+                action: 'get_recurring_tasks',
+                result: 'Denied',
+                user_context: args.phone_number || null,
+                details: { reason: 'No permission to view recurring tasks' },
+              })
+              throw new Error('Agent does not have permission to view recurring tasks')
+            }
+
+            let query = supabase
+              .from('recurring_tasks')
+              .select('*')
+              .order('created_at', { ascending: false })
+
+            if (args.recurrence_task_id) {
+              query = query.eq('recurrence_task_id', args.recurrence_task_id)
+            }
+            if (args.is_active !== undefined) {
+              query = query.eq('is_active', args.is_active)
+            }
+            if (args.recurrence_type) {
+              query = query.eq('recurrence_type', args.recurrence_type)
+            }
+            if (args.limit) {
+              query = query.limit(args.limit)
+            } else {
+              query = query.limit(100)
+            }
+
+            const { data, error } = await query
+
+            if (error) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Tasks',
+                action: 'get_recurring_tasks',
+                result: 'Error',
+                user_context: args.phone_number || null,
+                details: { error: error.message },
+              })
+              throw error
+            }
+
+            await supabase.from('ai_agent_logs').insert({
+              agent_id: agentId,
+              agent_name: agentName,
+              module: 'Tasks',
+              action: 'get_recurring_tasks',
+              result: 'Success',
+              user_context: args.phone_number || null,
+              details: { filters: args, result_count: data?.length || 0 },
+            })
+
+            response.result = {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({ success: true, data, count: data?.length || 0 }, null, 2),
+                },
+              ],
+            }
+            break
+          }
+
+          case 'create_recurring_task': {
+            if (!enabledTools.includes('create_recurring_task')) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Tasks',
+                action: 'create_recurring_task',
+                result: 'Denied',
+                user_context: args.phone_number || null,
+                details: { reason: 'No permission to create recurring tasks' },
+              })
+              throw new Error('Agent does not have permission to create recurring tasks')
+            }
+
+            const taskData: any = {
+              title: args.title,
+              description: args.description || null,
+              priority: args.priority || 'Medium',
+              assigned_to: args.assigned_to || null,
+              contact_id: args.contact_id || null,
+              recurrence_type: args.recurrence_type,
+              start_time: args.start_time,
+              due_time: args.due_time,
+              start_days: args.start_days || null,
+              start_day_of_month: args.start_day_of_month || null,
+              due_days: args.due_days || null,
+              due_day_of_month: args.due_day_of_month || null,
+              supporting_docs: args.supporting_docs ? JSON.stringify(args.supporting_docs) : null,
+              is_active: true,
+            }
+
+            const { data, error } = await supabase
+              .from('recurring_tasks')
+              .insert(taskData)
+              .select()
+              .single()
+
+            if (error) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Tasks',
+                action: 'create_recurring_task',
+                result: 'Error',
+                user_context: args.phone_number || null,
+                details: { error: error.message, task_data: args },
+              })
+              throw error
+            }
+
+            await supabase.from('ai_agent_logs').insert({
+              agent_id: agentId,
+              agent_name: agentName,
+              module: 'Tasks',
+              action: 'create_recurring_task',
+              result: 'Success',
+              user_context: args.phone_number || null,
+              details: { recurrence_task_id: data.recurrence_task_id, title: args.title },
+            })
+
+            response.result = {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({
+                    success: true,
+                    message: 'Recurring task created successfully',
+                    recurring_task: data
+                  }, null, 2),
+                },
+              ],
+            }
+            break
+          }
+
+          case 'update_recurring_task': {
+            if (!enabledTools.includes('update_recurring_task')) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Tasks',
+                action: 'update_recurring_task',
+                result: 'Denied',
+                user_context: args.phone_number || null,
+                details: { reason: 'No permission to edit recurring tasks' },
+              })
+              throw new Error('Agent does not have permission to edit recurring tasks')
+            }
+
+            const { recurrence_task_id, ...updates } = args
+            delete updates.agent_id
+            delete updates.phone_number
+
+            const { data, error } = await supabase
+              .from('recurring_tasks')
+              .update(updates)
+              .eq('recurrence_task_id', recurrence_task_id)
+              .select()
+              .single()
+
+            if (error) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Tasks',
+                action: 'update_recurring_task',
+                result: 'Error',
+                user_context: args.phone_number || null,
+                details: { error: error.message, recurrence_task_id, updates },
+              })
+              throw error
+            }
+
+            await supabase.from('ai_agent_logs').insert({
+              agent_id: agentId,
+              agent_name: agentName,
+              module: 'Tasks',
+              action: 'update_recurring_task',
+              result: 'Success',
+              user_context: args.phone_number || null,
+              details: { recurrence_task_id, updates },
+            })
+
+            response.result = {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({ success: true, message: 'Recurring task updated successfully', recurring_task: data }, null, 2),
+                },
+              ],
+            }
+            break
+          }
+
+          case 'delete_recurring_task': {
+            if (!enabledTools.includes('delete_recurring_task')) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Tasks',
+                action: 'delete_recurring_task',
+                result: 'Denied',
+                user_context: args.phone_number || null,
+                details: { reason: 'No permission to delete recurring tasks' },
+              })
+              throw new Error('Agent does not have permission to delete recurring tasks')
+            }
+
+            const { error } = await supabase
+              .from('recurring_tasks')
+              .delete()
+              .eq('recurrence_task_id', args.recurrence_task_id)
+
+            if (error) {
+              await supabase.from('ai_agent_logs').insert({
+                agent_id: agentId,
+                agent_name: agentName,
+                module: 'Tasks',
+                action: 'delete_recurring_task',
+                result: 'Error',
+                user_context: args.phone_number || null,
+                details: { error: error.message, recurrence_task_id: args.recurrence_task_id },
+              })
+              throw error
+            }
+
+            await supabase.from('ai_agent_logs').insert({
+              agent_id: agentId,
+              agent_name: agentName,
+              module: 'Tasks',
+              action: 'delete_recurring_task',
+              result: 'Success',
+              user_context: args.phone_number || null,
+              details: { recurrence_task_id: args.recurrence_task_id },
+            })
+
+            response.result = {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({ success: true, message: 'Recurring task deleted successfully', recurrence_task_id: args.recurrence_task_id }, null, 2),
                 },
               ],
             }
