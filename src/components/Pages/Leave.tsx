@@ -909,7 +909,7 @@ export function Leave() {
                 </div>
 
                 <div className="flex items-center gap-3 mt-6">
-                  {selectedRequest.status === 'Pending' && (
+                  {canUpdate('leave') && selectedRequest.status === 'Pending' && (
                     <>
                       <Button
                         onClick={() => setShowApproveModal(true)}
@@ -927,24 +927,28 @@ export function Leave() {
                       </Button>
                     </>
                   )}
-                  <Button
-                    onClick={() => handleEditClick(selectedRequest)}
-                    className="flex-1"
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      handleDeleteRequest(selectedRequest.id, selectedRequest.request_id)
-                      handleBackToList()
-                    }}
-                    className="flex-1 text-red-600 hover:text-red-700 hover:border-red-600"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </Button>
+                  {canUpdate('leave') && (
+                    <Button
+                      onClick={() => handleEditClick(selectedRequest)}
+                      className="flex-1"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </Button>
+                  )}
+                  {canDelete('leave') && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        handleDeleteRequest(selectedRequest.id, selectedRequest.request_id)
+                        handleBackToList()
+                      }}
+                      className="flex-1 text-red-600 hover:text-red-700 hover:border-red-600"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1191,7 +1195,7 @@ export function Leave() {
 
               {/* Action Buttons */}
               <div className="px-4 pb-4 space-y-3">
-                {selectedRequest.status === 'Pending' && (
+                {canUpdate('leave') && selectedRequest.status === 'Pending' && (
                   <div className="flex gap-3">
                     <motion.button
                       whileTap={{ scale: 0.98 }}
@@ -1212,25 +1216,29 @@ export function Leave() {
                   </div>
                 )}
                 <div className="flex gap-3">
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleEditClick(selectedRequest)}
-                    className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl py-4 font-semibold shadow-lg flex items-center justify-center gap-2"
-                  >
-                    <Edit className="w-5 h-5" />
-                    Edit
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      handleDeleteRequest(selectedRequest.id, selectedRequest.request_id)
-                      handleBackToList()
-                    }}
-                    className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl py-4 font-semibold shadow-lg flex items-center justify-center gap-2"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                    Delete
-                  </motion.button>
+                  {canUpdate('leave') && (
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleEditClick(selectedRequest)}
+                      className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl py-4 font-semibold shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <Edit className="w-5 h-5" />
+                      Edit
+                    </motion.button>
+                  )}
+                  {canDelete('leave') && (
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        handleDeleteRequest(selectedRequest.id, selectedRequest.request_id)
+                        handleBackToList()
+                      }}
+                      className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-2xl py-4 font-semibold shadow-lg flex items-center justify-center gap-2"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                      Delete
+                    </motion.button>
+                  )}
                 </div>
               </div>
             </div>
