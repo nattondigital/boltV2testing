@@ -1114,10 +1114,12 @@ export const Tasks: React.FC = () => {
                             <table className="w-full">
                               <thead>
                                 <tr className="border-b border-gray-200">
+                                  <th className="text-left py-3 px-4 font-semibold text-brand-text">RETASK ID</th>
                                   <th className="text-left py-3 px-4 font-semibold text-brand-text">Title</th>
                                   <th className="text-left py-3 px-4 font-semibold text-brand-text">Type</th>
                                   <th className="text-left py-3 px-4 font-semibold text-brand-text">Schedule</th>
                                   <th className="text-left py-3 px-4 font-semibold text-brand-text">Time</th>
+                                  <th className="text-left py-3 px-4 font-semibold text-brand-text">Next Recurrence</th>
                                   <th className="text-left py-3 px-4 font-semibold text-brand-text">Priority</th>
                                   <th className="text-left py-3 px-4 font-semibold text-brand-text">Assigned To</th>
                                   <th className="text-left py-3 px-4 font-semibold text-brand-text">Status</th>
@@ -1153,6 +1155,9 @@ export const Tasks: React.FC = () => {
                                       className="border-b border-gray-100 hover:bg-gray-50"
                                     >
                                       <td className="py-3 px-4">
+                                        <span className="font-mono font-semibold text-brand-primary">{task.recurrence_task_id}</span>
+                                      </td>
+                                      <td className="py-3 px-4">
                                         <div>
                                           <p className="font-medium text-gray-900">{task.title}</p>
                                           {task.contact && (
@@ -1168,6 +1173,16 @@ export const Tasks: React.FC = () => {
                                       </td>
                                       <td className="py-3 px-4">
                                         <span className="text-sm text-gray-600">{timeText}</span>
+                                      </td>
+                                      <td className="py-3 px-4">
+                                        {task.next_recurrence ? (
+                                          <div className="text-sm">
+                                            <p className="text-gray-900">{new Date(task.next_recurrence).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                            <p className="text-gray-500">{new Date(task.next_recurrence).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+                                          </div>
+                                        ) : (
+                                          <span className="text-sm text-gray-400">Not set</span>
+                                        )}
                                       </td>
                                       <td className="py-3 px-4">
                                         <Badge className={`capitalize ${priorityColors[task.priority] || 'bg-gray-100 text-gray-800'}`}>

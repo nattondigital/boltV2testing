@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface RecurringTask {
   id: string
+  recurrence_task_id: string
   title: string
   description: string
   contact_id: string | null
@@ -174,12 +175,12 @@ Deno.serve(async (req: Request) => {
         const { data: existingTasks } = await supabase
           .from('tasks')
           .select('id')
-          .eq('title', task.title)
+          .eq('recurrence_task_id', task.recurrence_task_id)
           .gte('start_date', startOfDay.toISOString())
           .lte('start_date', endOfDay.toISOString())
 
         if (existingTasks && existingTasks.length > 0) {
-          console.log(`Task "${task.title}" already exists today, skipping`)
+          console.log(`Task "${task.title}" (${task.recurrence_task_id}) already exists today, skipping`)
 
           if (!task.next_recurrence) {
             const nextRecurrence = calculateNextRecurrence(task, kolkataTime)
@@ -187,7 +188,7 @@ Deno.serve(async (req: Request) => {
               .from('recurring_tasks')
               .update({ next_recurrence: nextRecurrence.toISOString() })
               .eq('id', task.id)
-            console.log(`Updated next_recurrence for existing task "${task.title}" to ${nextRecurrence.toISOString()}`)
+            console.log(`Updated next_recurrence for existing task "${task.title}" (${task.recurrence_task_id}) to ${nextRecurrence.toISOString()}`)
           }
           continue
         }
@@ -204,11 +205,12 @@ Deno.serve(async (req: Request) => {
           due_date: dueDateTime.toISOString(),
           supporting_documents: Array.isArray(task.supporting_docs) ? task.supporting_docs : [],
           progress_percentage: 0,
+          recurrence_task_id: task.recurrence_task_id,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }
 
-        console.log(`Creating task "${task.title}"...`)
+        console.log(`Creating task "${task.title}" (${task.recurrence_task_id})...`)
 
         const { data: createdTask, error: createError } = await supabase
           .from('tasks')
@@ -217,14 +219,15 @@ Deno.serve(async (req: Request) => {
           .single()
 
         if (createError) {
-          console.error(`Error creating task "${task.title}":`, createError)
+          console.error(`Error creating task "${task.title}" (${task.recurrence_task_id}):`, createError)
           errors.push({
             recurringTaskId: task.id,
+            recurrenceTaskId: task.recurrence_task_id,
             taskTitle: task.title,
             error: createError.message
           })
         } else {
-          console.log(`Successfully created task "${task.title}" with ID:`, createdTask.id)
+          console.log(`Successfully created task "${task.title}" (${task.recurrence_task_id}) with ID:`, createdTask.id)
 
           const nextRecurrence = calculateNextRecurrence(task, kolkataTime)
 
@@ -237,13 +240,14 @@ Deno.serve(async (req: Request) => {
             .eq('id', task.id)
 
           if (updateError) {
-            console.error(`Error updating next_recurrence for "${task.title}":`, updateError)
+            console.error(`Error updating next_recurrence for "${task.title}" (${task.recurrence_task_id}):`, updateError)
           } else {
-            console.log(`Updated next_recurrence for "${task.title}" to ${nextRecurrence.toISOString()}`)
+            console.log(`Updated next_recurrence for "${task.title}" (${task.recurrence_task_id}) to ${nextRecurrence.toISOString()}`)
           }
 
           tasksCreated.push({
             recurringTaskId: task.id,
+            recurrenceTaskId: task.recurrence_task_id,
             taskId: createdTask.id,
             title: task.title,
             nextRecurrence: nextRecurrence.toISOString()
