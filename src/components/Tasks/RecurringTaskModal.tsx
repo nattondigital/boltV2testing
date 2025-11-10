@@ -204,17 +204,13 @@ export const RecurringTaskModal: React.FC<RecurringTaskModalProps> = ({
   }
 
   const handleStartDayToggle = (day: string) => {
-    const newDays = selectedStartDays.includes(day)
-      ? selectedStartDays.filter(d => d !== day)
-      : [...selectedStartDays, day]
+    const newDays = [day]
     setSelectedStartDays(newDays)
     setFormData(prev => ({ ...prev, start_days: newDays }))
   }
 
   const handleDueDayToggle = (day: string) => {
-    const newDays = selectedDueDays.includes(day)
-      ? selectedDueDays.filter(d => d !== day)
-      : [...selectedDueDays, day]
+    const newDays = [day]
     setSelectedDueDays(newDays)
     setFormData(prev => ({ ...prev, due_days: newDays }))
   }
@@ -278,11 +274,11 @@ export const RecurringTaskModal: React.FC<RecurringTaskModalProps> = ({
 
     if (formData.recurrence_type === 'weekly') {
       if (!formData.start_days || formData.start_days.length === 0) {
-        alert('Please select at least one start day for weekly recurrence')
+        alert('Please select a start day for weekly recurrence')
         return
       }
       if (!formData.due_days || formData.due_days.length === 0) {
-        alert('Please select at least one due day for weekly recurrence')
+        alert('Please select a due day for weekly recurrence')
         return
       }
     }
@@ -514,7 +510,7 @@ export const RecurringTaskModal: React.FC<RecurringTaskModalProps> = ({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start Days <span className="text-red-500">*</span>
+                  Start Day <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2 flex-wrap">
                   {daysOfWeek.map(day => (
@@ -542,7 +538,7 @@ export const RecurringTaskModal: React.FC<RecurringTaskModalProps> = ({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Due Days <span className="text-red-500">*</span>
+                  Due Day <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2 flex-wrap">
                   {daysOfWeek.map(day => (
