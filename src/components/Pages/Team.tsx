@@ -549,10 +549,10 @@ export function Team() {
         >
           <option value="">All Roles</option>
           <option value="Super Admin">Super Admin</option>
-          <option value="Sales Manager">Sales Manager</option>
-          <option value="Content Manager">Content Manager</option>
-          <option value="Support Agent">Support Agent</option>
-          <option value="Marketing Specialist">Marketing Specialist</option>
+          <option value="Admin">Admin</option>
+          <option value="Manager">Manager</option>
+          <option value="Team Lead">Team Lead</option>
+          <option value="Team Member">Team Member</option>
         </select>
         <select
           className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
