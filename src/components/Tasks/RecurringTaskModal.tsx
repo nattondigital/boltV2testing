@@ -45,6 +45,66 @@ interface RecurringTaskModalProps {
   contacts: Contact[]
 }
 
+function calculateInitialNextRecurrence(task: RecurringTask): string {
+  const now = new Date()
+  const kolkataTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }))
+  let nextRecurrence = new Date(kolkataTime)
+
+  const [startHour, startMinute] = task.start_time.split(':').map(Number)
+
+  if (task.recurrence_type === 'daily') {
+    nextRecurrence.setHours(startHour, startMinute, 0, 0)
+    if (nextRecurrence <= kolkataTime) {
+      nextRecurrence.setDate(nextRecurrence.getDate() + 1)
+    }
+  } else if (task.recurrence_type === 'weekly') {
+    const startDays = task.start_days || []
+    const daysOfWeek = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+    const currentDayIndex = daysOfWeek.indexOf(
+      nextRecurrence.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'Asia/Kolkata' }).toLowerCase()
+    )
+
+    let daysToAdd = 7
+    for (const startDay of startDays) {
+      const startDayIndex = daysOfWeek.indexOf(startDay)
+      let diff = startDayIndex - currentDayIndex
+      if (diff < 0) diff += 7
+      if (diff === 0) {
+        nextRecurrence.setHours(startHour, startMinute, 0, 0)
+        if (nextRecurrence <= kolkataTime) {
+          diff = 7
+        }
+      }
+      if (diff < daysToAdd) {
+        daysToAdd = diff
+      }
+    }
+
+    if (daysToAdd > 0) {
+      nextRecurrence.setDate(nextRecurrence.getDate() + daysToAdd)
+    }
+    nextRecurrence.setHours(startHour, startMinute, 0, 0)
+  } else if (task.recurrence_type === 'monthly') {
+    let startDay = task.start_day_of_month || 1
+
+    if (startDay === 0) {
+      const lastDay = new Date(nextRecurrence.getFullYear(), nextRecurrence.getMonth() + 1, 0).getDate()
+      startDay = lastDay
+    }
+
+    nextRecurrence.setDate(Math.min(startDay, new Date(nextRecurrence.getFullYear(), nextRecurrence.getMonth() + 1, 0).getDate()))
+    nextRecurrence.setHours(startHour, startMinute, 0, 0)
+
+    if (nextRecurrence <= kolkataTime) {
+      nextRecurrence.setMonth(nextRecurrence.getMonth() + 1)
+      const lastDay = new Date(nextRecurrence.getFullYear(), nextRecurrence.getMonth() + 1, 0).getDate()
+      nextRecurrence.setDate(Math.min(startDay, lastDay))
+    }
+  }
+
+  return nextRecurrence.toISOString()
+}
+
 const daysOfWeek = [
   { value: 'mon', label: 'Mon' },
   { value: 'tue', label: 'Tue' },
@@ -262,9 +322,14 @@ export const RecurringTaskModal: React.FC<RecurringTaskModalProps> = ({
 
         if (error) throw error
       } else {
+        const nextRecurrence = calculateInitialNextRecurrence(formData)
+
         const { error } = await supabase
           .from('recurring_tasks')
-          .insert([formData])
+          .insert([{
+            ...formData,
+            next_recurrence: nextRecurrence
+          }])
 
         if (error) throw error
       }
