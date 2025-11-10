@@ -2153,18 +2153,22 @@ export function Leads() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Button onClick={() => handleEditClick(selectedLead)}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Lead
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleDeleteLead(selectedLead.id)}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
+              <PermissionGuard module="leads" action="update">
+                <Button onClick={() => handleEditClick(selectedLead)}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Lead
+                </Button>
+              </PermissionGuard>
+              <PermissionGuard module="leads" action="delete">
+                <Button
+                  variant="outline"
+                  onClick={() => handleDeleteLead(selectedLead.id)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+              </PermissionGuard>
             </div>
           </div>
         </div>
@@ -2802,24 +2806,28 @@ export function Leads() {
                                 <div className="flex items-start justify-between">
                                   <p className="text-gray-700 flex-1">{note.note_text}</p>
                                   <div className="flex space-x-1 ml-4">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        setEditingNoteId(note.id)
-                                        setEditingNoteText(note.note_text)
-                                      }}
-                                    >
-                                      <Edit className="w-3 h-3" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => handleDeleteNote(note.id)}
-                                      className="text-red-600"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
+                                    <PermissionGuard module="contacts" action="update">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          setEditingNoteId(note.id)
+                                          setEditingNoteText(note.note_text)
+                                        }}
+                                      >
+                                        <Edit className="w-3 h-3" />
+                                      </Button>
+                                    </PermissionGuard>
+                                    <PermissionGuard module="contacts" action="delete">
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleDeleteNote(note.id)}
+                                        className="text-red-600"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </PermissionGuard>
                                   </div>
                                 </div>
                                 <div className="flex items-center space-x-2 mt-2 text-xs text-gray-500">
@@ -2857,13 +2865,15 @@ export function Leads() {
                 <div className="flex items-center justify-between">
                   <CardTitle>Appointments ({contactAppointments.length})</CardTitle>
                   {linkedContact && (
-                    <Button
-                      onClick={handleAddAppointment}
-                      size="sm"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Appointment
-                    </Button>
+                    <PermissionGuard module="appointments" action="insert">
+                      <Button
+                        onClick={handleAddAppointment}
+                        size="sm"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Appointment
+                      </Button>
+                    </PermissionGuard>
                   )}
                 </div>
               </CardHeader>
@@ -2903,21 +2913,25 @@ export function Leads() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEditAppointment(appointment)}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-red-600 hover:text-red-700"
-                                onClick={() => handleDeleteAppointment(appointment.id)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              <PermissionGuard module="appointments" action="update">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleEditAppointment(appointment)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              </PermissionGuard>
+                              <PermissionGuard module="appointments" action="delete">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-red-600 hover:text-red-700"
+                                  onClick={() => handleDeleteAppointment(appointment.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </PermissionGuard>
                             </div>
                           </div>
 
@@ -2964,13 +2978,15 @@ export function Leads() {
                 <div className="flex items-center justify-between">
                   <CardTitle>Tasks ({contactTasks.length})</CardTitle>
                   {linkedContact && (
-                    <Button
-                      onClick={handleAddTask}
-                      size="sm"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Task
-                    </Button>
+                    <PermissionGuard module="tasks" action="insert">
+                      <Button
+                        onClick={handleAddTask}
+                        size="sm"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Task
+                      </Button>
+                    </PermissionGuard>
                   )}
                 </div>
               </CardHeader>
@@ -3021,21 +3037,25 @@ export function Leads() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleEditTask(task)}
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="text-red-600 hover:text-red-700"
-                                onClick={() => handleDeleteTask(task.id)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              <PermissionGuard module="tasks" action="update">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleEditTask(task)}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              </PermissionGuard>
+                              <PermissionGuard module="tasks" action="delete">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-red-600 hover:text-red-700"
+                                  onClick={() => handleDeleteTask(task.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </PermissionGuard>
                             </div>
                           </div>
 
@@ -3348,17 +3368,21 @@ export function Leads() {
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditClick(lead); }}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit Lead
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id); }}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete Lead
-                              </DropdownMenuItem>
+                              {canUpdate('leads') && (
+                                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditClick(lead); }}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Lead
+                                </DropdownMenuItem>
+                              )}
+                              {canDelete('leads') && (
+                                <DropdownMenuItem
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id); }}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete Lead
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -3501,17 +3525,21 @@ export function Leads() {
                                     <Eye className="w-4 h-4 mr-2" />
                                     View Details
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditClick(lead); }}>
-                                    <Edit className="w-4 h-4 mr-2" />
-                                    Edit Lead
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id); }}
-                                    className="text-red-600 focus:text-red-600"
-                                  >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Delete Lead
-                                  </DropdownMenuItem>
+                                  {canUpdate('leads') && (
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditClick(lead); }}>
+                                      <Edit className="w-4 h-4 mr-2" />
+                                      Edit Lead
+                                    </DropdownMenuItem>
+                                  )}
+                                  {canDelete('leads') && (
+                                    <DropdownMenuItem
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.id); }}
+                                      className="text-red-600 focus:text-red-600"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-2" />
+                                      Delete Lead
+                                    </DropdownMenuItem>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </td>

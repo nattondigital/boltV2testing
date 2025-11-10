@@ -13,6 +13,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { RecurringTaskModal } from '@/components/Tasks/RecurringTaskModal'
 import { supabase } from '@/lib/supabase'
 import { formatDate, formatDateTime, convertISTToUTC, convertUTCToISTForInput } from '@/lib/utils'
+import { useAuth } from '@/contexts/AuthContext'
+import { PermissionGuard } from '@/components/Common/PermissionGuard'
 
 interface Task {
   id: string
@@ -104,6 +106,7 @@ const categoryOptions = ['Development', 'Design', 'Marketing', 'Sales', 'Support
 export const Tasks: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { canCreate, canUpdate, canDelete } = useAuth()
   const [activeTab, setActiveTab] = useState<'active' | 'recurring'>('active')
   const [view, setView] = useState<'list' | 'add' | 'edit' | 'view'>('list')
   const [tasks, setTasks] = useState<Task[]>([])
@@ -776,16 +779,16 @@ export const Tasks: React.FC = () => {
               title="Tasks Management"
               subtitle="Create and manage team tasks efficiently"
               actions={[
-                {
+                ...(canCreate('tasks') ? [{
                   label: activeTab === 'active' ? 'Add Task' : 'Add Recurring Task',
                   onClick: () => activeTab === 'active' ? setView('add') : setShowRecurringModal(true),
-                  variant: 'default',
+                  variant: 'default' as const,
                   icon: Plus
-                },
+                }] : []),
                 {
                   label: 'Refresh',
                   onClick: () => activeTab === 'active' ? fetchTasks() : fetchRecurringTasks(),
-                  variant: 'outline',
+                  variant: 'outline' as const,
                   icon: RefreshCw
                 }
               ]}
@@ -1067,17 +1070,21 @@ export const Tasks: React.FC = () => {
                                         <Eye className="w-4 h-4 mr-2" />
                                         View Details
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleEditClick(task)}>
-                                        <Edit className="w-4 h-4 mr-2" />
-                                        Edit Task
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() => handleDeleteTask(task.id)}
-                                        className="text-red-600 focus:text-red-600"
-                                      >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Delete Task
-                                      </DropdownMenuItem>
+                                      {canUpdate('tasks') && (
+                                        <DropdownMenuItem onClick={() => handleEditClick(task)}>
+                                          <Edit className="w-4 h-4 mr-2" />
+                                          Edit Task
+                                        </DropdownMenuItem>
+                                      )}
+                                      {canDelete('tasks') && (
+                                        <DropdownMenuItem
+                                          onClick={() => handleDeleteTask(task.id)}
+                                          className="text-red-600 focus:text-red-600"
+                                        >
+                                          <Trash2 className="w-4 h-4 mr-2" />
+                                          Delete Task
+                                        </DropdownMenuItem>
+                                      )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </td>
@@ -1201,37 +1208,41 @@ export const Tasks: React.FC = () => {
                                       </td>
                                       <td className="py-3 px-4">
                                         <div className="flex items-center gap-2">
-                                          <button
-                                            onClick={() => {
-                                              setSelectedRecurringTask(task)
-                                              setShowRecurringModal(true)
-                                            }}
-                                            className="text-blue-600 hover:text-blue-800"
-                                            title="Edit"
-                                          >
-                                            <Edit className="w-4 h-4" />
-                                          </button>
-                                          <button
-                                            onClick={async () => {
-                                              if (confirm('Are you sure you want to delete this recurring task?')) {
-                                                try {
-                                                  const { error } = await supabase
-                                                    .from('recurring_tasks')
-                                                    .delete()
-                                                    .eq('id', task.id)
-                                                  if (error) throw error
-                                                  fetchRecurringTasks()
-                                                } catch (error) {
-                                                  console.error('Error deleting recurring task:', error)
-                                                  alert('Failed to delete recurring task')
+                                          {canUpdate('tasks') && (
+                                            <button
+                                              onClick={() => {
+                                                setSelectedRecurringTask(task)
+                                                setShowRecurringModal(true)
+                                              }}
+                                              className="text-blue-600 hover:text-blue-800"
+                                              title="Edit"
+                                            >
+                                              <Edit className="w-4 h-4" />
+                                            </button>
+                                          )}
+                                          {canDelete('tasks') && (
+                                            <button
+                                              onClick={async () => {
+                                                if (confirm('Are you sure you want to delete this recurring task?')) {
+                                                  try {
+                                                    const { error } = await supabase
+                                                      .from('recurring_tasks')
+                                                      .delete()
+                                                      .eq('id', task.id)
+                                                    if (error) throw error
+                                                    fetchRecurringTasks()
+                                                  } catch (error) {
+                                                    console.error('Error deleting recurring task:', error)
+                                                    alert('Failed to delete recurring task')
+                                                  }
                                                 }
-                                              }
-                                            }}
-                                            className="text-red-600 hover:text-red-800"
-                                            title="Delete"
-                                          >
-                                            <Trash2 className="w-4 h-4" />
-                                          </button>
+                                              }}
+                                              className="text-red-600 hover:text-red-800"
+                                              title="Delete"
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
+                                          )}
                                         </div>
                                       </td>
                                     </motion.tr>
@@ -1715,10 +1726,12 @@ export const Tasks: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3 pt-4">
-                    <Button onClick={view === 'add' ? handleAddTask : handleEditTask}>
-                      <Save className="w-4 h-4 mr-2" />
-                      {view === 'add' ? 'Create Task' : 'Update Task'}
-                    </Button>
+                    <PermissionGuard module="tasks" action={view === 'add' ? 'insert' : 'update'}>
+                      <Button onClick={view === 'add' ? handleAddTask : handleEditTask}>
+                        <Save className="w-4 h-4 mr-2" />
+                        {view === 'add' ? 'Create Task' : 'Update Task'}
+                      </Button>
+                    </PermissionGuard>
                     <Button variant="outline" onClick={handleBackNavigation}>
                       Cancel
                     </Button>
@@ -1761,22 +1774,26 @@ export const Tasks: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={() => handleEditClick(selectedTask)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this task?')) {
-                            handleDeleteTask(selectedTask.id)
-                          }
-                        }}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </Button>
+                      <PermissionGuard module="tasks" action="update">
+                        <Button onClick={() => handleEditClick(selectedTask)}>
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </Button>
+                      </PermissionGuard>
+                      <PermissionGuard module="tasks" action="delete">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            if (confirm('Are you sure you want to delete this task?')) {
+                              handleDeleteTask(selectedTask.id)
+                            }
+                          }}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </Button>
+                      </PermissionGuard>
                     </div>
                   </div>
 
@@ -2357,10 +2374,12 @@ export const Tasks: React.FC = () => {
               </div>
 
               <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3">
-                <Button onClick={view === 'add' ? handleAddTask : handleEditTask} className="flex-1">
-                  <Save className="w-4 h-4 mr-2" />
-                  {view === 'add' ? 'Create Task' : 'Update Task'}
-                </Button>
+                <PermissionGuard module="tasks" action={view === 'add' ? 'insert' : 'update'}>
+                  <Button onClick={view === 'add' ? handleAddTask : handleEditTask} className="flex-1">
+                    <Save className="w-4 h-4 mr-2" />
+                    {view === 'add' ? 'Create Task' : 'Update Task'}
+                  </Button>
+                </PermissionGuard>
                 <Button variant="outline" onClick={handleBackNavigation}>
                   Cancel
                 </Button>
@@ -2489,21 +2508,25 @@ export const Tasks: React.FC = () => {
               </div>
 
               <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3">
-                <Button onClick={() => handleEditClick(selectedTask)} className="flex-1">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (confirm('Are you sure you want to delete this task?')) {
-                      handleDeleteTask(selectedTask.id)
-                    }
-                  }}
-                  className="text-red-600"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <PermissionGuard module="tasks" action="update">
+                  <Button onClick={() => handleEditClick(selectedTask)} className="flex-1">
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                </PermissionGuard>
+                <PermissionGuard module="tasks" action="delete">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (confirm('Are you sure you want to delete this task?')) {
+                        handleDeleteTask(selectedTask.id)
+                      }
+                    }}
+                    className="text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </PermissionGuard>
               </div>
             </motion.div>
           )}

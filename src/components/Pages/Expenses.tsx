@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { format } from 'date-fns'
+import { useAuth } from '@/contexts/AuthContext'
+import { PermissionGuard } from '@/components/Common/PermissionGuard'
 
 const statusColors: Record<string, string> = {
   'Pending': 'bg-yellow-100 text-yellow-800',
@@ -61,6 +63,7 @@ interface Expense {
 }
 
 export function Expenses() {
+  const { canCreate, canUpdate, canDelete } = useAuth()
   const [view, setView] = useState<'list' | 'add' | 'edit' | 'view'>('list')
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
@@ -498,12 +501,12 @@ export function Expenses() {
               title="Expense Management"
               subtitle="Track, manage, and approve team expenses"
               actions={[
-                {
+                ...(canCreate('expenses') ? [{
                   label: 'Add Expense',
                   onClick: handleAddExpense,
-                  variant: 'default',
+                  variant: 'default' as const,
                   icon: Plus
-                }
+                }] : [])
               ]}
             />
 
@@ -670,17 +673,21 @@ export function Expenses() {
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEditClick(expense)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit Expense
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteExpense(expense.id, expense.expense_id)}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete Expense
-                              </DropdownMenuItem>
+                              {canUpdate('expenses') && (
+                                <DropdownMenuItem onClick={() => handleEditClick(expense)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Expense
+                                </DropdownMenuItem>
+                              )}
+                              {canDelete('expenses') && (
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteExpense(expense.id, expense.expense_id)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete Expense
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -829,14 +836,16 @@ export function Expenses() {
                 </div>
 
                 <div className="flex items-center space-x-3 pt-4">
-                  <Button
-                    onClick={view === 'add' ? handleCreateExpense : handleEditExpense}
-                    disabled={!formData.category || !formData.amount || !formData.description || !formData.expense_date || !formData.payment_method}
-                    className="flex-1"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {view === 'add' ? 'Add Expense' : 'Save Changes'}
-                  </Button>
+                  <PermissionGuard module="expenses" action={view === 'add' ? 'insert' : 'update'}>
+                    <Button
+                      onClick={view === 'add' ? handleCreateExpense : handleEditExpense}
+                      disabled={!formData.category || !formData.amount || !formData.description || !formData.expense_date || !formData.payment_method}
+                      className="flex-1"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      {view === 'add' ? 'Add Expense' : 'Save Changes'}
+                    </Button>
+                  </PermissionGuard>
                   <Button variant="outline" onClick={handleBackToList} className="flex-1">
                     Cancel
                   </Button>
