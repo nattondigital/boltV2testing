@@ -31,15 +31,16 @@ function calculateNextRecurrence(task: RecurringTask, fromDate: Date): Date {
   let nextRecurrence = new Date(kolkataTime)
 
   const [startHour, startMinute] = task.start_time.split(':').map(Number)
+  const istOffset = 5.5 * 60 * 60 * 1000
 
   if (task.recurrence_type === 'daily') {
-    nextRecurrence.setDate(nextRecurrence.getDate() + 1)
-    nextRecurrence.setHours(startHour, startMinute, 0, 0)
+    nextRecurrence = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth(), kolkataTime.getDate() + 1, startHour, startMinute, 0, 0)
+    nextRecurrence = new Date(nextRecurrence.getTime() - istOffset)
   } else if (task.recurrence_type === 'weekly') {
     const startDays = task.start_days || []
     const daysOfWeek = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
     const currentDayIndex = daysOfWeek.indexOf(
-      nextRecurrence.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'Asia/Kolkata' }).toLowerCase()
+      kolkataTime.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'Asia/Kolkata' }).toLowerCase()
     )
 
     let daysToAdd = 7
@@ -52,19 +53,23 @@ function calculateNextRecurrence(task: RecurringTask, fromDate: Date): Date {
       }
     }
 
-    nextRecurrence.setDate(nextRecurrence.getDate() + daysToAdd)
-    nextRecurrence.setHours(startHour, startMinute, 0, 0)
+    nextRecurrence = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth(), kolkataTime.getDate() + daysToAdd, startHour, startMinute, 0, 0)
+    nextRecurrence = new Date(nextRecurrence.getTime() - istOffset)
   } else if (task.recurrence_type === 'monthly') {
     let startDay = task.start_day_of_month || 1
 
     if (startDay === 0) {
-      const lastDay = new Date(nextRecurrence.getFullYear(), nextRecurrence.getMonth() + 2, 0).getDate()
+      const lastDay = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth() + 2, 0).getDate()
       startDay = lastDay
     }
 
-    nextRecurrence.setMonth(nextRecurrence.getMonth() + 1)
-    nextRecurrence.setDate(Math.min(startDay, new Date(nextRecurrence.getFullYear(), nextRecurrence.getMonth() + 1, 0).getDate()))
-    nextRecurrence.setHours(startHour, startMinute, 0, 0)
+    const nextMonth = kolkataTime.getMonth() + 1
+    const nextYear = nextMonth > 11 ? kolkataTime.getFullYear() + 1 : kolkataTime.getFullYear()
+    const adjustedMonth = nextMonth > 11 ? 0 : nextMonth
+    const maxDay = new Date(nextYear, adjustedMonth + 1, 0).getDate()
+
+    nextRecurrence = new Date(nextYear, adjustedMonth, Math.min(startDay, maxDay), startHour, startMinute, 0, 0)
+    nextRecurrence = new Date(nextRecurrence.getTime() - istOffset)
   }
 
   return nextRecurrence
@@ -113,16 +118,18 @@ Deno.serve(async (req: Request) => {
         const [dueHour, dueMinute] = task.due_time.split(':').map(Number)
 
         if (task.recurrence_type === 'daily') {
-          startDateTime = new Date(kolkataTime)
-          startDateTime.setHours(startHour, startMinute, 0, 0)
+          startDateTime = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth(), kolkataTime.getDate(), startHour, startMinute, 0, 0)
+          const istOffset = 5.5 * 60 * 60 * 1000
+          startDateTime = new Date(startDateTime.getTime() - istOffset)
 
-          dueDateTime = new Date(kolkataTime)
-          dueDateTime.setHours(dueHour, dueMinute, 0, 0)
+          dueDateTime = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth(), kolkataTime.getDate(), dueHour, dueMinute, 0, 0)
+          dueDateTime = new Date(dueDateTime.getTime() - istOffset)
         } else if (task.recurrence_type === 'weekly') {
           const currentDayOfWeek = kolkataTime.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'Asia/Kolkata' }).toLowerCase()
+          const istOffset = 5.5 * 60 * 60 * 1000
 
-          startDateTime = new Date(kolkataTime)
-          startDateTime.setHours(startHour, startMinute, 0, 0)
+          startDateTime = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth(), kolkataTime.getDate(), startHour, startMinute, 0, 0)
+          startDateTime = new Date(startDateTime.getTime() - istOffset)
 
           const dueDays = task.due_days || []
           const daysOfWeek = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
@@ -138,31 +145,32 @@ Deno.serve(async (req: Request) => {
             }
           }
 
-          dueDateTime = new Date(kolkataTime)
-          dueDateTime.setDate(dueDateTime.getDate() + daysToAdd)
-          dueDateTime.setHours(dueHour, dueMinute, 0, 0)
+          dueDateTime = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth(), kolkataTime.getDate() + daysToAdd, dueHour, dueMinute, 0, 0)
+          dueDateTime = new Date(dueDateTime.getTime() - istOffset)
         } else if (task.recurrence_type === 'monthly') {
-          startDateTime = new Date(kolkataTime)
-          startDateTime.setHours(startHour, startMinute, 0, 0)
+          const istOffset = 5.5 * 60 * 60 * 1000
+
+          startDateTime = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth(), kolkataTime.getDate(), startHour, startMinute, 0, 0)
+          startDateTime = new Date(startDateTime.getTime() - istOffset)
 
           let dueDay = task.due_day_of_month || 1
-          dueDateTime = new Date(kolkataTime)
 
           if (dueDay === 0) {
             const lastDay = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth() + 1, 0).getDate()
             dueDay = lastDay
           }
 
-          dueDateTime.setDate(dueDay)
-          dueDateTime.setHours(dueHour, dueMinute, 0, 0)
+          dueDateTime = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth(), dueDay, dueHour, dueMinute, 0, 0)
 
           const startDay = task.start_day_of_month === 0
             ? new Date(kolkataTime.getFullYear(), kolkataTime.getMonth() + 1, 0).getDate()
             : task.start_day_of_month || 1
 
           if (dueDay < startDay) {
-            dueDateTime.setMonth(dueDateTime.getMonth() + 1)
+            dueDateTime = new Date(kolkataTime.getFullYear(), kolkataTime.getMonth() + 1, dueDay, dueHour, dueMinute, 0, 0)
           }
+
+          dueDateTime = new Date(dueDateTime.getTime() - istOffset)
         } else {
           throw new Error(`Unknown recurrence type: ${task.recurrence_type}`)
         }
