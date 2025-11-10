@@ -235,13 +235,18 @@ export function Team() {
 
   const handleCreateMember = async () => {
     try {
+      // Convert role back to snake_case for database
+      const roleToSnakeCase = (role: string) => {
+        return role.toLowerCase().replace(/\s+/g, '_')
+      }
+
       const { data, error } = await supabase
         .from('admin_users')
         .insert([{
           full_name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          role: formData.role,
+          role: roleToSnakeCase(formData.role),
           department: formData.department,
           status: formData.status,
           password_hash: '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
@@ -253,13 +258,20 @@ export function Team() {
 
       if (error) throw error
 
+      const formatRole = (role: string) => {
+        return role
+          .split('_')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')
+      }
+
       const newMember = {
         id: data[0].id,
         memberId: data[0].member_id,
         name: data[0].full_name,
         email: data[0].email,
         phone: data[0].phone,
-        role: data[0].role,
+        role: formatRole(data[0].role),
         department: data[0].department,
         modulePermissions: data[0].permissions,
         status: data[0].status,
@@ -280,13 +292,18 @@ export function Team() {
 
   const handleEditMember = async () => {
     try {
+      // Convert role back to snake_case for database
+      const roleToSnakeCase = (role: string) => {
+        return role.toLowerCase().replace(/\s+/g, '_')
+      }
+
       const { data, error } = await supabase
         .from('admin_users')
         .update({
           full_name: formData.name,
           email: formData.email,
           phone: formData.phone,
-          role: formData.role,
+          role: roleToSnakeCase(formData.role),
           department: formData.department,
           status: formData.status,
           is_active: formData.status === 'Active',
@@ -1299,7 +1316,7 @@ export function Team() {
                 Close
               </Button>
               <Button
-                onClick={() => setView('edit')}
+                onClick={() => handleEditClick(selectedMember)}
                 className="bg-brand-primary hover:bg-brand-primary/90"
               >
                 <Edit className="w-4 h-4 mr-2" />
