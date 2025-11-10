@@ -893,7 +893,7 @@ export function Attendance() {
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-2">
-                                {!record.check_out_time && (
+                                {canUpdate('attendance') && !record.check_out_time && (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -914,17 +914,21 @@ export function Attendance() {
                                       <Eye className="w-4 h-4 mr-2" />
                                       View Details
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleEditDetails(record)}>
-                                      <Edit className="w-4 h-4 mr-2" />
-                                      Edit Details
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => handleDeleteAttendance(record)}
-                                      className="text-red-600"
-                                    >
-                                      <Trash2 className="w-4 h-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
+                                    {canUpdate('attendance') && (
+                                      <DropdownMenuItem onClick={() => handleEditDetails(record)}>
+                                        <Edit className="w-4 h-4 mr-2" />
+                                        Edit Details
+                                      </DropdownMenuItem>
+                                    )}
+                                    {canDelete('attendance') && (
+                                      <DropdownMenuItem
+                                        onClick={() => handleDeleteAttendance(record)}
+                                        className="text-red-600"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    )}
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </div>
