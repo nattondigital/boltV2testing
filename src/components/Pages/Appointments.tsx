@@ -1410,10 +1410,12 @@ export function Appointments() {
               </div>
 
               <div className="flex items-center space-x-3 mt-6">
-                <Button onClick={() => handleEditClick(selectedAppointment)}>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Appointment
-                </Button>
+                <PermissionGuard module="appointments" action="update">
+                  <Button onClick={() => handleEditClick(selectedAppointment)}>
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Appointment
+                  </Button>
+                </PermissionGuard>
                 <Button variant="outline" onClick={() => { setView('list'); resetForm(); }}>
                   Close
                 </Button>
@@ -1494,16 +1496,18 @@ export function Appointments() {
                 </div>
               </div>
 
-              <div className="px-4 mb-4">
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setView('add')}
-                  className="w-full bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-2xl py-4 px-6 shadow-lg flex items-center justify-center gap-3 font-semibold"
-                >
-                  <Plus className="w-5 h-5" />
-                  Add New Appointment
-                </motion.button>
-              </div>
+              <PermissionGuard module="appointments" action="insert">
+                <div className="px-4 mb-4">
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setView('add')}
+                    className="w-full bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-2xl py-4 px-6 shadow-lg flex items-center justify-center gap-3 font-semibold"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Add New Appointment
+                  </motion.button>
+                </div>
+              </PermissionGuard>
 
               <div className="px-4 pb-20">
                 <h2 className="text-lg font-bold text-gray-800 mb-3">Upcoming Appointments</h2>
@@ -1942,24 +1946,28 @@ export function Appointments() {
               </div>
 
               <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3">
-                <Button onClick={() => handleEditClick(selectedAppointment)} className="flex-1">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    if (confirm('Are you sure you want to delete this appointment?')) {
-                      handleDeleteAppointment(selectedAppointment.id)
-                      setView('list')
-                      resetForm()
-                    }
-                  }}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </Button>
+                <PermissionGuard module="appointments" action="update">
+                  <Button onClick={() => handleEditClick(selectedAppointment)} className="flex-1">
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                </PermissionGuard>
+                <PermissionGuard module="appointments" action="delete">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (confirm('Are you sure you want to delete this appointment?')) {
+                        handleDeleteAppointment(selectedAppointment.id)
+                        setView('list')
+                        resetForm()
+                      }
+                    }}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                </PermissionGuard>
                 <Button variant="outline" onClick={() => { setView('list'); resetForm(); }}>
                   Close
                 </Button>
