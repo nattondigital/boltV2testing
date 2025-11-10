@@ -166,6 +166,7 @@ export function Leads() {
   const [sourceFilter, setSourceFilter] = useState('')
   const [interestFilter, setInterestFilter] = useState('')
   const [stageFilter, setStageFilter] = useState('')
+  const [assignedToFilter, setAssignedToFilter] = useState('')
   const [leads, setLeads] = useState<Lead[]>([])
   const [teamMembers, setTeamMembers] = useState<any[]>([])
   const [pipelines, setPipelines] = useState<Pipeline[]>([])
@@ -1148,8 +1149,9 @@ export function Leads() {
     const matchesSource = !sourceFilter || lead.source === sourceFilter
     const matchesInterest = !interestFilter || lead.interest === interestFilter
     const matchesStage = !stageFilter || lead.stage === stageFilter
+    const matchesAssignedTo = !assignedToFilter || lead.owner === assignedToFilter
 
-    return matchesSearch && matchesPipeline && matchesSource && matchesInterest && matchesStage
+    return matchesSearch && matchesPipeline && matchesSource && matchesInterest && matchesStage && matchesAssignedTo
   })
 
   // Debug logging
@@ -3272,6 +3274,16 @@ export function Leads() {
               <option value="">All Stages</option>
               {stageColumns.map((stage) => (
                 <option key={stage.id} value={stage.id}>{stage.label}</option>
+              ))}
+            </select>
+            <select
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              value={assignedToFilter}
+              onChange={(e) => setAssignedToFilter(e.target.value)}
+            >
+              <option value="">All Assigned To</option>
+              {teamMembers.map((member) => (
+                <option key={member.id} value={member.full_name}>{member.full_name}</option>
               ))}
             </select>
             <div className="ml-auto flex items-center gap-2 border border-gray-300 rounded-md overflow-hidden">
