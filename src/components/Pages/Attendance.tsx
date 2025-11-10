@@ -408,11 +408,11 @@ export function Attendance() {
       if (error) {
         if (error.code === '23505') {
           alert('Attendance already marked for today')
-        } else if (error.message && error.message.includes('last attendance entry') && error.message.includes('Present')) {
+        } else if (error.message && error.message.includes('last attendance entry') && error.message.includes('not been checked out')) {
           // Extract date from error message if possible
           const dateMatch = error.message.match(/\(([^)]+)\)/)
           const dateStr = dateMatch ? dateMatch[1] : 'previous entry'
-          alert(`Cannot check in: Your last attendance entry (${dateStr}) is still marked as "Present". Please check out first before creating a new check-in.`)
+          alert(`Cannot check in: Your last attendance entry (${dateStr}) has not been checked out yet. Please check out first before creating a new check-in.`)
         } else {
           throw error
         }
@@ -425,10 +425,10 @@ export function Attendance() {
       setView('list')
     } catch (err: any) {
       console.error('Error marking attendance:', err)
-      if (err.message && err.message.includes('last attendance entry') && err.message.includes('Present')) {
+      if (err.message && err.message.includes('last attendance entry') && err.message.includes('not been checked out')) {
         const dateMatch = err.message.match(/\(([^)]+)\)/)
         const dateStr = dateMatch ? dateMatch[1] : 'previous entry'
-        alert(`Cannot check in: Your last attendance entry (${dateStr}) is still marked as "Present". Please check out first before creating a new check-in.`)
+        alert(`Cannot check in: Your last attendance entry (${dateStr}) has not been checked out yet. Please check out first before creating a new check-in.`)
       } else {
         alert('Failed to mark attendance: ' + (err.message || 'Unknown error'))
       }
