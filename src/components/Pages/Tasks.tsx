@@ -1096,7 +1096,7 @@ export const Tasks: React.FC = () => {
           </>
         )}
 
-        {view === 'list' && (
+        {view === 'list' && recurringView === 'list' && (
           <>
             {isLoading && (
               <motion.div
