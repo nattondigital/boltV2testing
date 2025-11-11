@@ -348,7 +348,7 @@ export const RecurringTaskForm: React.FC<RecurringTaskFormProps> = ({
   const isViewMode = mode === 'view'
 
   return (
-    <Card>
+    <Card className="shadow-xl">
       <CardContent className="p-6">
         <div className="flex items-center gap-4 mb-6">
           <Button
@@ -365,20 +365,20 @@ export const RecurringTaskForm: React.FC<RecurringTaskFormProps> = ({
         </div>
 
         <div className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Title <span className="text-red-500">*</span>
-            </label>
-            <Input
-              value={formData.title}
-              onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="Enter task title"
-              disabled={isViewMode}
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Title <span className="text-red-500">*</span>
+          </label>
+          <Input
+            value={formData.title}
+            onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
+            placeholder="Enter task title"
+            disabled={isViewMode}
+          />
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
             <textarea
               value={formData.description}
               onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
