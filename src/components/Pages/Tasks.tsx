@@ -829,7 +829,14 @@ export const Tasks: React.FC = () => {
               actions={[
                 ...(canCreate('tasks') ? [{
                   label: activeTab === 'active' ? 'Add Task' : 'Add Recurring Task',
-                  onClick: () => activeTab === 'active' ? setView('add') : setRecurringView('add'),
+                  onClick: () => {
+                    if (activeTab === 'active') {
+                      setView('add')
+                    } else {
+                      setSelectedRecurringTask(null)
+                      setRecurringView('add')
+                    }
+                  },
                   variant: 'default' as const,
                   icon: Plus
                 }] : [])

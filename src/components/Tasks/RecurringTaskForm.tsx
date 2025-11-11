@@ -337,13 +337,13 @@ export const RecurringTaskForm: React.FC<RecurringTaskFormProps> = ({
     }
   }
 
-  const filteredContacts = contacts.filter(contact =>
-    contact.full_name.toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
-    contact.phone.includes(contactSearchTerm)
-  )
+  const filteredContacts = contacts?.filter(contact =>
+    contact.full_name?.toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
+    contact.phone?.includes(contactSearchTerm)
+  ) || []
 
-  const selectedContact = contacts.find(c => c.id === formData.contact_id)
-  const selectedAssignee = teamMembers.find(m => m.id === formData.assigned_to)
+  const selectedContact = contacts?.find(c => c.id === formData.contact_id)
+  const selectedAssignee = teamMembers?.find(m => m.id === formData.assigned_to)
 
   const isViewMode = mode === 'view'
 
