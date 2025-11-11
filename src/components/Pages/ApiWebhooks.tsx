@@ -204,6 +204,154 @@ export function ApiWebhooks() {
 
   return (
     <>
+      <Card className="shadow-xl mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Globe className="w-5 h-5 text-brand-primary" />
+            <span>API Documentation - Upsert Lead</span>
+          </CardTitle>
+          <p className="text-sm text-gray-600 mt-2">
+            Use this API endpoint to create or update leads with custom fields
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">Endpoint:</h3>
+              <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded border border-gray-200">
+                <code className="text-sm font-mono text-gray-800 flex-1">
+                  POST https://lddridmkphmckbjjlfxi.supabase.co/functions/v1/add-lead
+                </code>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => copyToClipboard('https://lddridmkphmckbjjlfxi.supabase.co/functions/v1/add-lead')}
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">Required Fields:</h3>
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3">
+                <ul className="text-sm text-yellow-900 space-y-1">
+                  <li>• <strong>name</strong>: Full name of the lead</li>
+                  <li>• <strong>phone</strong>: Phone number with country code</li>
+                  <li>• <strong>pipeline_id</strong>: Pipeline identifier (e.g., "LEAD-001")</li>
+                </ul>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">cURL Example:</h3>
+              <div className="relative">
+                <pre className="bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto text-xs">
+{`curl -X POST 'https://lddridmkphmckbjjlfxi.supabase.co/functions/v1/add-lead' \\
+  -H 'Content-Type: application/json' \\
+  -H 'Authorization: Bearer YOUR_SUPABASE_ANON_KEY' \\
+  -d '{
+  "name": "John Doe",
+  "phone": "+919876543210",
+  "pipeline_id": "LEAD-001",
+  "email": "john@example.com",
+  "source": "Website",
+  "stage": "New",
+  "interest": "Hot",
+  "owner": "Sales Team",
+  "company": "Acme Corp",
+  "address": "123 Main Street",
+  "notes": "Interested in premium",
+  "lead_score": 85,
+  "assigned_to": "+919999999999",
+  "custom_fields": {
+    "company_size": "50-100",
+    "budget": "50000",
+    "project_deadline": "2025-12-31",
+    "website_url": "https://example.com",
+    "interested_services": ["Web Dev", "Mobile App"],
+    "additional_notes": "Custom CRM needed",
+    "contact_email": "contact@example.com",
+    "document_links": ["https://example.com/file.pdf"],
+    "is_urgent": true,
+    "priority_level": "7"
+  }
+}'`}
+                </pre>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => copyToClipboard(`curl -X POST 'https://lddridmkphmckbjjlfxi.supabase.co/functions/v1/add-lead' \\
+  -H 'Content-Type: application/json' \\
+  -H 'Authorization: Bearer YOUR_SUPABASE_ANON_KEY' \\
+  -d '{
+  "name": "John Doe",
+  "phone": "+919876543210",
+  "pipeline_id": "LEAD-001",
+  "email": "john@example.com",
+  "source": "Website",
+  "stage": "New",
+  "interest": "Hot",
+  "owner": "Sales Team",
+  "company": "Acme Corp",
+  "address": "123 Main Street",
+  "notes": "Interested in premium",
+  "lead_score": 85,
+  "assigned_to": "+919999999999",
+  "custom_fields": {
+    "company_size": "50-100",
+    "budget": "50000",
+    "project_deadline": "2025-12-31",
+    "website_url": "https://example.com",
+    "interested_services": ["Web Dev", "Mobile App"],
+    "additional_notes": "Custom CRM needed",
+    "contact_email": "contact@example.com",
+    "document_links": ["https://example.com/file.pdf"],
+    "is_urgent": true,
+    "priority_level": "7"
+  }
+}'`)}
+                  className="absolute top-2 right-2"
+                >
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">Custom Field Types & Format:</h3>
+              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-blue-900">
+                  <div><strong>Text/LongText:</strong> "string value"</div>
+                  <div><strong>Number/Currency:</strong> "50000"</div>
+                  <div><strong>Email:</strong> "email@example.com"</div>
+                  <div><strong>Phone:</strong> "+919876543210"</div>
+                  <div><strong>URL:</strong> "https://example.com"</div>
+                  <div><strong>Date:</strong> "2025-12-31"</div>
+                  <div><strong>Dropdown Single:</strong> "option1"</div>
+                  <div><strong>Dropdown Multiple:</strong> ["opt1", "opt2"]</div>
+                  <div><strong>File Upload:</strong> ["url1", "url2"]</div>
+                  <div><strong>Checkbox:</strong> true or "true"</div>
+                  <div><strong>Range:</strong> "7"</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded p-3">
+              <h4 className="text-sm font-semibold text-green-900 mb-2">How it works:</h4>
+              <ul className="text-xs text-green-800 space-y-1">
+                <li>• Uses phone number to check if lead exists (upsert logic)</li>
+                <li>• If lead exists, updates all fields including custom fields</li>
+                <li>• If lead doesn't exist, creates new lead with provided data</li>
+                <li>• Custom fields are matched by field_key (unique identifier)</li>
+                <li>• Only custom fields belonging to the specified pipeline are processed</li>
+                <li>• Returns complete lead data after create/update</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="shadow-xl">
         <CardHeader>
           <div className="flex items-center justify-between">
