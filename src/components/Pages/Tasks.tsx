@@ -1171,43 +1171,63 @@ export const Tasks: React.FC = () => {
                                         </Badge>
                                       </td>
                                       <td className="py-3 px-4">
-                                        <div className="flex items-center gap-2">
-                                          {canUpdate('tasks') && (
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
                                             <button
+                                              className="text-gray-600 hover:text-gray-800 p-1 rounded hover:bg-gray-100"
+                                              title="Actions"
+                                            >
+                                              <MoreVertical className="w-5 h-5" />
+                                            </button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
                                               onClick={() => {
                                                 setSelectedRecurringTask(task)
                                                 setShowRecurringModal(true)
                                               }}
-                                              className="text-blue-600 hover:text-blue-800"
-                                              title="Edit"
+                                              className="cursor-pointer"
                                             >
-                                              <Edit className="w-4 h-4" />
-                                            </button>
-                                          )}
-                                          {canDelete('tasks') && (
-                                            <button
-                                              onClick={async () => {
-                                                if (confirm('Are you sure you want to delete this recurring task?')) {
-                                                  try {
-                                                    const { error } = await supabase
-                                                      .from('recurring_tasks')
-                                                      .delete()
-                                                      .eq('id', task.id)
-                                                    if (error) throw error
-                                                    fetchRecurringTasks()
-                                                  } catch (error) {
-                                                    console.error('Error deleting recurring task:', error)
-                                                    alert('Failed to delete recurring task')
+                                              <Eye className="w-4 h-4 mr-2" />
+                                              View
+                                            </DropdownMenuItem>
+                                            {canUpdate('tasks') && (
+                                              <DropdownMenuItem
+                                                onClick={() => {
+                                                  setSelectedRecurringTask(task)
+                                                  setShowRecurringModal(true)
+                                                }}
+                                                className="cursor-pointer"
+                                              >
+                                                <Edit className="w-4 h-4 mr-2" />
+                                                Edit
+                                              </DropdownMenuItem>
+                                            )}
+                                            {canDelete('tasks') && (
+                                              <DropdownMenuItem
+                                                onClick={async () => {
+                                                  if (confirm('Are you sure you want to delete this recurring task?')) {
+                                                    try {
+                                                      const { error } = await supabase
+                                                        .from('recurring_tasks')
+                                                        .delete()
+                                                        .eq('id', task.id)
+                                                      if (error) throw error
+                                                      fetchRecurringTasks()
+                                                    } catch (error) {
+                                                      console.error('Error deleting recurring task:', error)
+                                                      alert('Failed to delete recurring task')
+                                                    }
                                                   }
-                                                }
-                                              }}
-                                              className="text-red-600 hover:text-red-800"
-                                              title="Delete"
-                                            >
-                                              <Trash2 className="w-4 h-4" />
-                                            </button>
-                                          )}
-                                        </div>
+                                                }}
+                                                className="cursor-pointer text-red-600 focus:text-red-600"
+                                              >
+                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                Delete
+                                              </DropdownMenuItem>
+                                            )}
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </td>
                                     </motion.tr>
                                   )
