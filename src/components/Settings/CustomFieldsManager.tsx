@@ -36,7 +36,9 @@ const fieldTypeLabels: Record<string, string> = {
   phone: 'Phone Number Field',
   url: 'URL Field',
   currency: 'Currency Field',
-  longtext: 'Long Text Field'
+  longtext: 'Long Text Field',
+  range: 'Range',
+  file_upload: 'File Upload'
 }
 
 export function CustomFieldsManager({ customTabId, tabName }: CustomFieldsManagerProps) {
@@ -273,6 +275,8 @@ export function CustomFieldsManager({ customTabId, tabName }: CustomFieldsManage
                         <SelectItem value="dropdown_single">Dropdown (Single)</SelectItem>
                         <SelectItem value="dropdown_multiple">Dropdown (Multiple)</SelectItem>
                         <SelectItem value="date">Date Picker</SelectItem>
+                        <SelectItem value="range">Range</SelectItem>
+                        <SelectItem value="file_upload">File Upload</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
