@@ -292,16 +292,18 @@ export function LMS() {
           <h2 className="text-2xl font-bold text-gray-900">All Courses</h2>
           <p className="text-gray-600 mt-1">Manage your course library</p>
         </div>
-        <Button
-          onClick={() => {
-            setEditingItem(null)
-            setShowCourseModal(true)
-          }}
-          className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Course
-        </Button>
+        <PermissionGuard module="lms" action="insert">
+          <Button
+            onClick={() => {
+              setEditingItem(null)
+              setShowCourseModal(true)
+            }}
+            className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Course
+          </Button>
+        </PermissionGuard>
       </div>
 
       {loading ? (
@@ -414,24 +416,28 @@ export function LMS() {
                         <FolderOpen className="w-4 h-4 mr-2" />
                         <span>View</span>
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditingItem(course)
-                          setShowCourseModal(true)
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-red-600 hover:text-red-700"
-                        onClick={() => handleDeleteCourse(course.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {canUpdate('lms') && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingItem(course)
+                            setShowCourseModal(true)
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {canDelete('lms') && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteCourse(course.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -454,16 +460,18 @@ export function LMS() {
           <h2 className="text-2xl font-bold text-gray-900">{selectedCourse?.title}</h2>
           <p className="text-gray-600 mt-1">Manage course categories and modules</p>
         </div>
-        <Button
-          onClick={() => {
-            setEditingItem(null)
-            setShowCategoryModal(true)
-          }}
-          className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Category
-        </Button>
+        <PermissionGuard module="lms" action="insert">
+          <Button
+            onClick={() => {
+              setEditingItem(null)
+              setShowCategoryModal(true)
+            }}
+            className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Category
+          </Button>
+        </PermissionGuard>
       </div>
 
       {categories.length === 0 ? (
@@ -500,36 +508,42 @@ export function LMS() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelectedCategory(category)
-                          setEditingItem(null)
-                          setShowLessonModal(true)
-                        }}
-                        className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Lesson
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditingItem(category)
-                          setShowCategoryModal(true)
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDeleteCategory(category.id)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {canCreate('lms') && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedCategory(category)
+                            setEditingItem(null)
+                            setShowLessonModal(true)
+                          }}
+                          className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Lesson
+                        </Button>
+                      )}
+                      {canUpdate('lms') && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingItem(category)
+                            setShowCategoryModal(true)
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {canDelete('lms') && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteCategory(category.id)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -564,26 +578,30 @@ export function LMS() {
                             </div>
                           </div>
                           <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setSelectedLesson(lesson)
-                                setSelectedCategory(category)
-                                setEditingItem(lesson)
-                                setShowLessonModal(true)
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDeleteLesson(lesson.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {canUpdate('lms') && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setSelectedLesson(lesson)
+                                  setSelectedCategory(category)
+                                  setEditingItem(lesson)
+                                  setShowLessonModal(true)
+                                }}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {canDelete('lms') && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteLesson(lesson.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -663,25 +681,29 @@ export function LMS() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setEditingItem(lesson)
-                          setSelectedLesson(lesson)
-                          setShowLessonModal(true)
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDeleteLesson(lesson.id)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {canUpdate('lms') && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingItem(lesson)
+                            setSelectedLesson(lesson)
+                            setShowLessonModal(true)
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {canDelete('lms') && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteLesson(lesson.id)}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -717,14 +739,16 @@ export function LMS() {
                                 )}
                               </div>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDeleteAttachment(attachment.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {canDelete('lms') && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteAttachment(attachment.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         ))}
                       </div>
