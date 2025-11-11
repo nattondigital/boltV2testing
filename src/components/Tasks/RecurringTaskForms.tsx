@@ -204,32 +204,57 @@ export const RecurringTaskForms: React.FC<RecurringTaskFormsProps> = ({
               </p>
             ) : (
               <>
-                <Input
-                  value={selectedContact ? `${selectedContact.full_name} (${selectedContact.phone})` : contactSearchTerm}
-                  onChange={e => {
-                    setContactSearchTerm(e.target.value)
-                    setShowContactDropdown(true)
-                  }}
-                  onFocus={() => setShowContactDropdown(true)}
-                  placeholder="Search contact by name or phone"
-                />
-                {showContactDropdown && (
-                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    {filteredContacts.map(contact => (
-                      <div
-                        key={contact.id}
-                        onClick={() => {
-                          setFormData((prev: any) => ({ ...prev, contactId: contact.id }))
-                          setContactSearchTerm('')
-                          setShowContactDropdown(false)
-                        }}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                      >
-                        <div className="font-medium">{contact.full_name}</div>
-                        <div className="text-sm text-gray-500">{contact.phone}</div>
-                      </div>
-                    ))}
+                {selectedContact ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={`${selectedContact.full_name} (${selectedContact.phone})`}
+                      readOnly
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setFormData((prev: any) => ({ ...prev, contactId: null }))
+                        setContactSearchTerm('')
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Remove
+                    </Button>
                   </div>
+                ) : (
+                  <>
+                    <Input
+                      value={contactSearchTerm}
+                      onChange={e => {
+                        setContactSearchTerm(e.target.value)
+                        setShowContactDropdown(true)
+                      }}
+                      onFocus={() => setShowContactDropdown(true)}
+                      placeholder="Search contact by name or phone"
+                    />
+                    {showContactDropdown && filteredContacts.length > 0 && (
+                      <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {filteredContacts.map(contact => (
+                          <div
+                            key={contact.id}
+                            onClick={() => {
+                              setFormData((prev: any) => ({ ...prev, contactId: contact.id }))
+                              setContactSearchTerm('')
+                              setShowContactDropdown(false)
+                            }}
+                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          >
+                            <div className="font-medium">{contact.full_name}</div>
+                            <div className="text-sm text-gray-500">{contact.phone}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
