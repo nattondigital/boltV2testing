@@ -240,6 +240,21 @@ export function Team() {
         return role.toLowerCase().replace(/\s+/g, '_')
       }
 
+      // Get the highest member_id to generate the next one
+      const { data: existingMembers } = await supabase
+        .from('admin_users')
+        .select('member_id')
+        .not('member_id', 'is', null)
+        .order('member_id', { ascending: false })
+        .limit(1)
+
+      let nextMemberId = 'T001'
+      if (existingMembers && existingMembers.length > 0) {
+        const lastId = existingMembers[0].member_id
+        const lastNumber = parseInt(lastId.substring(1))
+        nextMemberId = `T${String(lastNumber + 1).padStart(3, '0')}`
+      }
+
       const { data, error } = await supabase
         .from('admin_users')
         .insert([{
@@ -252,7 +267,7 @@ export function Team() {
           password_hash: '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
           permissions: modulePermissions,
           is_active: formData.status === 'Active',
-          member_id: `T${String(teamMembers.length + 1).padStart(3, '0')}`
+          member_id: nextMemberId
         }])
         .select()
 
@@ -284,9 +299,10 @@ export function Team() {
       setTeamMembers(prev => [newMember, ...prev])
       setView('list')
       resetForm()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create team member:', error)
-      alert('Failed to create team member. Please try again.')
+      const errorMessage = error?.message || 'Unknown error'
+      alert(`Failed to create team member: ${errorMessage}`)
     }
   }
 
@@ -338,9 +354,10 @@ export function Team() {
       ))
       setView('list')
       resetForm()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update team member:', error)
-      alert('Failed to update team member. Please try again.')
+      const errorMessage = error?.message || 'Unknown error'
+      alert(`Failed to update team member: ${errorMessage}`)
     }
   }
 
