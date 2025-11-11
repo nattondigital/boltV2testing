@@ -271,18 +271,18 @@ export function Affiliates() {
         title="Affiliate Management"
         subtitle="Referrals → Earnings → Payouts"
         actions={[
-          {
+          ...(canCreate('affiliates') ? [{
             label: 'Add Affiliate',
             onClick: handleAddClick,
-            variant: 'default',
+            variant: 'default' as const,
             icon: UserPlus
-          },
-          {
+          }] : []),
+          ...(canUpdate('affiliates') ? [{
             label: 'Bulk Payout',
             onClick: () => {},
-            variant: 'secondary',
+            variant: 'secondary' as const,
             icon: DollarSign
-          }
+          }] : [])
         ]}
       />
 
@@ -446,34 +446,46 @@ export function Affiliates() {
                         <Badge className={statusColors[affiliate.status]}>{affiliate.status}</Badge>
                       </td>
                       <td className="py-3 px-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="ghost">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewAffiliate(affiliate)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditClick(affiliate)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit Affiliate
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <DollarSign className="w-4 h-4 mr-2" />
-                              Trigger Payout
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteAffiliate(affiliate)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Remove Affiliate
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        {(canUpdate('affiliates') || canDelete('affiliates')) ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="ghost">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleViewAffiliate(affiliate)}>
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              {canUpdate('affiliates') && (
+                                <DropdownMenuItem onClick={() => handleEditClick(affiliate)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Affiliate
+                                </DropdownMenuItem>
+                              )}
+                              {canUpdate('affiliates') && (
+                                <DropdownMenuItem>
+                                  <DollarSign className="w-4 h-4 mr-2" />
+                                  Trigger Payout
+                                </DropdownMenuItem>
+                              )}
+                              {canDelete('affiliates') && (
+                                <DropdownMenuItem
+                                  onClick={() => handleDeleteAffiliate(affiliate)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Remove Affiliate
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : (
+                          <Button size="sm" variant="ghost" onClick={() => handleViewAffiliate(affiliate)}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        )}
                       </td>
                     </motion.tr>
                   ))}
@@ -1004,30 +1016,38 @@ export function Affiliates() {
                   <div className="flex-1">
                     <h1 className="text-xl font-bold">Affiliate Details</h1>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="ghost" className="text-white hover:bg-white/20">
-                        <MoreVertical className="w-5 h-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditClick(selectedAffiliate)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Affiliate
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <DollarSign className="w-4 h-4 mr-2" />
-                        Trigger Payout
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteAffiliate(selectedAffiliate)}
-                        className="text-red-600 focus:text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {(canUpdate('affiliates') || canDelete('affiliates')) && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="ghost" className="text-white hover:bg-white/20">
+                          <MoreVertical className="w-5 h-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {canUpdate('affiliates') && (
+                          <DropdownMenuItem onClick={() => handleEditClick(selectedAffiliate)}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit Affiliate
+                          </DropdownMenuItem>
+                        )}
+                        {canUpdate('affiliates') && (
+                          <DropdownMenuItem>
+                            <DollarSign className="w-4 h-4 mr-2" />
+                            Trigger Payout
+                          </DropdownMenuItem>
+                        )}
+                        {canDelete('affiliates') && (
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteAffiliate(selectedAffiliate)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
 
                 {/* Profile Section */}

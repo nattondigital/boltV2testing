@@ -499,12 +499,12 @@ export function Team() {
           title="Team Management"
           subtitle="Roles → Permissions → Access Control"
           actions={[
-            {
+            ...(canCreate('team') ? [{
               label: 'Add Team Member',
               onClick: () => setView('add'),
-              variant: 'default',
+              variant: 'default' as const,
               icon: UserPlus
-            }
+            }] : [])
           ]}
         />
       )}
@@ -681,43 +681,55 @@ export function Team() {
                           </Badge>
                         </td>
                         <td className="py-3 px-4">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button size="sm" variant="ghost">
-                                <MoreVertical className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleViewMember(member)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Profile
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleEditClick(member)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit Member
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedMember(member)
-                                  if (member.modulePermissions) {
-                                    setModulePermissions(member.modulePermissions)
-                                  }
-                                  setFormTab('modules')
-                                  setView('view')
-                                }}
-                              >
-                                <Lock className="w-4 h-4 mr-2" />
-                                Manage Module Access
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDeleteMember(member.memberId, member.id)}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Remove Member
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {(canUpdate('team') || canDelete('team')) ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="ghost">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleViewMember(member)}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Profile
+                                </DropdownMenuItem>
+                                {canUpdate('team') && (
+                                  <DropdownMenuItem onClick={() => handleEditClick(member)}>
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Edit Member
+                                  </DropdownMenuItem>
+                                )}
+                                {canUpdate('team') && (
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedMember(member)
+                                      if (member.modulePermissions) {
+                                        setModulePermissions(member.modulePermissions)
+                                      }
+                                      setFormTab('modules')
+                                      setView('view')
+                                    }}
+                                  >
+                                    <Lock className="w-4 h-4 mr-2" />
+                                    Manage Module Access
+                                  </DropdownMenuItem>
+                                )}
+                                {canDelete('team') && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteMember(member.memberId, member.id)}
+                                    className="text-red-600 focus:text-red-600"
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Remove Member
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <Button size="sm" variant="ghost" onClick={() => handleViewMember(member)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          )}
                         </td>
                       </motion.tr>
                     )
@@ -1332,13 +1344,15 @@ export function Team() {
               >
                 Close
               </Button>
-              <Button
-                onClick={() => handleEditClick(selectedMember)}
-                className="bg-brand-primary hover:bg-brand-primary/90"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Member
-              </Button>
+              {canUpdate('team') && (
+                <Button
+                  onClick={() => handleEditClick(selectedMember)}
+                  className="bg-brand-primary hover:bg-brand-primary/90"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Member
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -1530,10 +1544,12 @@ export function Team() {
             )}
 
             <div className="flex items-center space-x-3 mt-6">
-              <Button onClick={() => { setShowViewModal(false); handleEditClick(selectedMember); }}>
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Member
-              </Button>
+              {canUpdate('team') && (
+                <Button onClick={() => { setShowViewModal(false); handleEditClick(selectedMember); }}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Member
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setShowViewModal(false)}>
                 Close
               </Button>
@@ -2736,15 +2752,17 @@ export function Team() {
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleEditClick(selectedMember)}
-                    className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl py-3 text-sm font-medium"
-                  >
-                    Edit Member
-                  </motion.button>
-                </div>
+                {canUpdate('team') && (
+                  <div className="mt-4">
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleEditClick(selectedMember)}
+                      className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl py-3 text-sm font-medium"
+                    >
+                      Edit Member
+                    </motion.button>
+                  </div>
+                )}
               </div>
               )}
 
