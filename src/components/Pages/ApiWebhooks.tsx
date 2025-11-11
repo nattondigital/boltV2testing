@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Globe, Edit, Trash2, Power, Copy, Check, X } from 'lucide-react'
+import { Plus, Globe, Edit, Trash2, Power, Copy, Check, X, MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { supabase } from '@/lib/supabase'
 
 interface ApiWebhook {
@@ -232,118 +233,117 @@ export function ApiWebhooks() {
               <p className="text-sm">Create your first webhook to start sending trigger data to external URLs</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {webhooks.map((webhook) => {
-                const triggerInfo = triggerEvents.find(t => t.value === webhook.trigger_event)
-                const successRate = webhook.total_calls > 0
-                  ? Math.round((webhook.success_count / webhook.total_calls) * 100)
-                  : 0
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Trigger Event</th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Module</th>
+                    <th className="text-left py-3 px-4 font-semibold text-sm text-gray-700">Webhook URL</th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">Total Calls</th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">Success</th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">Failed</th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">Success Rate</th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">Status</th>
+                    <th className="text-center py-3 px-4 font-semibold text-sm text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {webhooks.map((webhook) => {
+                    const triggerInfo = triggerEvents.find(t => t.value === webhook.trigger_event)
+                    const successRate = webhook.total_calls > 0
+                      ? Math.round((webhook.success_count / webhook.total_calls) * 100)
+                      : 0
 
-                return (
-                  <motion.div
-                    key={webhook.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="font-semibold text-brand-text text-lg">{webhook.name}</h3>
+                    return (
+                      <motion.tr
+                        key={webhook.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="py-4 px-4">
+                          <div className="text-sm font-medium text-brand-text">
+                            {triggerInfo?.label || webhook.trigger_event}
+                          </div>
+                          {webhook.name && (
+                            <div className="text-xs text-gray-500 mt-1">{webhook.name}</div>
+                          )}
+                        </td>
+                        <td className="py-4 px-4">
+                          <Badge variant="outline" className="text-xs">
+                            {triggerInfo?.module || 'N/A'}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center space-x-2">
+                            <div className="text-sm font-mono text-gray-600 truncate max-w-xs" title={webhook.webhook_url}>
+                              {webhook.webhook_url}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => copyToClipboard(webhook.webhook_url)}
+                              className="flex-shrink-0"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <div className="text-sm font-semibold text-brand-text">{webhook.total_calls}</div>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <div className="text-sm font-semibold text-green-600">{webhook.success_count}</div>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <div className="text-sm font-semibold text-red-600">{webhook.failure_count}</div>
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <div className={`text-sm font-semibold ${
+                            successRate >= 80 ? 'text-green-600' :
+                            successRate >= 50 ? 'text-yellow-600' :
+                            'text-red-600'
+                          }`}>
+                            {successRate}%
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-center">
                           <Badge className={webhook.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
                             {webhook.is_active ? 'Active' : 'Inactive'}
                           </Badge>
-                          {triggerInfo && (
-                            <Badge variant="outline" className="text-xs">
-                              {triggerInfo.module}
-                            </Badge>
-                          )}
-                        </div>
-                        {webhook.description && (
-                          <p className="text-sm text-gray-600 mb-3">{webhook.description}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">Trigger Event</label>
-                        <div className="text-sm font-mono bg-gray-50 px-3 py-2 rounded">
-                          {triggerInfo?.label || webhook.trigger_event}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-gray-700 block mb-1">Webhook URL</label>
-                        <div className="flex items-center space-x-2">
-                          <div className="text-sm font-mono bg-gray-50 px-3 py-2 rounded flex-1 truncate">
-                            {webhook.webhook_url}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => copyToClipboard(webhook.webhook_url)}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <div className="text-xs text-gray-600 mb-1">Total Calls</div>
-                        <div className="text-lg font-semibold text-brand-text">{webhook.total_calls}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-600 mb-1">Success</div>
-                        <div className="text-lg font-semibold text-green-600">{webhook.success_count}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-600 mb-1">Failed</div>
-                        <div className="text-lg font-semibold text-red-600">{webhook.failure_count}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-600 mb-1">Success Rate</div>
-                        <div className="text-lg font-semibold text-blue-600">{successRate}%</div>
-                      </div>
-                    </div>
-
-                    {webhook.last_triggered && (
-                      <div className="text-xs text-gray-500 mb-4">
-                        Last triggered: {new Date(webhook.last_triggered).toLocaleString()}
-                      </div>
-                    )}
-
-                    <div className="flex space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleToggleActive(webhook)}
-                      >
-                        <Power className="w-4 h-4 mr-2" />
-                        {webhook.is_active ? 'Deactivate' : 'Activate'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleOpenModal(webhook)}
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleDelete(webhook.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </Button>
-                    </div>
-                  </motion.div>
-                )
-              })}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleToggleActive(webhook)}>
+                                <Power className="w-4 h-4 mr-2" />
+                                {webhook.is_active ? 'Deactivate' : 'Activate'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleOpenModal(webhook)}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(webhook.id)}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </motion.tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </CardContent>
