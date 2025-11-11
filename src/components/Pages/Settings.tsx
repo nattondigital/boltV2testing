@@ -557,30 +557,54 @@ export function Settings() {
       const examplePayload: any = {}
 
       if (webhook.payload_fields) {
-        Object.entries(webhook.payload_fields).forEach(([key, description]: [string, any]) => {
-          const descStr = typeof description === 'string' ? description : String(description)
-          const isRequired = descStr.includes('(required)')
-          const isOptional = descStr.includes('(optional)')
+        Object.entries(webhook.payload_fields).forEach(([key, fieldInfo]: [string, any]) => {
+          const fieldType = fieldInfo.type || 'string'
+          const isRequired = fieldInfo.required === true
+          const description = fieldInfo.description || ''
 
           let value: any = 'value'
 
-          if (descStr.includes('string')) {
-            value = isRequired ? 'your_value_here' : '(optional) your_value_here'
-          } else if (descStr.includes('number')) {
-            value = isRequired ? 0 : '(optional) 0'
-          } else if (descStr.includes('array')) {
-            value = isRequired ? [] : '(optional) []'
-          } else if (descStr.includes('object')) {
-            value = isRequired ? {} : '(optional) {}'
-          } else if (descStr.includes('boolean')) {
-            value = isRequired ? true : '(optional) true'
+          if (fieldType === 'string') {
+            if (key === 'name') value = 'John Doe'
+            else if (key === 'phone') value = '+919876543210'
+            else if (key === 'pipeline_id') value = 'LEAD-001'
+            else if (key === 'email') value = 'john@example.com'
+            else if (key === 'source') value = 'Website'
+            else if (key === 'stage') value = 'New'
+            else if (key === 'interest') value = 'Hot'
+            else if (key === 'owner') value = 'Sales Team'
+            else if (key === 'company') value = 'Acme Corp'
+            else if (key === 'address') value = '123 Main Street'
+            else if (key === 'notes') value = 'Interested in premium'
+            else if (key === 'assigned_to') value = '+919999999999'
+            else value = 'your_value_here'
+          } else if (fieldType === 'integer' || fieldType === 'number') {
+            if (key === 'lead_score') value = 85
+            else value = 0
+          } else if (fieldType === 'array') {
+            value = []
+          } else if (fieldType === 'object') {
+            if (key === 'custom_fields') {
+              value = {
+                "company_size": "50-100",
+                "budget": "50000",
+                "project_deadline": "2025-12-31",
+                "website_url": "https://example.com",
+                "interested_services": ["Web Dev", "Mobile App"],
+                "additional_notes": "Custom CRM needed",
+                "contact_email": "contact@example.com",
+                "document_links": ["https://example.com/file.pdf"],
+                "is_urgent": true,
+                "priority_level": "7"
+              }
+            } else {
+              value = {}
+            }
+          } else if (fieldType === 'boolean') {
+            value = true
           }
 
-          if (!isOptional || isRequired) {
-            examplePayload[key] = value
-          } else {
-            examplePayload[`${key} (optional)`] = value
-          }
+          examplePayload[key] = value
         })
       }
 
