@@ -2599,9 +2599,32 @@ function FormModal({ title, formData, setFormData, onSave, onCancel, type, loadi
           {type === 'subscriptions' && (
             <>
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Customer Name *</label>
-                  <Input value={formData.customerName || ''} onChange={(e) => updateField('customerName', e.target.value)} placeholder="Enter customer name" />
+                  <Input
+                    value={contactSearchTerm || formData.customerName || ''}
+                    onChange={(e) => {
+                      setContactSearchTerm(e.target.value)
+                      updateField('customerName', e.target.value)
+                      setShowContactDropdown(true)
+                    }}
+                    onFocus={() => setShowContactDropdown(true)}
+                    placeholder="Search customer by name, email, or phone"
+                  />
+                  {showContactDropdown && filteredContacts.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredContacts.map((contact: any) => (
+                        <div
+                          key={contact.id}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          onClick={() => handleContactSelect(contact)}
+                        >
+                          <div className="font-medium">{contact.full_name}</div>
+                          <div className="text-sm text-gray-500">{contact.email || contact.phone}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Customer Email *</label>
@@ -2630,11 +2653,178 @@ function FormModal({ title, formData, setFormData, onSave, onCancel, type, loadi
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Amount *</label>
-                  <Input type="number" value={formData.amount || ''} onChange={(e) => updateField('amount', e.target.value)} placeholder="0.00" />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quick Add Package</label>
+                <div className="relative package-search-container">
+                  <Input
+                    value={packageSearchTerm}
+                    onChange={(e) => {
+                      setPackageSearchTerm(e.target.value)
+                      setShowPackageDropdown(true)
+                    }}
+                    onFocus={() => setShowPackageDropdown(true)}
+                    placeholder="Search and add package (optional)"
+                  />
+                  {showPackageDropdown && packages.filter(pkg =>
+                    pkg.package_name?.toLowerCase().includes(packageSearchTerm.toLowerCase()) ||
+                    pkg.package_id?.toLowerCase().includes(packageSearchTerm.toLowerCase())
+                  ).length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {packages.filter(pkg =>
+                        pkg.package_name?.toLowerCase().includes(packageSearchTerm.toLowerCase()) ||
+                        pkg.package_id?.toLowerCase().includes(packageSearchTerm.toLowerCase())
+                      ).map((pkg: any) => (
+                        <div
+                          key={pkg.id}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          onClick={() => {
+                            if (Array.isArray(pkg.products) && pkg.products.length > 0) {
+                              handlePackageSelect(pkg.products)
+                            }
+                            setPackageSearchTerm('')
+                            setShowPackageDropdown(false)
+                          }}
+                        >
+                          <div className="font-medium">{pkg.package_name}</div>
+                          <div className="text-sm text-gray-500">
+                            {pkg.package_id} • {Array.isArray(pkg.products) ? pkg.products.length : 0} products • {formatCurrency(pkg.discounted_price || 0)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+                <p className="text-xs text-gray-500 mt-1">Select a package to add all its products at once</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Products *</label>
+                <div className="relative">
+                  <Input
+                    value={productSearchTerm}
+                    onChange={(e) => {
+                      setProductSearchTerm(e.target.value)
+                      setShowProductDropdown(true)
+                    }}
+                    onFocus={() => setShowProductDropdown(true)}
+                    placeholder="Search and add products"
+                  />
+                  {showProductDropdown && filteredProducts.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                      {filteredProducts.map((product: any) => (
+                        <div
+                          key={product.id}
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          onClick={() => handleProductSelect(product)}
+                        >
+                          <div className="font-medium">{product.product_name}</div>
+                          <div className="text-sm text-gray-500">
+                            {product.product_id} • {formatCurrency(product.product_price || 0)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {(formData.items || []).length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {(formData.items || []).map((item: any) => (
+                      <div key={item.id} className="border rounded-lg p-3 bg-gray-50">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <div className="font-medium">{item.product_name}</div>
+                            <div className="text-xs text-gray-500">{item.product_id}</div>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveItem(item.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-xs text-gray-600">Quantity</label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => handleUpdateItemQuantity(item.id, parseFloat(e.target.value) || 1)}
+                              className="h-8"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-600">Unit Price</label>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.unit_price}
+                              onChange={(e) => handleUpdateItemPrice(item.id, parseFloat(e.target.value) || 0)}
+                              className="h-8"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-600">Total</label>
+                            <Input
+                              type="number"
+                              value={item.total}
+                              readOnly
+                              className="h-8 bg-gray-100"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Subtotal</span>
+                  <span className="font-medium">{formatCurrency(formData.subtotal || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Tax ({formData.taxRate || 0}%)</span>
+                  <span className="font-medium">{formatCurrency(formData.taxAmount || 0)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Discount</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.discount || 0}
+                    onChange={(e) => {
+                      const discount = parseFloat(e.target.value) || 0
+                      updateField('discount', discount)
+                      const subtotal = formData.subtotal || 0
+                      const taxRate = formData.taxRate || 0
+                      const taxAmount = (subtotal - discount) * (taxRate / 100)
+                      const total = subtotal - discount + taxAmount
+                      setFormData((prev: any) => ({
+                        ...prev,
+                        discount,
+                        taxAmount,
+                        amount: total
+                      }))
+                    }}
+                    className="w-32 h-8 text-right"
+                  />
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                  <span className="font-semibold text-brand-text">Total Amount</span>
+                  <span className="font-bold text-lg text-brand-primary">{formatCurrency(formData.amount || 0)}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Payment Method</label>
                   <Select value={formData.paymentMethod} onValueChange={(value) => updateField('paymentMethod', value)}>
@@ -2646,10 +2836,10 @@ function FormModal({ title, formData, setFormData, onSave, onCancel, type, loadi
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Next Billing Date</label>
-                <Input type="date" value={formData.nextBillingDate || ''} onChange={(e) => updateField('nextBillingDate', e.target.value)} />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Next Billing Date</label>
+                  <Input type="date" value={formData.nextBillingDate || ''} onChange={(e) => updateField('nextBillingDate', e.target.value)} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
