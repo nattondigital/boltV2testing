@@ -672,34 +672,40 @@ export function Products() {
                                 </Badge>
                               </td>
                               <td className="py-3 px-4">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                      <MoreVertical className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleViewProduct(product)}>
-                                      <Eye className="w-4 h-4 mr-2" />
-                                      View
-                                    </DropdownMenuItem>
-                                    {canUpdate('products') && (
-                                      <DropdownMenuItem onClick={() => handleEditClick(product)}>
-                                        <Edit className="w-4 h-4 mr-2" />
-                                        Edit
+                                {(canUpdate('products') || canDelete('products')) ? (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreVertical className="w-4 h-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleViewProduct(product)}>
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        View
                                       </DropdownMenuItem>
-                                    )}
-                                    {canDelete('products') && (
-                                      <DropdownMenuItem
-                                        onClick={() => handleDeleteProduct(product.id, product.product_id)}
-                                        className="text-red-600"
-                                      >
-                                        <Trash2 className="w-4 h-4 mr-2" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    )}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                      {canUpdate('products') && (
+                                        <DropdownMenuItem onClick={() => handleEditClick(product)}>
+                                          <Edit className="w-4 h-4 mr-2" />
+                                          Edit
+                                        </DropdownMenuItem>
+                                      )}
+                                      {canDelete('products') && (
+                                        <DropdownMenuItem
+                                          onClick={() => handleDeleteProduct(product.id, product.product_id)}
+                                          className="text-red-600"
+                                        >
+                                          <Trash2 className="w-4 h-4 mr-2" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                ) : (
+                                  <Button variant="ghost" size="sm" onClick={() => handleViewProduct(product)}>
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                )}
                               </td>
                             </tr>
                           ))
@@ -789,60 +795,69 @@ export function Products() {
                                   </Badge>
                                 </td>
                                 <td className="py-3 px-4">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm">
-                                        <MoreVertical className="w-4 h-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem onClick={() => {
-                                        setSelectedPackage(pkg)
-                                        setView('view')
-                                      }}>
-                                        <Eye className="w-4 h-4 mr-2" />
-                                        View
-                                      </DropdownMenuItem>
-                                      {canUpdate('products') && (
+                                  {(canUpdate('products') || canDelete('products')) ? (
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm">
+                                          <MoreVertical className="w-4 h-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => {
                                           setSelectedPackage(pkg)
-                                          setPackageFormData({
-                                            package_name: pkg.package_name,
-                                            package_type: pkg.package_type,
-                                            description: pkg.description || '',
-                                            selected_products: pkg.products,
-                                            discount_percentage: pkg.discount_percentage.toString(),
-                                            features: Array.isArray(pkg.features) ? pkg.features.join('\n') : '',
-                                            validity_days: pkg.validity_days?.toString() || '',
-                                            thumbnail_url: pkg.thumbnail_url || '',
-                                            is_active: pkg.is_active
-                                          })
-                                          setView('edit')
+                                          setView('view')
                                         }}>
-                                          <Edit className="w-4 h-4 mr-2" />
-                                          Edit
+                                          <Eye className="w-4 h-4 mr-2" />
+                                          View
                                         </DropdownMenuItem>
-                                      )}
-                                      {canDelete('products') && (
-                                        <DropdownMenuItem
-                                          onClick={async () => {
-                                            if (confirm(`Are you sure you want to delete package "${pkg.package_id}"?`)) {
-                                              try {
-                                                await supabase.from('packages').delete().eq('id', pkg.id)
-                                                fetchPackages()
-                                              } catch (error) {
-                                                console.error('Failed to delete package:', error)
+                                        {canUpdate('products') && (
+                                          <DropdownMenuItem onClick={() => {
+                                            setSelectedPackage(pkg)
+                                            setPackageFormData({
+                                              package_name: pkg.package_name,
+                                              package_type: pkg.package_type,
+                                              description: pkg.description || '',
+                                              selected_products: pkg.products,
+                                              discount_percentage: pkg.discount_percentage.toString(),
+                                              features: Array.isArray(pkg.features) ? pkg.features.join('\n') : '',
+                                              validity_days: pkg.validity_days?.toString() || '',
+                                              thumbnail_url: pkg.thumbnail_url || '',
+                                              is_active: pkg.is_active
+                                            })
+                                            setView('edit')
+                                          }}>
+                                            <Edit className="w-4 h-4 mr-2" />
+                                            Edit
+                                          </DropdownMenuItem>
+                                        )}
+                                        {canDelete('products') && (
+                                          <DropdownMenuItem
+                                            onClick={async () => {
+                                              if (confirm(`Are you sure you want to delete package "${pkg.package_id}"?`)) {
+                                                try {
+                                                  await supabase.from('packages').delete().eq('id', pkg.id)
+                                                  fetchPackages()
+                                                } catch (error) {
+                                                  console.error('Failed to delete package:', error)
+                                                }
                                               }
-                                            }
-                                          }}
-                                          className="text-red-600"
-                                        >
-                                          <Trash2 className="w-4 h-4 mr-2" />
-                                          Delete
-                                        </DropdownMenuItem>
-                                      )}
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
+                                            }}
+                                            className="text-red-600"
+                                          >
+                                            <Trash2 className="w-4 h-4 mr-2" />
+                                            Delete
+                                          </DropdownMenuItem>
+                                        )}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  ) : (
+                                    <Button variant="ghost" size="sm" onClick={() => {
+                                      setSelectedPackage(pkg)
+                                      setView('view')
+                                    }}>
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                 </td>
                               </tr>
                             ))
