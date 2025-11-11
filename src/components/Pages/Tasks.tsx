@@ -1345,25 +1345,26 @@ export const Tasks: React.FC = () => {
                 )}
 
                 {activeTab === 'recurring' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="mb-8"
-                  >
-                    <Card className="shadow-xl">
-                      <CardHeader>
-                        <CardTitle>Recurring Tasks</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {recurringTasks.length === 0 ? (
-                          <div className="text-center py-12">
-                            <Repeat className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                            <p className="text-gray-500">No recurring tasks found</p>
-                          </div>
-                        ) : (
-                          <div className="overflow-x-auto">
-                            <table className="w-full">
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="mb-8"
+                    >
+                      <Card className="shadow-xl">
+                        <CardHeader>
+                          <CardTitle>Recurring Tasks</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {recurringTasks.length === 0 && recurringView === 'list' ? (
+                            <div className="text-center py-12">
+                              <Repeat className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                              <p className="text-gray-500">No recurring tasks found</p>
+                            </div>
+                          ) : recurringView === 'list' ? (
+                            <div className="overflow-x-auto">
+                              <table className="w-full">
                               <thead>
                                 <tr className="border-b border-gray-200">
                                   <th className="text-left py-3 px-4 font-semibold text-brand-text">RETASK ID</th>
@@ -1548,10 +1549,46 @@ export const Tasks: React.FC = () => {
                               </tbody>
                             </table>
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                          ) : null}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+
+                    {/* Recurring Task Forms Below Table */}
+                    {recurringView !== 'list' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="mb-8"
+                      >
+                        <RecurringTaskForms
+                          view={recurringView}
+                          formData={recurringFormData}
+                          setFormData={setRecurringFormData}
+                          selectedTask={selectedRecurringTask}
+                          teamMembers={teamMembers}
+                          contacts={contacts}
+                          contactSearchTerm={recurringContactSearchTerm}
+                          setContactSearchTerm={setRecurringContactSearchTerm}
+                          showContactDropdown={showRecurringContactDropdown}
+                          setShowContactDropdown={setShowRecurringContactDropdown}
+                          selectedContact={selectedRecurringContact}
+                          uploadingFiles={uploadingFiles}
+                          daysOfWeek={daysOfWeek}
+                          daysOfMonth={daysOfMonth}
+                          filteredContacts={filteredRecurringContacts}
+                          onSave={recurringView === 'add' ? handleAddRecurringTask : handleEditRecurringTask}
+                          onBack={() => {
+                            setRecurringView('list')
+                            resetRecurringForm()
+                          }}
+                          onFileUpload={handleRecurringFileUpload}
+                          onEdit={() => setRecurringView('edit')}
+                        />
+                      </motion.div>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -2818,35 +2855,6 @@ export const Tasks: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Recurring Task Forms */}
-      <div className="hidden md:block ppt-slide p-6">
-        {activeTab === 'recurring' && recurringView !== 'list' && (
-          <RecurringTaskForms
-            view={recurringView}
-            formData={recurringFormData}
-            setFormData={setRecurringFormData}
-            selectedTask={selectedRecurringTask}
-            teamMembers={teamMembers}
-            contacts={contacts}
-            contactSearchTerm={recurringContactSearchTerm}
-            setContactSearchTerm={setRecurringContactSearchTerm}
-            showContactDropdown={showRecurringContactDropdown}
-            setShowRecurringContactDropdown={setShowRecurringContactDropdown}
-            selectedContact={selectedRecurringContact}
-            uploadingFiles={uploadingFiles}
-            daysOfWeek={daysOfWeek}
-            daysOfMonth={daysOfMonth}
-            filteredContacts={filteredRecurringContacts}
-            onSave={recurringView === 'add' ? handleAddRecurringTask : handleEditRecurringTask}
-            onBack={() => {
-              setRecurringView('list')
-              resetRecurringForm()
-            }}
-            onFileUpload={handleRecurringFileUpload}
-            onEdit={() => setRecurringView('edit')}
-          />
-        )}
-      </div>
     </div>
   )
 }
