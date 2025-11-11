@@ -1033,6 +1033,7 @@ export function Billing() {
                 type={activeTab}
                 onClose={handleBackToList}
                 onEdit={handleEditFromView}
+                canUpdate={canUpdate('billing')}
               />
             </motion.div>
           )}
@@ -2760,7 +2761,7 @@ function FormModal({ title, formData, setFormData, onSave, onCancel, type, loadi
   )
 }
 
-function ViewModal({ item, type, onClose, onEdit }: any) {
+function ViewModal({ item, type, onClose, onEdit, canUpdate }: any) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -2933,10 +2934,12 @@ function ViewModal({ item, type, onClose, onEdit }: any) {
         </div>
 
         <div className="flex items-center space-x-3 mt-6 pt-6 border-t border-gray-200">
-          <Button onClick={onEdit}>
-            <Edit className="w-4 h-4 mr-2" />
-            Edit
-          </Button>
+          {canUpdate && (
+            <Button onClick={onEdit}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+          )}
           <Button variant="outline" onClick={onClose}>Close</Button>
         </div>
         </CardContent>
