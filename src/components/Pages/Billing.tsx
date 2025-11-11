@@ -1997,17 +1997,27 @@ function SubscriptionsTable({ data, onView, onEdit, onDelete, loading }: any) {
                         )}
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex items-center space-x-2">
-                          <Button size="sm" variant="ghost" onClick={() => onView(item)} title="View">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => onEdit(item)} title="Edit">
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="ghost" className="text-red-600 hover:text-red-700" onClick={() => onDelete(item.id)} title="Cancel">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="ghost">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onView(item)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onEdit(item)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onDelete(item.id)} className="text-red-600 focus:text-red-600">
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Cancel
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </motion.tr>
                   ))}
