@@ -13,6 +13,8 @@ interface FollowupAssignment {
   trigger_event: string
   module: string
   whatsapp_template_id: string | null
+  whatsapp_template_id_2: string | null
+  whatsapp_template_id_3: string | null
   created_at: string
   updated_at: string
 }
@@ -47,6 +49,8 @@ export function Followups() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingData, setEditingData] = useState<{
     whatsapp_template_id: string | null
+    whatsapp_template_id_2: string | null
+    whatsapp_template_id_3: string | null
   } | null>(null)
 
   useEffect(() => {
@@ -89,7 +93,9 @@ export function Followups() {
   const handleEdit = (assignment: FollowupAssignment) => {
     setEditingId(assignment.id)
     setEditingData({
-      whatsapp_template_id: assignment.whatsapp_template_id || '__none__'
+      whatsapp_template_id: assignment.whatsapp_template_id || '__none__',
+      whatsapp_template_id_2: assignment.whatsapp_template_id_2 || '__none__',
+      whatsapp_template_id_3: assignment.whatsapp_template_id_3 || '__none__'
     })
   }
 
@@ -102,7 +108,9 @@ export function Followups() {
       const { error } = await supabase
         .from('followup_assignments')
         .update({
-          whatsapp_template_id: editingData.whatsapp_template_id === '__none__' ? null : editingData.whatsapp_template_id
+          whatsapp_template_id: editingData.whatsapp_template_id === '__none__' ? null : editingData.whatsapp_template_id,
+          whatsapp_template_id_2: editingData.whatsapp_template_id_2 === '__none__' ? null : editingData.whatsapp_template_id_2,
+          whatsapp_template_id_3: editingData.whatsapp_template_id_3 === '__none__' ? null : editingData.whatsapp_template_id_3
         })
         .eq('id', assignmentId)
 
@@ -145,8 +153,8 @@ export function Followups() {
             <span>Followup Assignments</span>
           </CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Configure WhatsApp templates for different trigger events across modules.
-            This helps automate followup communications for leads, tasks, appointments, and more.
+            Configure up to 3 WhatsApp templates per trigger event. Each template can use different receiver_phone settings
+            to send messages to different recipients (e.g., assigner, assignee, and client) for the same event.
           </p>
         </CardHeader>
         <CardContent>
@@ -167,14 +175,16 @@ export function Followups() {
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 font-semibold text-brand-text">Trigger Event</th>
                     <th className="text-left py-3 px-4 font-semibold text-brand-text">Module</th>
-                    <th className="text-left py-3 px-4 font-semibold text-brand-text">WhatsApp Template</th>
+                    <th className="text-left py-3 px-4 font-semibold text-brand-text">WhatsApp Templates (up to 3)</th>
                     <th className="text-right py-3 px-4 font-semibold text-brand-text">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {assignments.map((assignment) => {
                     const isEditing = editingId === assignment.id
-                    const template = templates.find(t => t.id === assignment.whatsapp_template_id)
+                    const template1 = templates.find(t => t.id === assignment.whatsapp_template_id)
+                    const template2 = templates.find(t => t.id === assignment.whatsapp_template_id_2)
+                    const template3 = templates.find(t => t.id === assignment.whatsapp_template_id_3)
 
                     return (
                       <tr
@@ -199,36 +209,105 @@ export function Followups() {
                         </td>
                         <td className="py-3 px-4">
                           {isEditing ? (
-                            <Select
-                              value={editingData?.whatsapp_template_id || '__none__'}
-                              onValueChange={(value) => setEditingData(editingData ? { ...editingData, whatsapp_template_id: value } : null)}
-                            >
-                              <SelectTrigger className="w-64">
-                                <SelectValue placeholder="Select a template..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="__none__">
-                                  <span className="text-gray-500">No template assigned</span>
-                                </SelectItem>
-                                {templates.map((template) => (
-                                  <SelectItem key={template.id} value={template.id}>
-                                    <div className="flex items-center space-x-2">
-                                      <MessageSquare className="w-4 h-4 text-gray-400" />
-                                      <span>{template.name} ({template.type})</span>
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="space-y-2">
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Template 1:</label>
+                                <Select
+                                  value={editingData?.whatsapp_template_id || '__none__'}
+                                  onValueChange={(value) => setEditingData(editingData ? { ...editingData, whatsapp_template_id: value } : null)}
+                                >
+                                  <SelectTrigger className="w-64">
+                                    <SelectValue placeholder="Select template 1..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__none__">
+                                      <span className="text-gray-500">No template</span>
+                                    </SelectItem>
+                                    {templates.map((template) => (
+                                      <SelectItem key={template.id} value={template.id}>
+                                        <div className="flex items-center space-x-2">
+                                          <MessageSquare className="w-4 h-4 text-gray-400" />
+                                          <span>{template.name} ({template.type})</span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Template 2:</label>
+                                <Select
+                                  value={editingData?.whatsapp_template_id_2 || '__none__'}
+                                  onValueChange={(value) => setEditingData(editingData ? { ...editingData, whatsapp_template_id_2: value } : null)}
+                                >
+                                  <SelectTrigger className="w-64">
+                                    <SelectValue placeholder="Select template 2..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__none__">
+                                      <span className="text-gray-500">No template</span>
+                                    </SelectItem>
+                                    {templates.map((template) => (
+                                      <SelectItem key={template.id} value={template.id}>
+                                        <div className="flex items-center space-x-2">
+                                          <MessageSquare className="w-4 h-4 text-gray-400" />
+                                          <span>{template.name} ({template.type})</span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Template 3:</label>
+                                <Select
+                                  value={editingData?.whatsapp_template_id_3 || '__none__'}
+                                  onValueChange={(value) => setEditingData(editingData ? { ...editingData, whatsapp_template_id_3: value } : null)}
+                                >
+                                  <SelectTrigger className="w-64">
+                                    <SelectValue placeholder="Select template 3..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="__none__">
+                                      <span className="text-gray-500">No template</span>
+                                    </SelectItem>
+                                    {templates.map((template) => (
+                                      <SelectItem key={template.id} value={template.id}>
+                                        <div className="flex items-center space-x-2">
+                                          <MessageSquare className="w-4 h-4 text-gray-400" />
+                                          <span>{template.name} ({template.type})</span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
                           ) : (
-                            <div className="flex items-center space-x-2">
-                              {template ? (
-                                <>
+                            <div className="space-y-1">
+                              {template1 && (
+                                <div className="flex items-center space-x-2">
+                                  <Badge variant="secondary" className="bg-green-100 text-green-800">1</Badge>
                                   <MessageSquare className="w-4 h-4 text-gray-400" />
-                                  <span className="text-gray-900">{template.name}</span>
-                                </>
-                              ) : (
-                                <span className="text-gray-500 italic">No template assigned</span>
+                                  <span className="text-gray-900 text-sm">{template1.name}</span>
+                                </div>
+                              )}
+                              {template2 && (
+                                <div className="flex items-center space-x-2">
+                                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">2</Badge>
+                                  <MessageSquare className="w-4 h-4 text-gray-400" />
+                                  <span className="text-gray-900 text-sm">{template2.name}</span>
+                                </div>
+                              )}
+                              {template3 && (
+                                <div className="flex items-center space-x-2">
+                                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">3</Badge>
+                                  <MessageSquare className="w-4 h-4 text-gray-400" />
+                                  <span className="text-gray-900 text-sm">{template3.name}</span>
+                                </div>
+                              )}
+                              {!template1 && !template2 && !template3 && (
+                                <span className="text-gray-500 italic text-sm">No templates assigned</span>
                               )}
                             </div>
                           )}

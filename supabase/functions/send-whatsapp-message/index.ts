@@ -11,6 +11,7 @@ interface WhatsAppMessageRequest {
   contact_phone: string
   contact_name?: string
   trigger_data?: Record<string, any>
+  template_id?: string
 }
 
 Deno.serve(async (req: Request) => {
@@ -23,36 +24,42 @@ Deno.serve(async (req: Request) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    const { trigger_event, contact_phone, contact_name, trigger_data } = await req.json() as WhatsAppMessageRequest
+    const { trigger_event, contact_phone, contact_name, trigger_data, template_id } = await req.json() as WhatsAppMessageRequest
 
     if (!trigger_event || !contact_phone) {
       throw new Error('trigger_event and contact_phone are required')
     }
 
-    // Get the followup assignment for this trigger event
-    const { data: assignment, error: assignmentError } = await supabase
-      .from('followup_assignments')
-      .select('whatsapp_template_id')
-      .eq('trigger_event', trigger_event)
-      .maybeSingle()
+    let templateIdToUse = template_id
 
-    if (assignmentError) {
-      throw new Error(`Failed to get followup assignment: ${assignmentError.message}`)
-    }
+    // If no template_id provided, get from followup assignment (backward compatibility)
+    if (!templateIdToUse) {
+      const { data: assignment, error: assignmentError } = await supabase
+        .from('followup_assignments')
+        .select('whatsapp_template_id')
+        .eq('trigger_event', trigger_event)
+        .maybeSingle()
 
-    // If no assignment or no template assigned, skip sending
-    if (!assignment || !assignment.whatsapp_template_id) {
-      return new Response(
-        JSON.stringify({ success: true, message: 'No WhatsApp template assigned for this trigger event' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      if (assignmentError) {
+        throw new Error(`Failed to get followup assignment: ${assignmentError.message}`)
+      }
+
+      // If no assignment or no template assigned, skip sending
+      if (!assignment || !assignment.whatsapp_template_id) {
+        return new Response(
+          JSON.stringify({ success: true, message: 'No WhatsApp template assigned for this trigger event' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      templateIdToUse = assignment.whatsapp_template_id
     }
 
     // Get the WhatsApp template
     const { data: template, error: templateError } = await supabase
       .from('whatsapp_templates')
       .select('*')
-      .eq('id', assignment.whatsapp_template_id)
+      .eq('id', templateIdToUse)
       .maybeSingle()
 
     if (templateError || !template) {
