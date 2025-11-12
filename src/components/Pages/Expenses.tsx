@@ -57,7 +57,6 @@ interface Expense {
   approved_by: string | null
   approved_at: string | null
   rejection_reason: string | null
-  notes: string | null
   created_at: string
   updated_at: string
 }
@@ -234,7 +233,6 @@ export function Expenses() {
           expense_date: formData.expense_date,
           payment_method: formData.payment_method,
           receipt_url: receiptUrl || null,
-          notes: null,
           status: 'Pending'
         }])
         .select()
