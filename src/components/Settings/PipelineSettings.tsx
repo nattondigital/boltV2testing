@@ -346,13 +346,13 @@ export function PipelineSettings() {
     setStageForm({ name: '', description: '', color: 'bg-blue-100' })
   }
 
-  const copyPipelineId = async (pipelineId: string) => {
+  const copyPipelineId = async (pipelineUUID: string) => {
     try {
-      await navigator.clipboard.writeText(pipelineId)
-      setCopiedId(pipelineId)
+      await navigator.clipboard.writeText(pipelineUUID)
+      setCopiedId(pipelineUUID)
       setTimeout(() => setCopiedId(null), 2000)
     } catch (error) {
-      console.error('Failed to copy pipeline ID:', error)
+      console.error('Failed to copy pipeline UUID:', error)
     }
   }
 
@@ -411,16 +411,16 @@ export function PipelineSettings() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          copyPipelineId(pipeline.pipeline_id)
+                          copyPipelineId(pipeline.id)
                         }}
                         className={`p-1 rounded transition-colors ${
                           selectedPipeline?.id === pipeline.id
                             ? 'hover:bg-white/20'
                             : 'hover:bg-gray-200'
                         }`}
-                        title="Copy Pipeline ID"
+                        title="Copy Pipeline UUID"
                       >
-                        {copiedId === pipeline.pipeline_id ? (
+                        {copiedId === pipeline.id ? (
                           <Check className={`w-3 h-3 ${selectedPipeline?.id === pipeline.id ? 'text-white' : 'text-green-600'}`} />
                         ) : (
                           <Copy className={`w-3 h-3 ${selectedPipeline?.id === pipeline.id ? 'text-white' : 'text-gray-600'}`} />
@@ -441,19 +441,26 @@ export function PipelineSettings() {
                 <div className="flex items-center gap-3">
                   <CardTitle>{selectedPipeline?.name || 'Select a Pipeline'}</CardTitle>
                   {selectedPipeline && (
-                    <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-md">
-                      <span className="text-xs font-mono text-gray-600">{selectedPipeline.pipeline_id}</span>
-                      <button
-                        onClick={() => copyPipelineId(selectedPipeline.pipeline_id)}
-                        className="p-0.5 rounded hover:bg-gray-200 transition-colors"
-                        title="Copy Pipeline ID"
-                      >
-                        {copiedId === selectedPipeline.pipeline_id ? (
-                          <Check className="w-3 h-3 text-green-600" />
-                        ) : (
-                          <Copy className="w-3 h-3 text-gray-600" />
-                        )}
-                      </button>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-md">
+                        <span className="text-xs text-gray-500">ID:</span>
+                        <span className="text-xs font-mono text-gray-600">{selectedPipeline.pipeline_id}</span>
+                      </div>
+                      <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-md">
+                        <span className="text-xs text-gray-500">UUID:</span>
+                        <span className="text-xs font-mono text-gray-600 truncate max-w-[200px]" title={selectedPipeline.id}>{selectedPipeline.id}</span>
+                        <button
+                          onClick={() => copyPipelineId(selectedPipeline.id)}
+                          className="p-0.5 rounded hover:bg-blue-100 transition-colors flex-shrink-0"
+                          title="Copy Pipeline UUID"
+                        >
+                          {copiedId === selectedPipeline.id ? (
+                            <Check className="w-3 h-3 text-green-600" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-gray-600" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
