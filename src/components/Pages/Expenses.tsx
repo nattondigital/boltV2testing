@@ -133,12 +133,10 @@ export function Expenses() {
 
   const handleCreateExpense = async () => {
     try {
-      console.log('Starting expense creation with formData:', formData)
       let receiptUrl = formData.receipt_url
 
       if (receiptFile) {
         try {
-          console.log('Attempting to upload receipt file...')
           const { data: integration, error: integrationError } = await supabase
             .from('integrations')
             .select('config')
@@ -222,11 +220,9 @@ export function Expenses() {
           }
         } catch (uploadErr) {
           console.error('Error uploading receipt:', uploadErr)
-          // Don't throw - continue with expense creation even if upload fails
         }
       }
 
-      console.log('Attempting to insert expense into database...')
       const { data, error } = await supabase
         .from('expenses')
         .insert([{
@@ -241,22 +237,14 @@ export function Expenses() {
         }])
         .select()
 
-      if (error) {
-        console.error('Supabase insert error:', error)
-        throw error
-      }
+      if (error) throw error
 
-      console.log('Expense created successfully:', data)
-      console.log('Fetching expenses...')
       await fetchExpenses()
-      console.log('Closing modal and resetting form...')
       setShowCreateModal(false)
       setView('list')
       resetForm()
-      console.log('Expense creation complete!')
     } catch (error) {
       console.error('Failed to create expense:', error)
-      console.error('Error details:', JSON.stringify(error, null, 2))
       alert('Failed to create expense. Please try again.')
     }
   }

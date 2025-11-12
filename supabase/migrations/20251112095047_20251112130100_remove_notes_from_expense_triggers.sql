@@ -4,6 +4,7 @@
   1. Changes
     - Update expense triggers to remove notes field references
     - Notes column has been dropped from expenses table
+    - Fix column name from 'name' to 'full_name' for admin_users table
 
   2. Notes
     - Updates all three expense trigger functions
@@ -261,6 +262,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-COMMENT ON FUNCTION trigger_workflows_on_expense_add() IS 'Triggers workflows for expense additions with employee_name lookup and global date/time variables (notes field removed)';
-COMMENT ON FUNCTION trigger_workflows_on_expense_update() IS 'Triggers workflows for expense updates with employee_name lookup and global date/time variables (notes field removed)';
-COMMENT ON FUNCTION trigger_workflows_on_expense_delete() IS 'Triggers workflows for expense deletions with employee_name lookup and global date/time variables (notes field removed)';
+COMMENT ON FUNCTION trigger_workflows_on_expense_add() IS 'Triggers workflows for expense additions with employee_name lookup and global date/time variables (notes field removed, uses full_name)';
+COMMENT ON FUNCTION trigger_workflows_on_expense_update() IS 'Triggers workflows for expense updates with employee_name lookup and global date/time variables (notes field removed, uses full_name)';
+COMMENT ON FUNCTION trigger_workflows_on_expense_delete() IS 'Triggers workflows for expense deletions with employee_name lookup and global date/time variables (notes field removed, uses full_name)';
