@@ -411,7 +411,7 @@ async function handleMCPRequest(
             },
             {
               name: 'get_custom_fields',
-              description: 'Get custom fields for lead pipelines. If pipeline_id is provided, returns custom fields for that pipeline only. If pipeline_id is omitted, returns custom fields for ALL lead pipelines. Use this before updating custom field values.',
+              description: 'TOOL NAME: get_custom_fields - Retrieves custom fields (additional fields beyond name/email/phone) configured for lead pipelines. Can filter by pipeline_id, search by pipeline_name (e.g., "Ai Automation 2.0"), or fetch all. Returns field definitions with types, options, and requirements.',
               inputSchema: {
                 type: 'object',
                 properties: {

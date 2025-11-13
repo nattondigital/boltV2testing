@@ -970,7 +970,18 @@ When the user asks to CREATE or UPDATE something that depends on other data:
             const serverKey = toolToServerMap[functionName]
 
             if (!serverKey) {
-              const errorMsg = `❌ No server mapping found for tool: ${functionName}. Available tools: ${Object.keys(toolToServerMap).join(', ')}`
+              const availableTools = Object.keys(toolToServerMap).sort()
+              const similarTools = availableTools.filter(t =>
+                t.toLowerCase().includes(functionName.toLowerCase().split('_').slice(-2).join('_')) ||
+                functionName.toLowerCase().includes(t.toLowerCase().split('_').slice(-2).join('_'))
+              )
+
+              const errorMsg = `❌ Tool '${functionName}' does not exist. ${
+                similarTools.length > 0
+                  ? `Did you mean: ${similarTools.join(', ')}?`
+                  : `Available tools: ${availableTools.slice(0, 10).join(', ')}${availableTools.length > 10 ? '...' : ''}`
+              }`
+
               console.error(errorMsg)
               toolResults.push(errorMsg)
               continue
