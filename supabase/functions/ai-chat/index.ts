@@ -713,7 +713,14 @@ Deno.serve(async (req: Request) => {
       console.log(`Cleaned preview: ${cleanedAssistantMessage.substring(0, 100)}...`)
     }
 
-    // Only save to memory if both messages are valid
+    // Save messages with explicit timestamps to ensure correct ordering
+    // CRITICAL: User message MUST have earlier timestamp than assistant message
+
+    const baseTimestamp = new Date()
+    const userTimestamp = baseTimestamp.toISOString()
+    // Add 1 second to assistant message to guarantee it comes after user message
+    const assistantTimestamp = new Date(baseTimestamp.getTime() + 1000).toISOString()
+
     const memoryRecords = []
 
     if (cleanedUserMessage) {
@@ -722,6 +729,7 @@ Deno.serve(async (req: Request) => {
         phone_number: payload.phone_number,
         role: 'user',
         message: cleanedUserMessage,
+        created_at: userTimestamp,
       })
     }
 
@@ -731,6 +739,7 @@ Deno.serve(async (req: Request) => {
         phone_number: payload.phone_number,
         role: 'assistant',
         message: cleanedAssistantMessage,
+        created_at: assistantTimestamp,
       })
     }
 
@@ -740,7 +749,8 @@ Deno.serve(async (req: Request) => {
         .from('ai_agent_chat_memory')
         .insert(memoryRecords)
 
-      console.log(`✅ Saved ${memoryRecords.length} clean messages to memory`)
+      console.log(`✅ Saved ${memoryRecords.length} clean messages to memory with explicit timestamps`)
+      console.log(`   User: ${userTimestamp}, Assistant: ${assistantTimestamp}`)
     } else {
       console.log('⚠️ Skipped saving to memory: no clean messages to store (likely only technical data)')
     }
