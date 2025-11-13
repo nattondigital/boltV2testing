@@ -112,6 +112,9 @@ export function Appointments() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [meetingTypeFilter, setMeetingTypeFilter] = useState('')
+  const [periodFilter, setPeriodFilter] = useState('')
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [contacts, setContacts] = useState<Contact[]>([])
   const [calendars, setCalendars] = useState<Calendar[]>([])
@@ -406,6 +409,70 @@ export function Appointments() {
     }
   }
 
+  const getDateRange = () => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    switch (periodFilter) {
+      case 'today': {
+        const start = today.toISOString().split('T')[0]
+        return { start, end: start }
+      }
+      case 'tomorrow': {
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        const date = tomorrow.toISOString().split('T')[0]
+        return { start: date, end: date }
+      }
+      case 'this_week': {
+        const start = new Date(today)
+        const end = new Date(today)
+        const dayOfWeek = today.getDay()
+        start.setDate(today.getDate() - dayOfWeek)
+        end.setDate(today.getDate() + (6 - dayOfWeek))
+        return {
+          start: start.toISOString().split('T')[0],
+          end: end.toISOString().split('T')[0]
+        }
+      }
+      case 'next_week': {
+        const start = new Date(today)
+        const end = new Date(today)
+        const dayOfWeek = today.getDay()
+        start.setDate(today.getDate() + (7 - dayOfWeek))
+        end.setDate(start.getDate() + 6)
+        return {
+          start: start.toISOString().split('T')[0],
+          end: end.toISOString().split('T')[0]
+        }
+      }
+      case 'this_month': {
+        const start = new Date(today.getFullYear(), today.getMonth(), 1)
+        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+        return {
+          start: start.toISOString().split('T')[0],
+          end: end.toISOString().split('T')[0]
+        }
+      }
+      case 'next_month': {
+        const start = new Date(today.getFullYear(), today.getMonth() + 1, 1)
+        const end = new Date(today.getFullYear(), today.getMonth() + 2, 0)
+        return {
+          start: start.toISOString().split('T')[0],
+          end: end.toISOString().split('T')[0]
+        }
+      }
+      case 'custom': {
+        if (customStartDate && customEndDate) {
+          return { start: customStartDate, end: customEndDate }
+        }
+        return null
+      }
+      default:
+        return null
+    }
+  }
+
   const filteredAppointments = appointments.filter(appointment => {
     const matchesSearch = (appointment.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (appointment.contact_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -414,6 +481,15 @@ export function Appointments() {
 
     const matchesStatus = !statusFilter || appointment.status === statusFilter
     const matchesMeetingType = !meetingTypeFilter || appointment.meeting_type === meetingTypeFilter
+
+    let matchesPeriod = true
+    if (periodFilter && periodFilter !== '') {
+      const dateRange = getDateRange()
+      if (dateRange) {
+        const appointmentDate = appointment.appointment_date
+        matchesPeriod = appointmentDate >= dateRange.start && appointmentDate <= dateRange.end
+      }
+    }
 
     const now = new Date()
     const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`)
@@ -425,7 +501,7 @@ export function Appointments() {
       return false
     }
 
-    return matchesSearch && matchesStatus && matchesMeetingType
+    return matchesSearch && matchesStatus && matchesMeetingType && matchesPeriod
   })
 
   const totalAppointments = appointments.length
@@ -852,6 +928,44 @@ export function Appointments() {
                     <option value="Video Call">Video Call</option>
                     <option value="Phone Call">Phone Call</option>
                   </select>
+                  <select
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    value={periodFilter}
+                    onChange={(e) => {
+                      setPeriodFilter(e.target.value)
+                      if (e.target.value !== 'custom') {
+                        setCustomStartDate('')
+                        setCustomEndDate('')
+                      }
+                    }}
+                  >
+                    <option value="">All Period</option>
+                    <option value="today">Today</option>
+                    <option value="tomorrow">Tomorrow</option>
+                    <option value="this_week">This Week</option>
+                    <option value="next_week">Next Week</option>
+                    <option value="this_month">This Month</option>
+                    <option value="next_month">Next Month</option>
+                    <option value="custom">Custom Range</option>
+                  </select>
+                  {periodFilter === 'custom' && (
+                    <>
+                      <Input
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        placeholder="Start Date"
+                        className="w-40"
+                      />
+                      <Input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        placeholder="End Date"
+                        className="w-40"
+                      />
+                    </>
+                  )}
                 </motion.div>
 
                 <motion.div
