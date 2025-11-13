@@ -282,14 +282,14 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
           })}
         </AnimatePresence>
 
-        {/* Members Management Section */}
+        {/* Client Management Section */}
         {!collapsed && visibleMembersNav.length > 0 && (
           <div className="pt-4">
             <button
               onClick={() => setMembersExpanded(!membersExpanded)}
               className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
             >
-              <span>Members Management</span>
+              <span>Client Management</span>
               <ChevronDown
                 className={cn(
                   "h-4 w-4 transition-transform duration-200",
