@@ -952,7 +952,17 @@ When the user asks to CREATE or UPDATE something that depends on other data:
             continue
           }
 
+          // Ensure functionArgs is an object before setting properties
+          if (!functionArgs || typeof functionArgs !== 'object') {
+            console.error(`Invalid functionArgs for ${functionName}:`, functionArgs)
+            functionArgs = {}
+          }
+
+          // Add required context fields
           functionArgs.agent_id = payload.agent_id
+          if (payload.phone_number) {
+            functionArgs.phone_number = payload.phone_number
+          }
 
           console.log(`Executing MCP tool: ${functionName} with args:`, functionArgs)
           try {
