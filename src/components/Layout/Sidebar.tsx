@@ -220,6 +220,68 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
           })}
         </AnimatePresence>
 
+        {/* Team Management Section */}
+        {!collapsed && visibleTeamNav.length > 0 && (
+          <div className="pt-4">
+            <button
+              onClick={() => setTeamExpanded(!teamExpanded)}
+              className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+            >
+              <span>Team Management</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform duration-200",
+                  teamExpanded && "transform rotate-180"
+                )}
+              />
+            </button>
+          </div>
+        )}
+
+        <AnimatePresence>
+          {teamExpanded && visibleTeamNav.map((item) => {
+            const isActive = location.pathname === item.to
+            const Icon = item.icon
+
+            return (
+              <motion.div
+                key={item.to}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Link
+                  to={item.to}
+                  onClick={onClose}
+                  title={collapsed ? item.label : undefined}
+                  className={cn(
+                    "group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                    !collapsed && "ml-3",
+                    collapsed && "justify-center px-2",
+                    isActive
+                      ? "bg-brand-primary text-white shadow-lg"
+                      : "text-gray-600 hover:bg-brand-primary/10 hover:text-brand-primary"
+                  )}
+                >
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  {!collapsed && (
+                    <span className="ml-3 truncate">{item.label}</span>
+                  )}
+                  {isActive && !collapsed && (
+                    <motion.div
+                      className="ml-auto h-2 w-2 rounded-full bg-brand-accent"
+                      layoutId="activeIndicator"
+                    />
+                  )}
+                </Link>
+              </motion.div>
+            )
+          })}
+        </AnimatePresence>
+
         {/* Client Management Section */}
         {!collapsed && visibleMembersNav.length > 0 && (
           <div className="pt-4">
@@ -302,68 +364,6 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
 
         <AnimatePresence>
           {mastersExpanded && visibleMastersNav.map((item) => {
-            const isActive = location.pathname === item.to
-            const Icon = item.icon
-
-            return (
-              <motion.div
-                key={item.to}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Link
-                  to={item.to}
-                  onClick={onClose}
-                  title={collapsed ? item.label : undefined}
-                  className={cn(
-                    "group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                    !collapsed && "ml-3",
-                    collapsed && "justify-center px-2",
-                    isActive
-                      ? "bg-brand-primary text-white shadow-lg"
-                      : "text-gray-600 hover:bg-brand-primary/10 hover:text-brand-primary"
-                  )}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  {!collapsed && (
-                    <span className="ml-3 truncate">{item.label}</span>
-                  )}
-                  {isActive && !collapsed && (
-                    <motion.div
-                      className="ml-auto h-2 w-2 rounded-full bg-brand-accent"
-                      layoutId="activeIndicator"
-                    />
-                  )}
-                </Link>
-              </motion.div>
-            )
-          })}
-        </AnimatePresence>
-
-        {/* Team Management Section */}
-        {!collapsed && visibleTeamNav.length > 0 && (
-          <div className="pt-4">
-            <button
-              onClick={() => setTeamExpanded(!teamExpanded)}
-              className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
-            >
-              <span>Team Management</span>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 transition-transform duration-200",
-                  teamExpanded && "transform rotate-180"
-                )}
-              />
-            </button>
-          </div>
-        )}
-
-        <AnimatePresence>
-          {teamExpanded && visibleTeamNav.map((item) => {
             const isActive = location.pathname === item.to
             const Icon = item.icon
 
