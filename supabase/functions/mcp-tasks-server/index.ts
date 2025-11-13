@@ -306,7 +306,7 @@ async function handleMCPRequest(
                   },
                   due_time: {
                     type: 'string',
-                    description: 'Due time (HH:MM format, 24-hour)',
+                    description: 'Due time in UTC (HH:MM format, 24-hour). MUST be UTC, not IST. Example: 10 AM IST = 04:30 UTC',
                   },
                   supporting_docs: {
                     type: 'array',
@@ -352,7 +352,7 @@ async function handleMCPRequest(
                   },
                   due_time: {
                     type: 'string',
-                    description: 'Due time (HH:MM format)',
+                    description: 'Due time in UTC (HH:MM format). MUST be UTC, not IST. Example: 3 PM IST = 09:30 UTC',
                   },
                 },
                 required: ['task_id'],
@@ -471,7 +471,7 @@ async function handleMCPRequest(
                   },
                   due_time: {
                     type: 'string',
-                    description: 'Due time (HH:MM format, 24-hour)',
+                    description: 'Due time in UTC (HH:MM format, 24-hour). MUST be UTC, not IST. Example: 9 AM IST = 03:30 UTC',
                   },
                   due_days: {
                     type: 'array',
@@ -519,8 +519,8 @@ async function handleMCPRequest(
                   },
                   assigned_to: { type: 'string' },
                   is_active: { type: 'boolean' },
-                  start_time: { type: 'string', description: 'HH:MM format' },
-                  due_time: { type: 'string', description: 'HH:MM format' },
+                  start_time: { type: 'string', description: 'Start time in UTC (HH:MM). MUST be UTC, not IST' },
+                  due_time: { type: 'string', description: 'Due time in UTC (HH:MM). MUST be UTC, not IST' },
                   start_days: {
                     type: 'array',
                     items: { type: 'integer' },

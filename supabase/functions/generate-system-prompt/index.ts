@@ -153,6 +153,7 @@ function generateSystemPrompt(permissions: MCPPermissions): string {
 - Ask ONLY for missing REQUIRED parameters
 - Use defaults for optional parameters
 - Accept natural language dates (convert to YYYY-MM-DD)
+- **ALL TOOLS EXPECT UTC TIME** - Never pass IST/local time to tools
 
 ## Response Style
 

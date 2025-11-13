@@ -563,8 +563,15 @@ Deno.serve(async (req: Request) => {
 **Date/Time (IST UTC+5:30)**
 Today: ${todayDate}, Tomorrow: ${tomorrowDate}, Time: ${currentTime}, Next Sunday: ${sundayDate}
 
-**Time Conversion Rule**: User times are IST. Convert to UTC (subtract 5:30) for tools.
-Examples: 10 AM IST = 04:30 UTC | 3 PM IST = 09:30 UTC | 9 AM IST = 03:30 UTC`
+**CRITICAL TIME RULE - NO EXCEPTIONS:**
+ALL tools expect UTC time ONLY. NEVER pass IST time to tools.
+User times are ALWAYS in IST. You MUST convert to UTC (subtract 5:30) before calling ANY tool.
+
+Conversion formula: UTC_time = IST_time - 5 hours 30 minutes
+Examples: 10:00 AM IST = 04:30 UTC | 3:00 PM IST = 09:30 UTC | 9:00 AM IST = 03:30 UTC | 6:00 PM IST = 12:30 UTC
+
+WRONG: due_time: "10:00" (IST) ❌
+RIGHT: due_time: "04:30" (UTC) ✅`
 
     const messages = [
       { role: 'system', content: enhancedSystemPrompt },

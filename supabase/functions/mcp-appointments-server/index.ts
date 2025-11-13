@@ -289,7 +289,7 @@ async function handleMCPRequest(
                   },
                   appointment_time: {
                     type: 'string',
-                    description: 'Appointment time (HH:MM, 24-hour format)',
+                    description: 'Appointment time in UTC (HH:MM, 24-hour). MUST be UTC, not IST. Example: 2 PM IST = 08:30 UTC',
                   },
                   duration_minutes: {
                     type: 'number',
@@ -345,7 +345,7 @@ async function handleMCPRequest(
                   },
                   appointment_time: {
                     type: 'string',
-                    description: 'New time (HH:MM)',
+                    description: 'New time in UTC (HH:MM). MUST be UTC, not IST. Example: 11 AM IST = 05:30 UTC',
                   },
                   duration_minutes: { type: 'number' },
                   location: { type: 'string' },
