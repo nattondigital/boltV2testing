@@ -863,7 +863,16 @@ Conversion formula: UTC_time = IST_time - 5 hours 30 minutes
 Examples: 10:00 AM IST = 04:30 UTC | 3:00 PM IST = 09:30 UTC | 9:00 AM IST = 03:30 UTC | 6:00 PM IST = 12:30 UTC
 
 WRONG: due_time: "10:00" (IST) ❌
-RIGHT: due_time: "04:30" (UTC) ✅`
+RIGHT: due_time: "04:30" (UTC) ✅
+
+**Multi-Step Tool Usage Rules:**
+When the user asks to CREATE or UPDATE something that depends on other data:
+1. First call lookup tools (like get_contacts, get_team_member) with FILTERS to find specific records (e.g., name="Amit")
+2. Then call the action tool (create_task, update_lead, etc.) using the retrieved data
+3. Do NOT stop after a lookup and just describe results - COMPLETE the original action
+4. You MAY call multiple tools in ONE response to finish the user's request end-to-end
+5. When using list/get tools, ALWAYS filter by user's criteria (name, email, phone) instead of retrieving everything
+6. If a lookup returns many results, narrow it down or ask for clarification - do NOT dump large lists`
 
     const messages = [
       { role: 'system', content: enhancedSystemPrompt },
@@ -986,6 +995,21 @@ RIGHT: due_time: "04:30" (UTC) ✅`
         // Second pass: Convert tool results to natural language
         // CRITICAL: Only send 3 messages (system, assistant with tool results, user instruction)
         // DO NOT send full conversation history again (doubles cost + increases hallucination)
+
+        // Build context-aware final prompt that remembers the original request
+        const finalUserPrompt = `Using the tool results above, continue fulfilling the user's original request:
+
+"${payload.message}"
+
+CRITICAL INSTRUCTIONS:
+- If the request was to CREATE/UPDATE/DELETE something, use the tool results as context and COMPLETE that action
+- Do NOT just summarize the tool output unless the user explicitly asked for a summary or list
+- If you retrieved data as a step toward an action (e.g., looked up a contact to assign a task), complete the action now
+- If you still lack required info, ask ONE specific follow-up question
+- Keep your response concise and action-focused
+
+Provide a natural, conversational response describing what you actually DID (not just what you found).`
+
         const finalResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -997,7 +1021,7 @@ RIGHT: due_time: "04:30" (UTC) ✅`
             messages: [
               { role: 'system', content: enhancedSystemPrompt },
               { role: 'assistant', content: toolResults.join('\n\n') },
-              { role: 'user', content: 'Based on the tool execution results above, provide a natural, conversational response to the user. Keep it concise and friendly.' }
+              { role: 'user', content: finalUserPrompt }
             ]
           }),
         })

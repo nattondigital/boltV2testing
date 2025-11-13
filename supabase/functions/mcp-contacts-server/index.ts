@@ -198,7 +198,7 @@ async function handleMCPRequest(
           tools: [
             {
               name: 'get_contacts',
-              description: 'Retrieve contacts with advanced filtering. Use contact_id to get a specific contact.',
+              description: 'Retrieve contacts with advanced filtering. Use contact_id to get a specific contact. Use name to search by contact name.',
               inputSchema: {
                 type: 'object',
                 properties: {
@@ -213,6 +213,10 @@ async function handleMCPRequest(
                   contact_id: {
                     type: 'string',
                     description: 'Get a specific contact by contact_id (e.g., CONT0001)',
+                  },
+                  name: {
+                    type: 'string',
+                    description: 'Search by contact name (case-insensitive partial match, e.g., "Amit" will find "Amit Kumar")',
                   },
                   email: {
                     type: 'string',
@@ -483,6 +487,9 @@ async function handleMCPRequest(
 
             if (args.contact_id) {
               query = query.eq('contact_id', args.contact_id)
+            }
+            if (args.name) {
+              query = query.ilike('name', `%${args.name}%`)
             }
             if (args.email) {
               query = query.eq('email', args.email)
