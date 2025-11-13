@@ -147,24 +147,44 @@ class MCPClient {
 }
 
 function convertMCPToolToOpenRouterFunction(mcpTool: MCPTool): any {
-  const properties = { ...mcpTool.inputSchema.properties }
-  delete properties.agent_id
-  delete properties.phone_number
+  // Safely extract properties, ensuring it's always an object
+  const rawProperties = mcpTool.inputSchema?.properties || {}
+  const properties: Record<string, any> = {}
 
-  const required = (mcpTool.inputSchema.required || []).filter(
+  // Copy all properties except agent_id and phone_number
+  for (const [key, value] of Object.entries(rawProperties)) {
+    if (key !== 'agent_id' && key !== 'phone_number') {
+      properties[key] = value
+    }
+  }
+
+  // Safely extract and filter required fields
+  const rawRequired = mcpTool.inputSchema?.required || []
+  const required = rawRequired.filter(
     (field: string) => field !== 'agent_id' && field !== 'phone_number'
   )
+
+  // Build OpenAI/Gemini-compatible parameters object
+  // CRITICAL: Always include "type" and "properties", even if empty
+  const parameters: any = {
+    type: mcpTool.inputSchema?.type || 'object',
+    properties: properties, // Always include, even if empty {}
+  }
+
+  // Only add "required" if it's not empty (OpenAI/Gemini prefer this)
+  if (required.length > 0) {
+    parameters.required = required
+  }
+
+  // Add additionalProperties: false for strict validation
+  parameters.additionalProperties = false
 
   return {
     type: 'function',
     function: {
       name: mcpTool.name,
-      description: mcpTool.description,
-      parameters: {
-        type: mcpTool.inputSchema.type || 'object',
-        properties,
-        required,
-      },
+      description: mcpTool.description || 'No description provided',
+      parameters: parameters,
     },
   }
 }
@@ -461,7 +481,16 @@ Deno.serve(async (req: Request) => {
 
       console.log(`Total MCP tools collected from all servers: ${allMCPTools.length}`, allMCPTools.map(t => t.name))
       tools = allMCPTools.map(convertMCPToolToOpenRouterFunction)
-      console.log(`Converted ${tools.length} MCP tools for OpenRouter`)
+      console.log(`✅ Converted ${tools.length} MCP tools for OpenRouter`)
+
+      // Validate tool schemas (debug logging)
+      tools.forEach(tool => {
+        const params = tool.function?.parameters
+        if (!params || !params.type || typeof params.properties !== 'object') {
+          console.error(`⚠️ Invalid schema for tool ${tool.function?.name}:`, JSON.stringify(params))
+        }
+      })
+      console.log('All tool schemas validated successfully')
     } catch (error) {
       console.error('Failed to initialize MCP client:', error)
       return new Response(
