@@ -70,6 +70,7 @@ interface Appointment {
   notes: string | null
   reminder_sent: boolean
   assigned_to: string | null
+  calendar_id: string | null
   created_at: string
   updated_at: string
 }
@@ -112,6 +113,7 @@ export function Appointments() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [meetingTypeFilter, setMeetingTypeFilter] = useState('')
+  const [calendarFilter, setCalendarFilter] = useState('')
   const [periodFilter, setPeriodFilter] = useState('')
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
@@ -489,6 +491,7 @@ export function Appointments() {
 
     const matchesStatus = !statusFilter || appointment.status === statusFilter
     const matchesMeetingType = !meetingTypeFilter || appointment.meeting_type === meetingTypeFilter
+    const matchesCalendar = !calendarFilter || appointment.calendar_id === calendarFilter
 
     let matchesPeriod = true
     if (periodFilter && periodFilter !== '') {
@@ -509,7 +512,7 @@ export function Appointments() {
       return false
     }
 
-    return matchesSearch && matchesStatus && matchesMeetingType && matchesPeriod
+    return matchesSearch && matchesStatus && matchesMeetingType && matchesCalendar && matchesPeriod
   })
 
   const totalAppointments = appointments.length
@@ -935,6 +938,18 @@ export function Appointments() {
                     <option value="In-Person">In-Person</option>
                     <option value="Video Call">Video Call</option>
                     <option value="Phone Call">Phone Call</option>
+                  </select>
+                  <select
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    value={calendarFilter}
+                    onChange={(e) => setCalendarFilter(e.target.value)}
+                  >
+                    <option value="">All Calendars</option>
+                    {calendars.map(calendar => (
+                      <option key={calendar.id} value={calendar.id}>
+                        {calendar.title}
+                      </option>
+                    ))}
                   </select>
                   <select
                     className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary"
