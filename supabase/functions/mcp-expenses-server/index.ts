@@ -318,10 +318,6 @@ async function handleMCPRequest(
                     enum: ['Pending', 'Approved', 'Rejected'],
                     description: 'Approval status (default: Pending)',
                   },
-                  notes: {
-                    type: 'string',
-                    description: 'Additional notes',
-                  },
                 },
                 required: ['category', 'amount', 'expense_date'],
               },
@@ -355,7 +351,6 @@ async function handleMCPRequest(
                     type: 'string',
                     enum: ['Pending', 'Approved', 'Rejected'],
                   },
-                  notes: { type: 'string' },
                 },
                 required: ['expense_id'],
               },
@@ -628,7 +623,6 @@ async function handleMCPRequest(
               payment_method: args.payment_method || null,
               receipt_url: args.receipt_url || null,
               status: args.status || 'Pending',
-              notes: args.notes || null,
             }
 
             const { data, error } = await supabase

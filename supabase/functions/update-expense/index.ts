@@ -18,7 +18,6 @@ interface UpdateExpensePayload {
   receipt_url?: string
   status?: string
   approved_by?: string
-  notes?: string
 }
 
 Deno.serve(async (req: Request) => {
@@ -241,7 +240,6 @@ Deno.serve(async (req: Request) => {
         updateData.approved_at = new Date().toISOString()
       }
     }
-    if (payload.notes !== undefined) updateData.notes = payload.notes
 
     const { data: updatedExpense, error: updateError } = await supabase
       .from('expenses')

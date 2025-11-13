@@ -17,7 +17,6 @@ interface ExpensePayload {
   receipt_url?: string
   status?: string
   approved_by?: string
-  notes?: string
 }
 
 Deno.serve(async (req: Request) => {
@@ -193,7 +192,6 @@ Deno.serve(async (req: Request) => {
       status: payload.status || 'Pending',
       approved_by: payload.approved_by || null,
       approved_at: payload.approved_by && payload.status === 'Approved' ? new Date().toISOString() : null,
-      notes: payload.notes || null,
     }
 
     const { data: newExpense, error: insertError } = await supabase
