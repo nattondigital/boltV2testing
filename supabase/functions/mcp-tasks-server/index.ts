@@ -290,11 +290,11 @@ async function handleMCPRequest(
                   },
                   assigned_to: {
                     type: 'string',
-                    description: 'UUID of assigned team member',
+                    description: 'UUID of assigned team member OR their name (will auto-lookup by name if not a UUID)',
                   },
                   assigned_to_name: {
                     type: 'string',
-                    description: 'Name of assigned team member',
+                    description: 'Name of assigned team member (alternative to assigned_to)',
                   },
                   contact_id: {
                     type: 'string',
@@ -688,25 +688,55 @@ async function handleMCPRequest(
               }
             }
 
-            let assignedToUuid = args.assigned_to || null
-            if (args.assigned_to_name && !assignedToUuid) {
-              const { data: userData } = await supabase
-                .from('admin_users')
-                .select('id')
-                .ilike('full_name', `%${args.assigned_to_name}%`)
-                .limit(1)
-                .maybeSingle()
+            let assignedToUuid = null
 
-              if (userData) {
-                assignedToUuid = userData.id
+            // Check if assigned_to is a valid UUID, otherwise treat it as a name
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            if (args.assigned_to && uuidRegex.test(args.assigned_to)) {
+              assignedToUuid = args.assigned_to
+            } else {
+              // If assigned_to is provided but not a UUID, treat it as a name
+              const nameToSearch = args.assigned_to_name || args.assigned_to
+              if (nameToSearch) {
+                const { data: userData } = await supabase
+                  .from('admin_users')
+                  .select('id')
+                  .ilike('full_name', `%${nameToSearch}%`)
+                  .limit(1)
+                  .maybeSingle()
+
+                if (userData) {
+                  assignedToUuid = userData.id
+                }
               }
+            }
+
+            // Normalize status to valid enum values
+            let normalizedStatus = args.status || 'To Do'
+            const statusMap: Record<string, string> = {
+              'open': 'To Do',
+              'todo': 'To Do',
+              'pending': 'To Do',
+              'in progress': 'In Progress',
+              'in_progress': 'In Progress',
+              'inprogress': 'In Progress',
+              'working': 'In Progress',
+              'completed': 'Completed',
+              'done': 'Completed',
+              'finished': 'Completed',
+              'cancelled': 'Cancelled',
+              'canceled': 'Cancelled',
+            }
+            const lowerStatus = (args.status || '').toLowerCase()
+            if (statusMap[lowerStatus]) {
+              normalizedStatus = statusMap[lowerStatus]
             }
 
             const taskData = {
               title: args.title,
               description: args.description || null,
               priority: args.priority || 'Medium',
-              status: args.status || 'To Do',
+              status: normalizedStatus,
               assigned_to: assignedToUuid,
               contact_id: args.contact_id || null,
               due_date: dueDateTimestamp,

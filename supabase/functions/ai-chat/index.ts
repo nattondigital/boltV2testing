@@ -382,6 +382,15 @@ function cleanMessageForMemory(message: string): string {
 
   let cleaned = message
 
+  // Remove XML function_calls blocks (Anthropic/Claude format)
+  cleaned = cleaned.replace(/<function_calls>[\s\S]*?<\/function_calls>/gi, '')
+
+  // Remove individual XML invoke blocks
+  cleaned = cleaned.replace(/<invoke[^>]*>[\s\S]*?<\/invoke>/gi, '')
+
+  // Remove XML parameter blocks
+  cleaned = cleaned.replace(/<parameter[^>]*>[\s\S]*?<\/parameter>/gi, '')
+
   // Remove JSON code blocks
   cleaned = cleaned.replace(/```json\s*\n[\s\S]*?\n```/gi, '')
 
