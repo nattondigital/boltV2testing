@@ -201,6 +201,131 @@ class MCPClient {
   }
 }
 
+// 3-Layer Tool Execution Error Handler
+interface ToolExecutionResult {
+  success: boolean
+  data?: any
+  error?: string
+  isRetryable?: boolean
+}
+
+async function executeToolWithRetry(
+  toolName: string,
+  toolArgs: any,
+  client: MCPClient,
+  maxRetries: number = 2
+): Promise<ToolExecutionResult> {
+  let lastError: string = ''
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      // Layer 1: Detect tool error
+      console.log(`🔧 Executing ${toolName} (attempt ${attempt + 1}/${maxRetries + 1})`)
+      const result = await client.callTool(toolName, toolArgs)
+
+      // Success!
+      console.log(`✅ ${toolName} succeeded on attempt ${attempt + 1}`)
+      return {
+        success: true,
+        data: result
+      }
+    } catch (error: any) {
+      lastError = error instanceof Error ? error.message : String(error)
+      console.error(`❌ ${toolName} failed (attempt ${attempt + 1}):`, lastError)
+
+      // Layer 2: Retry logic
+      if (attempt < maxRetries) {
+        // Check if error is retryable
+        const isRetryable = isRetryableError(lastError)
+
+        if (isRetryable) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delayMs = Math.pow(2, attempt) * 1000
+          console.log(`⏳ Retrying ${toolName} after ${delayMs}ms...`)
+          await new Promise(resolve => setTimeout(resolve, delayMs))
+          continue
+        } else {
+          // Non-retryable error, fail immediately
+          console.log(`🚫 ${toolName} error is non-retryable, stopping`)
+          break
+        }
+      }
+    }
+  }
+
+  // Layer 3: All retries exhausted, return error
+  return {
+    success: false,
+    error: lastError,
+    isRetryable: isRetryableError(lastError)
+  }
+}
+
+function isRetryableError(errorMessage: string): boolean {
+  const retryablePatterns = [
+    /timeout/i,
+    /network/i,
+    /connection/i,
+    /ECONNREFUSED/i,
+    /ETIMEDOUT/i,
+    /503/,
+    /502/,
+    /504/,
+    /temporarily unavailable/i,
+  ]
+
+  return retryablePatterns.some(pattern => pattern.test(errorMessage))
+}
+
+function generateErrorFallback(toolName: string, error: string): string {
+  // Natural language fallback that doesn't expose technical details
+  const actionMap: Record<string, string> = {
+    'create_task': 'create the task',
+    'update_task': 'update the task',
+    'delete_task': 'delete the task',
+    'get_tasks': 'retrieve tasks',
+    'create_lead': 'create the lead',
+    'update_lead': 'update the lead',
+    'get_leads': 'retrieve leads',
+    'add_contact': 'add the contact',
+    'get_contact': 'retrieve contact information',
+    'add_appointment': 'schedule the appointment',
+    'update_appointment': 'update the appointment',
+    'get_appointments': 'retrieve appointments',
+    'add_expense': 'record the expense',
+    'get_expenses': 'retrieve expenses',
+    'add_support_ticket': 'create the support ticket',
+    'get_support_tickets': 'retrieve support tickets',
+  }
+
+  const action = actionMap[toolName] || 'complete this action'
+
+  return `I apologize, but I couldn't ${action} due to a technical issue. Please try again in a moment. If the problem persists, please contact support.`
+}
+
+function containsTechnicalError(message: string): boolean {
+  // Detect if message contains technical error patterns
+  const technicalPatterns = [
+    /error:/i,
+    /exception/i,
+    /stack trace/i,
+    /failed to execute/i,
+    /❌/,
+    /\[object Object\]/,
+    /undefined is not/i,
+    /cannot read property/i,
+    /database error/i,
+    /connection refused/i,
+    /timeout/i,
+    /500 Internal Server Error/i,
+    /502 Bad Gateway/i,
+    /503 Service Unavailable/i,
+    /504 Gateway Timeout/i,
+  ]
+
+  return technicalPatterns.some(pattern => pattern.test(message))
+}
+
 function convertMCPToolToOpenRouterFunction(mcpTool: MCPTool): any {
   // Safely extract properties, ensuring it's always an object
   const rawProperties = mcpTool.inputSchema?.properties || {}
@@ -247,6 +372,12 @@ function convertMCPToolToOpenRouterFunction(mcpTool: MCPTool): any {
 function cleanMessageForMemory(message: string): string {
   if (!message || typeof message !== 'string') {
     return ''
+  }
+
+  // CRITICAL: Block technical error messages from memory
+  if (containsTechnicalError(message)) {
+    console.log('🚫 Blocked technical error from memory')
+    return '' // Return empty to prevent saving
   }
 
   let cleaned = message
@@ -830,11 +961,23 @@ RIGHT: due_time: "04:30" (UTC) ✅`
 
             const targetClient = new MCPClient(targetServerUrl, Deno.env.get('SUPABASE_ANON_KEY')!, payload.agent_id, payload.phone_number)
             await targetClient.initialize()
-            const result = await targetClient.callTool(functionName, functionArgs)
-            toolResults.push(result)
+
+            // Execute tool with 3-layer error handling
+            const executionResult = await executeToolWithRetry(functionName, functionArgs, targetClient, 2)
+
+            if (executionResult.success) {
+              toolResults.push(executionResult.data)
+            } else {
+              // Generate user-friendly fallback message (Layer 3)
+              const fallbackMessage = generateErrorFallback(functionName, executionResult.error || 'Unknown error')
+              console.error(`🚫 ${functionName} failed after retries: ${executionResult.error}`)
+              console.log(`💬 Fallback message: ${fallbackMessage}`)
+              toolResults.push(fallbackMessage)
+            }
           } catch (error) {
-            console.error(`MCP tool execution failed for ${functionName}:`, error)
-            toolResults.push(`❌ Failed to execute ${functionName}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+            console.error(`MCP tool initialization/routing failed for ${functionName}:`, error)
+            const fallbackMessage = generateErrorFallback(functionName, error instanceof Error ? error.message : 'Unknown error')
+            toolResults.push(fallbackMessage)
           }
         }
 
