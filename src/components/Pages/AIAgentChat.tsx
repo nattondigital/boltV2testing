@@ -166,6 +166,9 @@ export function AIAgentChat() {
         imageUrl: msg.metadata?.image_url
       }))
 
+      // Sort by timestamp to ensure correct chronological order
+      historyMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+
       setMessages(historyMessages)
     } catch (error) {
       console.error('Error loading chat history:', error)
@@ -1082,7 +1085,12 @@ When users ask about expenses with time periods (like "this month", "today", "la
       timestamp: new Date().toISOString()
     }
 
-    setMessages(prev => [...prev, userMessage])
+    // Add user message and sort by timestamp
+    setMessages(prev => {
+      const updated = [...prev, userMessage]
+      updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      return updated
+    })
     setInputMessage('')
     removeImage()
     setIsTyping(true)
@@ -1108,7 +1116,12 @@ When users ask about expenses with time periods (like "this month", "today", "la
         result: agentResponse.includes('Error') ? 'Error' : 'Success'
       }
 
-      setMessages(prev => [...prev, agentMessage])
+      // Add agent message and sort by timestamp
+      setMessages(prev => {
+        const updated = [...prev, agentMessage]
+        updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        return updated
+      })
     } catch (error) {
       console.error('Error sending message:', error)
       const errorMessage: Message = {
@@ -1118,7 +1131,12 @@ When users ask about expenses with time periods (like "this month", "today", "la
         timestamp: new Date().toISOString(),
         result: 'Error'
       }
-      setMessages(prev => [...prev, errorMessage])
+      // Add error message and sort by timestamp
+      setMessages(prev => {
+        const updated = [...prev, errorMessage]
+        updated.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        return updated
+      })
     } finally {
       setIsTyping(false)
     }
