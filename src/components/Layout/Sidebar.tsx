@@ -220,18 +220,18 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
           })}
         </AnimatePresence>
 
-        {/* Masters Section */}
-        {!collapsed && visibleMastersNav.length > 0 && (
+        {/* Client Management Section */}
+        {!collapsed && visibleMembersNav.length > 0 && (
           <div className="pt-4">
             <button
-              onClick={() => setMastersExpanded(!mastersExpanded)}
+              onClick={() => setMembersExpanded(!membersExpanded)}
               className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
             >
-              <span>Masters</span>
+              <span>Client Management</span>
               <ChevronDown
                 className={cn(
                   "h-4 w-4 transition-transform duration-200",
-                  mastersExpanded && "transform rotate-180"
+                  membersExpanded && "transform rotate-180"
                 )}
               />
             </button>
@@ -239,7 +239,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         )}
 
         <AnimatePresence>
-          {mastersExpanded && visibleMastersNav.map((item) => {
+          {membersExpanded && visibleMembersNav.map((item) => {
             const isActive = location.pathname === item.to
             const Icon = item.icon
 
@@ -282,18 +282,18 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
           })}
         </AnimatePresence>
 
-        {/* Client Management Section */}
-        {!collapsed && visibleMembersNav.length > 0 && (
+        {/* Masters Section */}
+        {!collapsed && visibleMastersNav.length > 0 && (
           <div className="pt-4">
             <button
-              onClick={() => setMembersExpanded(!membersExpanded)}
+              onClick={() => setMastersExpanded(!mastersExpanded)}
               className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
             >
-              <span>Client Management</span>
+              <span>Masters</span>
               <ChevronDown
                 className={cn(
                   "h-4 w-4 transition-transform duration-200",
-                  membersExpanded && "transform rotate-180"
+                  mastersExpanded && "transform rotate-180"
                 )}
               />
             </button>
@@ -301,7 +301,7 @@ export function Sidebar({ collapsed = false, onClose }: SidebarProps) {
         )}
 
         <AnimatePresence>
-          {membersExpanded && visibleMembersNav.map((item) => {
+          {mastersExpanded && visibleMastersNav.map((item) => {
             const isActive = location.pathname === item.to
             const Icon = item.icon
 
