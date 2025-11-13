@@ -431,6 +431,7 @@ Deno.serve(async (req: Request) => {
 
     let tools: any[] = []
     let mcpClient: MCPClient | null = null
+    let toolToServerMap: Record<string, string> = {}
 
     console.log('Using MODULAR MCP architecture for agent:', agent.name)
 
@@ -480,6 +481,23 @@ Deno.serve(async (req: Request) => {
       }
 
       console.log(`Total MCP tools collected from all servers: ${allMCPTools.length}`, allMCPTools.map(t => t.name))
+
+      // Build dynamic tool-to-server mapping from permissions
+      // This is the SINGLE SOURCE OF TRUTH for routing
+      toolToServerMap = {}
+
+      for (const [serverKey, serverConfig] of Object.entries(permissions)) {
+        if (!serverConfig?.enabled) continue
+
+        const toolList = serverConfig.tools || []
+        for (const toolName of toolList) {
+          toolToServerMap[toolName] = serverKey
+        }
+      }
+
+      console.log(`✅ Built tool-to-server mapping for ${Object.keys(toolToServerMap).length} tools`)
+      console.log('Tool routing map:', JSON.stringify(toolToServerMap, null, 2))
+
       tools = allMCPTools.map(convertMCPToolToOpenRouterFunction)
       console.log(`✅ Converted ${tools.length} MCP tools for OpenRouter`)
 
@@ -609,29 +627,26 @@ Deno.serve(async (req: Request) => {
 
           console.log(`Executing MCP tool: ${functionName} with args:`, functionArgs)
           try {
-            // Determine which MCP server this tool belongs to
-            let targetServerUrl = `${supabaseUrl}/functions/v1/mcp-server` // fallback
+            // Use the dynamic tool-to-server map (SINGLE SOURCE OF TRUTH)
+            const serverKey = toolToServerMap[functionName]
 
-            // Tool-to-server mapping
-            if (functionName.includes('task')) {
-              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-tasks-server`
-            } else if (functionName.includes('contact')) {
-              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-contacts-server`
-            } else if (functionName.includes('lead')) {
-              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-leads-server`
-            } else if (functionName.includes('appointment')) {
-              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-appointments-server`
-            } else if (functionName.includes('expense')) {
-              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-expenses-server`
-            } else if (functionName.includes('support') || functionName.includes('ticket')) {
-              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-support-server`
-            } else if (functionName.includes('product')) {
-              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-products-server`
-            } else if (functionName.includes('estimate') || functionName.includes('invoice') || functionName.includes('subscription') || functionName.includes('receipt')) {
-              targetServerUrl = `${supabaseUrl}/functions/v1/mcp-billing-server`
+            if (!serverKey) {
+              const errorMsg = `❌ No server mapping found for tool: ${functionName}. Available tools: ${Object.keys(toolToServerMap).join(', ')}`
+              console.error(errorMsg)
+              toolResults.push(errorMsg)
+              continue
             }
 
-            console.log(`Routing ${functionName} to ${targetServerUrl}`)
+            const targetServerUrl = mcpServers[serverKey]
+
+            if (!targetServerUrl) {
+              const errorMsg = `❌ Invalid server key: ${serverKey} for tool: ${functionName}`
+              console.error(errorMsg)
+              toolResults.push(errorMsg)
+              continue
+            }
+
+            console.log(`✅ Routing ${functionName} → ${serverKey} → ${targetServerUrl}`)
 
             const targetClient = new MCPClient(targetServerUrl, Deno.env.get('SUPABASE_ANON_KEY')!, payload.agent_id, payload.phone_number)
             await targetClient.initialize()
