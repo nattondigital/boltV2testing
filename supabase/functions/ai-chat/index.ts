@@ -279,37 +279,61 @@ Deno.serve(async (req: Request) => {
 
     if (agentType === 'FRONTEND') {
       console.log('FRONTEND agent: Loading last 20 chat messages for context')
-      const { data: existingMemory } = await supabase
+
+      // First get the IDs of the last N messages (most recent)
+      const { data: recentIds } = await supabase
         .from('ai_agent_chat_memory')
-        .select('*')
+        .select('id')
         .eq('agent_id', payload.agent_id)
         .eq('phone_number', payload.phone_number)
         .order('created_at', { ascending: false })
         .limit(20)
 
-      if (existingMemory && existingMemory.length > 0) {
-        existingMemory.reverse().forEach(msg => {
-          conversationMessages.push({ role: msg.role, content: msg.message })
-        })
-        console.log(`Loaded ${existingMemory.length} previous messages`)
+      if (recentIds && recentIds.length > 0) {
+        // Now fetch those messages in chronological order (oldest to newest)
+        const ids = recentIds.map(r => r.id)
+        const { data: existingMemory } = await supabase
+          .from('ai_agent_chat_memory')
+          .select('*')
+          .in('id', ids)
+          .order('created_at', { ascending: true })
+
+        if (existingMemory && existingMemory.length > 0) {
+          existingMemory.forEach(msg => {
+            conversationMessages.push({ role: msg.role, content: msg.message })
+          })
+          console.log(`Loaded ${existingMemory.length} previous messages in chronological order`)
+        }
       } else {
         console.log('No previous chat history found')
       }
     } else {
       console.log('BACKEND agent: Loading last 5 chat messages for immediate context')
-      const { data: existingMemory } = await supabase
+
+      // First get the IDs of the last N messages (most recent)
+      const { data: recentIds } = await supabase
         .from('ai_agent_chat_memory')
-        .select('*')
+        .select('id')
         .eq('agent_id', payload.agent_id)
         .eq('phone_number', payload.phone_number)
         .order('created_at', { ascending: false })
         .limit(5)
 
-      if (existingMemory && existingMemory.length > 0) {
-        existingMemory.reverse().forEach(msg => {
-          conversationMessages.push({ role: msg.role, content: msg.message })
-        })
-        console.log(`Loaded ${existingMemory.length} previous messages for task context`)
+      if (recentIds && recentIds.length > 0) {
+        // Now fetch those messages in chronological order (oldest to newest)
+        const ids = recentIds.map(r => r.id)
+        const { data: existingMemory } = await supabase
+          .from('ai_agent_chat_memory')
+          .select('*')
+          .in('id', ids)
+          .order('created_at', { ascending: true })
+
+        if (existingMemory && existingMemory.length > 0) {
+          existingMemory.forEach(msg => {
+            conversationMessages.push({ role: msg.role, content: msg.message })
+          })
+          console.log(`Loaded ${existingMemory.length} previous messages in chronological order for task context`)
+        }
       } else {
         console.log('No previous chat history - starting fresh')
       }
