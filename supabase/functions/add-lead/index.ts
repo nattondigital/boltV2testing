@@ -68,6 +68,20 @@ Deno.serve(async (req: Request) => {
       )
     }
 
+    // Extract custom fields from the payload (any field starting with "custom_")
+    const customFields: Record<string, any> = {}
+    const rawPayload = payload as any
+    for (const key in rawPayload) {
+      if (key.startsWith('custom_')) {
+        customFields[key] = rawPayload[key]
+      }
+    }
+
+    // Merge with explicit custom_fields if provided
+    if (payload.custom_fields) {
+      Object.assign(customFields, payload.custom_fields)
+    }
+
     const { data: existingLead, error: checkError } = await supabase
       .from('leads')
       .select('id, phone, lead_id')
@@ -195,8 +209,8 @@ Deno.serve(async (req: Request) => {
       leadData = updatedLead
       operationType = 'updated'
 
-      if (payload.custom_fields && Object.keys(payload.custom_fields).length > 0) {
-        await upsertCustomFields(supabase, updatedLead.id, pipelineUuid, payload.custom_fields)
+      if (Object.keys(customFields).length > 0) {
+        await upsertCustomFields(supabase, updatedLead.id, pipelineUuid, customFields)
       }
     } else {
       const { data: newLead, error: insertError } = await supabase
@@ -237,9 +251,31 @@ Deno.serve(async (req: Request) => {
       leadData = newLead
       operationType = 'created'
 
-      if (payload.custom_fields && Object.keys(payload.custom_fields).length > 0) {
-        await upsertCustomFields(supabase, newLead.id, pipelineUuid, payload.custom_fields)
+      if (Object.keys(customFields).length > 0) {
+        await upsertCustomFields(supabase, newLead.id, pipelineUuid, customFields)
       }
+    }
+
+    // Fetch custom field values to include in the response
+    let customFieldValues: Record<string, any> = {}
+    if (Object.keys(customFields).length > 0) {
+      const { data: fieldValues } = await supabase
+        .from('custom_field_values')
+        .select('custom_field_id, field_value, custom_fields(field_key, field_name)')
+        .eq('lead_id', leadData.id)
+
+      if (fieldValues && fieldValues.length > 0) {
+        fieldValues.forEach((fv: any) => {
+          if (fv.custom_fields) {
+            customFieldValues[fv.custom_fields.field_key] = fv.field_value
+          }
+        })
+      }
+    }
+
+    const responseData = {
+      ...leadData,
+      custom_fields: Object.keys(customFieldValues).length > 0 ? customFieldValues : undefined
     }
 
     const n8nWebhookUrl = 'https://n8n.srv825961.hstgr.cloud/webhook/b9306df2-26cc-447e-abb4-b2cfe8e1acdd'
@@ -250,7 +286,7 @@ Deno.serve(async (req: Request) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(leadData),
+        body: JSON.stringify(responseData),
       })
       console.log('Successfully sent lead to n8n webhook')
     } catch (n8nError) {
@@ -262,7 +298,7 @@ Deno.serve(async (req: Request) => {
         success: true,
         message: `Lead ${operationType} successfully`,
         operation: operationType,
-        data: leadData,
+        data: responseData,
       }),
       {
         status: operationType === 'created' ? 201 : 200,
